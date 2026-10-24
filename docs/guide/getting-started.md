@@ -12,7 +12,7 @@ Install the WebToApp builder on a device running **Android 6.0 (API 23) or newer
 
 <LatestRelease variant="install" />
 
-Get the APK from [GitHub Releases](https://github.com/shiaho777/web-to-app/releases) and install it like any other APK. The button auto-detects the newest version.
+Get the APK from [GitHub Releases](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/releases) and install it like any other APK. The button auto-detects the newest version.
 
 </div>
 
@@ -80,8 +80,8 @@ Open **⋮ → [File Manager](/guide/more-features/file-manager)** from the top-
 Requirements: Android Studio Hedgehog or newer, JDK 17. The Gradle wrapper pins Gradle 9.4.1.
 
 ```bash
-git clone https://github.com/shiaho777/web-to-app.git
-cd web-to-app
+git clone https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder.git
+cd Sherwood-WTA-webtoapp-builder
 ./gradlew assembleDebug
 ```
 

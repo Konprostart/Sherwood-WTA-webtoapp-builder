@@ -3,7 +3,7 @@
 This section is for people working on WebToApp itself — contributors, deep customizers, and AI coding agents. It explains how the codebase is organized and how the two things that trip everyone up actually work: the **export pipeline** and **shell sync**.
 
 ::: tip Authoritative reference
-[`AGENTS.md`](https://github.com/shiaho777/web-to-app/blob/main/AGENTS.md) at the repo root is the authoritative guide for AI agents and deep contributors. These pages expand on it with more context.
+[`AGENTS.md`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/AGENTS.md) at the repo root is the authoritative guide for AI agents and deep contributors. These pages expand on it with more context.
 :::
 
 ## Repository layout

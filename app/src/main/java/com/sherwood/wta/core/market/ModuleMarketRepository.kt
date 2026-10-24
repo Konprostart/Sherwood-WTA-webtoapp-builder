@@ -33,8 +33,8 @@ class ModuleMarketRepository private constructor(
     companion object {
         private const val TAG = "ModuleMarket"
 
-        private const val OWNER = "shiaho777"
-        private const val REPO = "web-to-app"
+        private const val OWNER = "Konprostart"
+        private const val REPO = "Sherwood-WTA-webtoapp-builder"
         private const val BRANCH = "main"
         private const val MODULES_DIR = "modules"
 

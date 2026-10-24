@@ -55,4 +55,4 @@ a {
 }
 ```
 
-See the built-in `builtin-dark-mode` package under [`app/src/main/assets/plugins/`](https://github.com/shiaho777/web-to-app/tree/main/app/src/main/assets/plugins) for a working dark-mode plugin (it injects its styles from `main.js`).
+See the built-in `builtin-dark-mode` package under [`app/src/main/assets/plugins/`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/tree/main/app/src/main/assets/plugins) for a working dark-mode plugin (it injects its styles from `main.js`).

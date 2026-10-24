@@ -4188,16 +4188,16 @@ object StringsE {
     }
 
     val madeWithLove: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "用心制作 by Shiaho"
-        AppLanguage.ENGLISH -> "Made with love by Shiaho"
-        AppLanguage.ARABIC -> "صنع بحب بواسطة Shiaho"
-        AppLanguage.PORTUGUESE -> "Feito com amor por Shiaho"
-        AppLanguage.SPANISH -> "Hecho con amor por Shiaho"
-        AppLanguage.FRENCH -> "Fait avec amour par Shiaho"
-        AppLanguage.GERMAN -> "Mit Liebe gemacht von Shiaho"
-        AppLanguage.RUSSIAN -> "Сделано с любовью Shiaho"
-        AppLanguage.JAPANESE -> "Shiaho が愛を込めて制作"
-        AppLanguage.KOREAN -> "Shiaho가 사랑을 담아 제작"
+        AppLanguage.CHINESE -> "用心制作 by Sherwood WTA"
+        AppLanguage.ENGLISH -> "Made with love by Sherwood WTA"
+        AppLanguage.ARABIC -> "صنع بحب بواسطة Sherwood WTA"
+        AppLanguage.PORTUGUESE -> "Feito com amor por Sherwood WTA"
+        AppLanguage.SPANISH -> "Hecho con amor por Sherwood WTA"
+        AppLanguage.FRENCH -> "Fait avec amour par Sherwood WTA"
+        AppLanguage.GERMAN -> "Mit Liebe gemacht von Sherwood WTA"
+        AppLanguage.RUSSIAN -> "Сделано с любовью Sherwood WTA"
+        AppLanguage.JAPANESE -> "Sherwood WTA が愛を込めて制作"
+        AppLanguage.KOREAN -> "Sherwood WTA가 사랑을 담아 제작"
     }
 
     val shortcutPermissionTitle: String get() = when (Strings.lang) {

@@ -3,7 +3,7 @@
 本节面向参与 WebToApp 本身开发的人 —— 贡献者、深度定制者和 AI 编码代理。它解释代码库如何组织,以及两个最容易让人栽跟头的机制实际如何工作:**导出管线**和 **shell 同步**。
 
 ::: tip 权威参考
-仓库根目录的 [`AGENTS.md`](https://github.com/shiaho777/web-to-app/blob/main/AGENTS.md) 是面向 AI 代理和深度贡献者的权威指南。这些页面在其基础上提供更多背景。
+仓库根目录的 [`AGENTS.md`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/AGENTS.md) 是面向 AI 代理和深度贡献者的权威指南。这些页面在其基础上提供更多背景。
 :::
 
 ## 仓库布局

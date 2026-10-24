@@ -114,4 +114,4 @@ Everything outside the `hcj/page` block is the plugin's own page, hosted in the 
 
 `.user.js` files import directly: the `==UserScript==` block is converted into `plugin.json` (`@match`/`@include` → `matches`, `@grant` → `permissions`, `@run-at` → `runAt`), and `GM_*` calls keep working through the userscript runtime. An `.hcj` file is just a zipped package for sharing.
 
-See the built-in plugins under [`app/src/main/assets/plugins/`](https://github.com/shiaho777/web-to-app/tree/main/app/src/main/assets/plugins) and the market packages under [`modules/`](https://github.com/shiaho777/web-to-app/tree/main/modules) for complete working examples.
+See the built-in plugins under [`app/src/main/assets/plugins/`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/tree/main/app/src/main/assets/plugins) and the market packages under [`modules/`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/tree/main/modules) for complete working examples.

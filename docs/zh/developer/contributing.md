@@ -2,15 +2,15 @@
 
 感谢你为 WebToApp 做贡献。规范的贡献者指南位于仓库中:
 
-👉 [`.github/CONTRIBUTING.md`](https://github.com/shiaho777/web-to-app/blob/main/.github/CONTRIBUTING.md)
+👉 [`.github/CONTRIBUTING.md`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/.github/CONTRIBUTING.md)
 
 ## 贡献通道
 
 | 通道 | 你做什么 | 指南 |
 | --- | --- | --- |
-| `modules/` | 把一个社区模块发布到应用内市场 | [modules/README.md](https://github.com/shiaho777/web-to-app/blob/main/modules/README.md) |
-| Issues | 报告 bug 或请求功能 | [GitHub Issues](https://github.com/shiaho777/web-to-app/issues) |
-| 代码 | 在 Android 客户端修复 bug 或构建功能 | [CONTRIBUTING.md](https://github.com/shiaho777/web-to-app/blob/main/.github/CONTRIBUTING.md) |
+| `modules/` | 把一个社区模块发布到应用内市场 | [modules/README.md](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/modules/README.md) |
+| Issues | 报告 bug 或请求功能 | [GitHub Issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues) |
+| 代码 | 在 Android 客户端修复 bug 或构建功能 | [CONTRIBUTING.md](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/.github/CONTRIBUTING.md) |
 | 文档 | 改进本文档站点 | 在 `docs/` 下编辑并开 PR |
 
 ## 基本规则

@@ -6,7 +6,7 @@ Practical questions, organized by topic. For full detail, follow the links.
 
 ### Is WebToApp free?
 
-Yes. WebToApp is open source under [The Unlicense](https://github.com/shiaho777/web-to-app/blob/main/LICENSE).
+Yes. WebToApp is open source under [The Unlicense](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/LICENSE).
 
 ### What Android version do I need?
 
@@ -143,6 +143,4 @@ Use [Data Backup](/guide/more-features/data-backup) (home ⋮ menu) to move the 
 
 ### Where do I get help?
 
-- GitHub: [github.com/shiaho777/web-to-app](https://github.com/shiaho777/web-to-app)
-- Telegram: [t.me/webtoapp777](https://t.me/webtoapp777)
-- X (Twitter): [@shiaho777](https://x.com/shiaho777)
+- GitHub: [github.com/Konprostart/Sherwood-WTA-webtoapp-builder](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder)

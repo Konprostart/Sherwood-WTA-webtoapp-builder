@@ -3,7 +3,7 @@
 插件市场是由 GitHub 承载的社区插件目录，没有后端——App 直接从本仓库拉取目录文件，投稿就是普通的 PR 流程。
 
 ::: info 权威规则
-提交规则、字段 Schema、审核 Checklist 和 CI 校验以 [`modules/README.md`](https://github.com/shiaho777/web-to-app/blob/main/modules/README.md) 为准。本页是快速上手。
+提交规则、字段 Schema、审核 Checklist 和 CI 校验以 [`modules/README.md`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/modules/README.md) 为准。本页是快速上手。
 :::
 
 ## 目录结构

@@ -31,9 +31,9 @@ object SampleSharedPackManager {
     private const val MANIFEST_FILE = "manifest.json"
 
     private const val RAW_BASE =
-        "https://raw.githubusercontent.com/shiaho777/web-to-app/main/sample-bundles"
+        "https://raw.githubusercontent.com/Konprostart/Sherwood-WTA-webtoapp-builder/main/sample-bundles"
     private const val JSDELIVR_BASE =
-        "https://cdn.jsdelivr.net/gh/shiaho777/web-to-app@main/sample-bundles"
+        "https://cdn.jsdelivr.net/gh/Konprostart/Sherwood-WTA-webtoapp-builder@main/sample-bundles"
 
     /** Unit-test seam: when true, manifest fetches behave as unreachable. */
     @Volatile

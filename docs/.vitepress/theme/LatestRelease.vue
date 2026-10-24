@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useData } from 'vitepress'
 
-const REPO = 'shiaho777/web-to-app'
+const REPO = 'Konprostart/Sherwood-WTA-webtoapp-builder'
 const RELEASES_PAGE = `https://github.com/${REPO}/releases`
 
 const { lang } = useData()

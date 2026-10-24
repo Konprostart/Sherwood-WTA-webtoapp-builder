@@ -2,9 +2,9 @@
 
 **Effective date:** October 8, 2026
 
-This policy describes the **WebToApp** Android app, the on-device builder published by **shiaho**. It covers the app you install from Google Play or from GitHub. It does not cover a website, server, or APK that you create with WebToApp. If you publish one of those, it needs its own privacy policy.
+This policy describes the **WebToApp** Android app, the on-device builder published by **Sherwood WTA**. It covers the app you install from Google Play or from GitHub. It does not cover a website, server, or APK that you create with WebToApp. If you publish one of those, it needs its own privacy policy.
 
-Contact: [GitHub Issues](https://github.com/shiaho777/web-to-app/issues)
+Contact: [GitHub Issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues)
 
 ## What we do not do
 
@@ -57,4 +57,4 @@ When this policy changes, the effective date at the top of this page changes wit
 
 ## Contact
 
-Questions about this policy: [github.com/shiaho777/web-to-app/issues](https://github.com/shiaho777/web-to-app/issues)
+Questions about this policy: [github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues)

@@ -56,7 +56,7 @@ jobs:
           # Legacy parameter: the generator records every human direct-push
           # author (modules only reach main via review or maintainer push)
           # and only excludes bot identities.
-          MAINTAINERS: shiaho777
+          MAINTAINERS: Konprostart
         run: |
           python3 .github/scripts/ci/generate_submissions.py \
             --owner "${GITHUB_REPOSITORY%%/*}" \

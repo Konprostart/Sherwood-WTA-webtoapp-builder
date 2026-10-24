@@ -44,13 +44,13 @@ Categories:
   - Development
   - Internet
 License: Unlicense
-SourceCode: https://github.com/shiaho777/web-to-app
-IssueTracker: https://github.com/shiaho777/web-to-app/issues
-Changelog: https://github.com/shiaho777/web-to-app/releases
-WebSite: https://shiaho777.github.io/web-to-app/
+SourceCode: https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder
+IssueTracker: https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues
+Changelog: https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/releases
+WebSite: https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/
 
 RepoType: git
-Repo: https://github.com/shiaho777/web-to-app.git
+Repo: https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder.git
 
 Builds:
   - versionName: "2.8.1"

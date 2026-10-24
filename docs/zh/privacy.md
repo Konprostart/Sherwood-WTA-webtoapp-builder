@@ -2,9 +2,9 @@
 
 **生效日期：** 2026 年 10 月 8 日
 
-本政策说明 **WebToApp** 这款 Android 应用如何处理信息。WebToApp 是 **shiaho** 发布的、在手机上打包 APK 的构建器。它只覆盖你从 Google Play 或 GitHub 安装的这一个应用，不覆盖你用它做出来的网站、服务器或 APK。那些作品是你的；如果你要把它们上架，需要另写一份它们自己的隐私权政策。
+本政策说明 **WebToApp** 这款 Android 应用如何处理信息。WebToApp 是 **Sherwood WTA** 发布的、在手机上打包 APK 的构建器。它只覆盖你从 Google Play 或 GitHub 安装的这一个应用，不覆盖你用它做出来的网站、服务器或 APK。那些作品是你的；如果你要把它们上架，需要另写一份它们自己的隐私权政策。
 
-联系方式：[GitHub Issues](https://github.com/shiaho777/web-to-app/issues)
+联系方式：[GitHub Issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues)
 
 ## 我们不做什么
 
@@ -57,4 +57,4 @@ WebToApp 是用来构建应用的工具，并非面向 13 岁以下儿童。
 
 ## 联系
 
-关于本政策的问题：[github.com/shiaho777/web-to-app/issues](https://github.com/shiaho777/web-to-app/issues)
+关于本政策的问题：[github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues)

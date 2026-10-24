@@ -3,7 +3,7 @@
 The Plugin Market is a GitHub-backed catalog of community plugins. There is no backend — the app fetches catalog files straight from this repository, so contributing is a normal pull-request flow.
 
 ::: info Canonical rules
-The authoritative submission rules, field schemas, reviewer checklist, and CI validation live in [`modules/README.md`](https://github.com/shiaho777/web-to-app/blob/main/modules/README.md). This page is a quick start.
+The authoritative submission rules, field schemas, reviewer checklist, and CI validation live in [`modules/README.md`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/modules/README.md). This page is a quick start.
 :::
 
 ## Catalog layout

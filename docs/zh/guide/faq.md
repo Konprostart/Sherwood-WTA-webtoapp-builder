@@ -6,7 +6,7 @@
 
 ### WebToApp 免费吗?
 
-是的。WebToApp 以 [The Unlicense](https://github.com/shiaho777/web-to-app/blob/main/LICENSE) 开源。
+是的。WebToApp 以 [The Unlicense](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/LICENSE) 开源。
 
 ### 需要什么 Android 版本?
 
@@ -143,7 +143,4 @@ Android 6.0(API 23)或更高。
 
 ### 去哪里获取帮助?
 
-- GitHub:[github.com/shiaho777/web-to-app](https://github.com/shiaho777/web-to-app)
-- Telegram:[t.me/webtoapp777](https://t.me/webtoapp777)
-- X(Twitter):[@shiaho777](https://x.com/shiaho777)
-- QQ 群:1041130206
+- GitHub:[github.com/Konprostart/Sherwood-WTA-webtoapp-builder](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder)

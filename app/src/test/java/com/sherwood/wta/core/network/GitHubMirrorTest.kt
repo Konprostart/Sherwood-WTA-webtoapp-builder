@@ -55,9 +55,9 @@ class GitHubMirrorTest {
     @Test
     fun `api and raw hosts expand like release assets do`() {
         listOf(
-            "https://api.github.com/repos/shiaho777/web-to-app/releases/latest",
-            "https://raw.githubusercontent.com/shiaho777/web-to-app/main/modules/registry.json",
-            "https://github.com/shiaho777/web-to-app/releases/download/v1/a.apk"
+            "https://api.github.com/repos/Konprostart/Sherwood-WTA-webtoapp-builder/releases/latest",
+            "https://raw.githubusercontent.com/Konprostart/Sherwood-WTA-webtoapp-builder/main/modules/registry.json",
+            "https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/releases/download/v1/a.apk"
         ).forEach { url ->
             val urls = GitHubMirror.proxiedCnGitHubHost(url)
             assertThat(urls).hasSize(GitHubMirror.CN_PROXIES.size + 1)
@@ -69,7 +69,7 @@ class GitHubMirrorTest {
 
     @Test
     fun `cdn hosts are not treated as github hosts`() {
-        val url = "https://cdn.jsdelivr.net/gh/shiaho777/web-to-app@main/modules/registry.json"
+        val url = "https://cdn.jsdelivr.net/gh/Konprostart/Sherwood-WTA-webtoapp-builder@main/modules/registry.json"
         assertThat(GitHubMirror.proxiedCnGitHubHost(url)).containsExactly(url)
     }
 
@@ -77,7 +77,7 @@ class GitHubMirrorTest {
     fun `release downloads keep using the untouched proxiedCn path`() {
         // Widen proxiedCn to api.github.com later and this fails: the release
         // path was measured and shipped, so it should not drift on its own.
-        val api = "https://api.github.com/repos/shiaho777/web-to-app/releases/latest"
+        val api = "https://api.github.com/repos/Konprostart/Sherwood-WTA-webtoapp-builder/releases/latest"
         assertThat(GitHubMirror.proxiedCn(api)).containsExactly(api)
     }
 

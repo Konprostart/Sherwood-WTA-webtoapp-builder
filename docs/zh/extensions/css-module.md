@@ -55,4 +55,4 @@ a {
 }
 ```
 
-可用的暗色插件示例见 [`app/src/main/assets/plugins/`](https://github.com/shiaho777/web-to-app/tree/main/app/src/main/assets/plugins) 下的 `builtin-dark-mode`（样式由 `main.js` 注入）。
+可用的暗色插件示例见 [`app/src/main/assets/plugins/`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/tree/main/app/src/main/assets/plugins) 下的 `builtin-dark-mode`（样式由 `main.js` 注入）。

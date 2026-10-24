@@ -17,7 +17,7 @@ hero:
       link: /developer/
     - theme: alt
       text: View on GitHub
-      link: https://github.com/shiaho777/web-to-app
+      link: https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder
 
 features:
   - icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16"/><path d="M4 9h5"/></svg>

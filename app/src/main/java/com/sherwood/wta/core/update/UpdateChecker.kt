@@ -19,8 +19,8 @@ object UpdateChecker {
 
     private const val TAG = "UpdateChecker"
 
-    private const val OWNER = "shiaho777"
-    private const val REPO = "web-to-app"
+    private const val OWNER = "Konprostart"
+    private const val REPO = "Sherwood-WTA-webtoapp-builder"
     private const val LATEST_RELEASE_API =
         "https://api.github.com/repos/$OWNER/$REPO/releases/latest"
     private const val ALL_RELEASES_API =
@@ -208,90 +208,6 @@ object UpdateChecker {
             AppLogger.e(TAG, "Fetch all releases failed", e)
             throw e
         }
-    }
-
-    /**
-     * A public repository owned by the app author, as shown by the About page's
-     * "more projects" section. Forks and this app itself are filtered out.
-     */
-    data class RepoSummary(
-        val name: String,
-        val description: String,
-        val stars: Long,
-        val forks: Long,
-        val language: String?,
-        val pushedAt: String,
-        val url: String
-    )
-
-    private const val AUTHOR_REPOS_API =
-        "https://api.github.com/users/$OWNER/repos?per_page=100&type=owner"
-
-    /**
-     * Pre-generated repo list on the `author-repos-data` branch, refreshed by
-     * the Update Author Repos workflow. Serving it through raw.githubusercontent.com
-     * matters: the proxy pool is whitelisted for repo file paths (releases/raw),
-     * while `api.github.com` is rate-limited per egress IP and most shared
-     * proxy IPs are exhausted — the API alone leaves CN users with no route.
-     */
-    private const val AUTHOR_REPOS_RAW =
-        "https://raw.githubusercontent.com/$OWNER/$REPO/author-repos-data/repos.json"
-
-    /**
-     * Fetches the author's public repos for the About page. Client-side sorting
-     * covers both "by stars" and "latest" so the sort toggle never refetches.
-     */
-    suspend fun fetchAuthorRepos(context: android.content.Context): List<RepoSummary> =
-        withContext(Dispatchers.IO) {
-            try {
-                val json = fetchJsonRaced(authorReposCandidates()) { it.trimStart().startsWith("[") }
-                    ?: throw IllegalStateException("Empty response from repos API")
-                AuthorReposCache.write(context, json)
-                parseAuthorRepos(json)
-            } catch (e: Exception) {
-                AppLogger.e(TAG, "Fetch author repos failed", e)
-                throw e
-            }
-        }
-
-    /**
-     * Race candidates for the repo list: the raw data file through every proxy
-     * channel plus direct, then the REST API through the same — first response
-     * that parses as a JSON array wins.
-     */
-    private fun authorReposCandidates(): List<String> {
-        val channels = com.sherwood.wta.core.network.CnMirrorProbe.peekChannels()
-        return (channels.map { it.rewrite(AUTHOR_REPOS_RAW) } +
-            AUTHOR_REPOS_RAW +
-            channels.map { it.rewrite(AUTHOR_REPOS_API) } +
-            AUTHOR_REPOS_API).distinct()
-    }
-
-    internal fun parseAuthorRepos(json: String): List<RepoSummary> {
-        val arr = org.json.JSONArray(json)
-        val out = ArrayList<RepoSummary>(arr.length())
-        for (i in 0 until arr.length()) {
-            val repo = arr.optJSONObject(i) ?: continue
-            if (repo.optBoolean("fork", false)) continue
-            val name = repo.optString("name").trim()
-            if (name.isBlank() || name.equals(REPO, ignoreCase = true)) continue
-            // optString("description") returns the literal "null" when the field
-            // is JSON null — check the raw value instead.
-            val rawDesc = repo.opt("description")
-            val rawLang = repo.opt("language")
-            out.add(
-                RepoSummary(
-                    name = name,
-                    description = if (rawDesc == null || rawDesc == JSONObject.NULL) "" else rawDesc.toString().trim(),
-                    stars = repo.optLong("stargazers_count", 0L),
-                    forks = repo.optLong("forks_count", 0L),
-                    language = if (rawLang == null || rawLang == JSONObject.NULL) null else rawLang.toString(),
-                    pushedAt = repo.optString("pushed_at").trim(),
-                    url = repo.optString("html_url").trim()
-                )
-            )
-        }
-        return out
     }
 
     private fun pickBestApkAsset(release: JSONObject): JSONObject? {

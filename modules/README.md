@@ -69,7 +69,7 @@ hands them to the plugin store. The registry is cached for one hour.
 
 ## Submitting a plugin
 
-1. **Fork** [`shiaho777/web-to-app`](https://github.com/shiaho777/web-to-app).
+1. **Fork** [`Konprostart/Sherwood-WTA-webtoapp-builder`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder).
 2. Create a unique kebab-case folder under `modules/`, e.g.
    `modules/dark-reader-lite/`. The folder name is your `path` in
    `registry.json`.

@@ -74,7 +74,7 @@ object ApkUpdateInstaller {
     }
 
     /**
-     * Streams the update APK into `update_apks/web-to-app-<version>.apk` via OkHttp, emitting
+     * Streams the update APK into `update_apks/sherwood-wta-<version>.apk` via OkHttp, emitting
      * progress roughly once per second.
      *
      * [url] is the raw GitHub asset URL; the measured mirror pool expands it into candidates and
@@ -170,7 +170,7 @@ object ApkUpdateInstaller {
         onState: (UpdateDownloadState) -> Unit
     ): File {
         val dir = targetDir(context)
-        val fileName = "web-to-app-$version.apk"
+        val fileName = "sherwood-wta-$version.apk"
         val target = File(dir, fileName)
 
         // Per-route client: a tighter read timeout than the shared download

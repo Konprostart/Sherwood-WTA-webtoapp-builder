@@ -20,4 +20,4 @@
 ## 说明
 
 - 在重大更改前或更换设备时,使用 [数据备份](/zh/guide/more-features/data-backup)。
-- WebToApp 以 [The Unlicense](https://github.com/shiaho777/web-to-app/blob/main/LICENSE) 开源。
+- WebToApp 以 [The Unlicense](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/LICENSE) 开源。

@@ -20,4 +20,4 @@ These switches live only in the builder. Generated APKs do not read them.
 ## Notes
 
 - Use [Data Backup](/guide/more-features/data-backup) before major changes or when switching devices.
-- WebToApp is open source under [The Unlicense](https://github.com/shiaho777/web-to-app/blob/main/LICENSE).
+- WebToApp is open source under [The Unlicense](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/LICENSE).

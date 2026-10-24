@@ -2,15 +2,15 @@
 
 Thank you for contributing to WebToApp. The canonical contributor guide lives in the repository:
 
-👉 [`.github/CONTRIBUTING.md`](https://github.com/shiaho777/web-to-app/blob/main/.github/CONTRIBUTING.md)
+👉 [`.github/CONTRIBUTING.md`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/.github/CONTRIBUTING.md)
 
 ## Contribution lanes
 
 | Lane | What you do | Guide |
 | --- | --- | --- |
-| `modules/` | Publish a community module to the in-app market | [modules/README.md](https://github.com/shiaho777/web-to-app/blob/main/modules/README.md) |
-| Issues | Report a bug or request a feature | [GitHub Issues](https://github.com/shiaho777/web-to-app/issues) |
-| Code | Fix a bug or build a feature in the Android client | [CONTRIBUTING.md](https://github.com/shiaho777/web-to-app/blob/main/.github/CONTRIBUTING.md) |
+| `modules/` | Publish a community module to the in-app market | [modules/README.md](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/modules/README.md) |
+| Issues | Report a bug or request a feature | [GitHub Issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues) |
+| Code | Fix a bug or build a feature in the Android client | [CONTRIBUTING.md](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/.github/CONTRIBUTING.md) |
 | Docs | Improve this documentation site | Edit under `docs/` and open a PR |
 
 ## Ground rules

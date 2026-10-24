@@ -114,4 +114,4 @@ document.body.appendChild(banner)
 
 `.user.js` 可直接导入：`==UserScript==` 块会被转换成 `plugin.json`（`@match`/`@include` → `matches`，`@grant` → `permissions`，`@run-at` → `runAt`），`GM_*` 调用继续走油猴运行时。`.hcj` 文件就是 zip 压缩的插件包，用于分享。
 
-完整示例见内置插件包 [`app/src/main/assets/plugins/`](https://github.com/shiaho777/web-to-app/tree/main/app/src/main/assets/plugins) 和市场包 [`modules/`](https://github.com/shiaho777/web-to-app/tree/main/modules)。
+完整示例见内置插件包 [`app/src/main/assets/plugins/`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/tree/main/app/src/main/assets/plugins) 和市场包 [`modules/`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/tree/main/modules)。

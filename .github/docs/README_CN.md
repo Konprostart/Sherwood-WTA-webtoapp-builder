@@ -11,34 +11,29 @@
 [English](../../README.md) · **简体中文**
 
 <p align="center">
-  <a href="https://github.com/shiaho777/web-to-app/stargazers">
-    <img src="https://img.shields.io/github/stars/shiaho777/web-to-app?style=for-the-badge" alt="Stars">
+  <a href="https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/stargazers">
+    <img src="https://img.shields.io/github/stars/Konprostart/Sherwood-WTA-webtoapp-builder?style=for-the-badge" alt="Stars">
   </a>
-  <a href="https://github.com/shiaho777/web-to-app/network/members">
-    <img src="https://img.shields.io/github/forks/shiaho777/web-to-app?style=for-the-badge" alt="Forks">
+  <a href="https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/network/members">
+    <img src="https://img.shields.io/github/forks/Konprostart/Sherwood-WTA-webtoapp-builder?style=for-the-badge" alt="Forks">
   </a>
-  <a href="https://github.com/shiaho777/web-to-app/releases/latest">
-    <img src="https://img.shields.io/github/v/release/shiaho777/web-to-app" alt="最新版本">
+  <a href="https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/releases/latest">
+    <img src="https://img.shields.io/github/v/release/Konprostart/Sherwood-WTA-webtoapp-builder" alt="最新版本">
   </a>
   <a href="../../LICENSE">
     <img src="https://img.shields.io/badge/License-Unlicense-blue?style=for-the-badge" alt="License: Unlicense">
   </a>
-  <a href="https://github.com/shiaho777/web-to-app/releases">
+  <a href="https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/releases">
     <img src="https://img.shields.io/badge/Android-6.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 6.0+">
   </a>
-  <a href="https://github.com/shiaho777/web-to-app/actions/workflows/android-ci.yml">
-    <img src="https://github.com/shiaho777/web-to-app/actions/workflows/android-ci.yml/badge.svg" alt="Android CI">
+  <a href="https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/actions/workflows/android-ci.yml">
+    <img src="https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/actions/workflows/android-ci.yml/badge.svg" alt="Android CI">
   </a>
-  <a href="https://shiaho777.github.io/web-to-app/zh/">
+  <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/">
     <img src="https://img.shields.io/badge/docs-online-blue?style=for-the-badge" alt="文档站点">
   </a>
 </p>
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/22597?utm_source=trendshift-badge&utm_medium=badge&utm_campaign=badge-trendshift-22597" target="_blank" rel="noopener noreferrer">
-    <img src="https://trendshift.io/api/badge/trendshift/repositories/22597/weekly?language=Kotlin" alt="shiaho777%2Fweb-to-app | Trendshift" width="250" height="55">
-  </a>
-</p>
 
 </div>
 
@@ -139,13 +134,13 @@ Node.js、PHP、Python、Go、WordPress、图片和视频的代码仍在应用�
 
 从全新安装到第一个签名 APK,大约一分钟:
 
-1. **安装打包器** —— 从 [GitHub Releases](https://github.com/shiaho777/web-to-app/releases) 下载 APK,装到 Android 6.0(API 23)或更新的设备上。
+1. **安装打包器** —— 从 [GitHub Releases](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/releases) 下载 APK,装到 Android 6.0(API 23)或更新的设备上。
 2. **创建应用** —— 在「我的应用」点 **创建**。默认网格是网页、多站点、HTML、离线包、前端和画廊。PHP、WordPress、Node.js、Python、Go 和媒体要打开 **关于 → 高级功能** 后才出现。
 3. **填基本信息** —— 应用名、目标 URL(或项目文件)和可选图标,然后 **Save**。编辑器里其余卡片都是可选配置。
 4. **预览** —— 点应用卡片,运行在与导出产物相同的运行时代码里。
 5. **构建** —— 点 **⋮ → Build APK**,选引擎和选项,得到一个可直接安装/分享的签名 APK。要上 Google Play?改用 **⋮ → Google Play** —— 它会自动构建 APK、转换成 Play 可用的签名 AAB(自动改写 `targetSdk`),并在设备端生成 Play 元数据。
 
-带逐类型说明和底层原理的完整教程见[快速上手指南](https://shiaho777.github.io/web-to-app/zh/guide/getting-started)。
+带逐类型说明和底层原理的完整教程见[快速上手指南](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/guide/getting-started)。
 
 ---
 
@@ -236,7 +231,7 @@ WebToApp 的开关非常多。下面按使用场景分组,并用可折叠区段�
 - **SDK 级别** —— 可以把 minSdk 提高到 23 以上,并把 targetSdk 固定为 28、31、33、34、35 或 36。服务端运行时类型仍固定 28。Play AAB 导出仍会把 targetSdk 改写到 36。
 - **按生成 APK 的实际勾选注入权限** —— 第三方应用从 API 23 到 Android 17 可以声明的权限,一行一个。未使用的权限会从模板 manifest 中裁掉。
 - **前台服务类型** —— 生成的 APK 只在对应服务还在时才声明该类型。媒体会话关闭时不带媒体播放类型。`DATA_SYNC` 只留在宿主上。
-- **一键 AAB 导出** —— 按需自动构建 APK,转换成可直接上架的签名 AAB(自动把 `targetSdk` 改写到 Play 要求的级别,目前为 36,并在本地生成 protobuf 元数据);支持中途取消。除服务端运行时应用类型和开启资源加密的构建外全部可用 —— 见[哪些应用可以上架](https://shiaho777.github.io/web-to-app/zh/guide/more-features/google-play)。
+- **一键 AAB 导出** —— 按需自动构建 APK,转换成可直接上架的签名 AAB(自动把 `targetSdk` 改写到 Play 要求的级别,目前为 36,并在本地生成 protobuf 元数据);支持中途取消。除服务端运行时应用类型和开启资源加密的构建外全部可用 —— 见[哪些应用可以上架](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/guide/more-features/google-play)。
 - **密钥库管理** —— 创建、导入、导出、删除和证书指纹查看;支持 PKCS12/PFX/JKS/BKS 导入,包括 Android Studio upload key 那种 store 密码和 key 密码不同的情况。
 - **签名方案** —— V1、V2、V3 独立控制,可对旧证书兼容性自动回退;自定义 V1 签名文件名,对应 `META-INF/<name>.SF` / `.RSA`。
 - **性能选项** —— 图片压缩、WebP 转换、代码压缩、懒加载、DNS 预取、preload 提示。
@@ -319,15 +314,15 @@ App 会同时拉取 `registry.json` 和 `submissions.json`,只展示两边都存
 
 ## 文档站点
 
-官方文档站点发布在 **[shiaho777.github.io/web-to-app](https://shiaho777.github.io/web-to-app/)**,中英双语:
+官方文档站点发布在 **[konprostart.github.io/web-to-app](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/)**,中英双语:
 
 | 板块 | 地址 | 内容 |
 | --- | --- | --- |
-| 使用指南 | [/zh/guide/introduction](https://shiaho777.github.io/web-to-app/zh/guide/introduction) | 快速上手、主界面、应用类型、单应用操作与通用配置、FAQ |
-| 开发者文档 | [/zh/developer/](https://shiaho777.github.io/web-to-app/zh/developer/) | 架构、导出管线、shell 同步、配置漂移、i18n、常见改动配方 |
-| 扩展开发 | [/zh/extensions/](https://shiaho777.github.io/web-to-app/zh/extensions/) | JS/CSS 模块、油猴脚本、Chrome MV3、API 参考、发布流程 |
-| English | [/](https://shiaho777.github.io/web-to-app/) | 上述全部页面的英文原版 |
-| 隐私政策 | [/zh/privacy](https://shiaho777.github.io/web-to-app/zh/privacy) | 构建器本身的隐私政策。用它打包出去的应用需要自己的政策 |
+| 使用指南 | [/zh/guide/introduction](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/guide/introduction) | 快速上手、主界面、应用类型、单应用操作与通用配置、FAQ |
+| 开发者文档 | [/zh/developer/](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/developer/) | 架构、导出管线、shell 同步、配置漂移、i18n、常见改动配方 |
+| 扩展开发 | [/zh/extensions/](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/extensions/) | JS/CSS 模块、油猴脚本、Chrome MV3、API 参考、发布流程 |
+| English | [/](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/) | 上述全部页面的英文原版 |
+| 隐私政策 | [/zh/privacy](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/privacy) | 构建器本身的隐私政策。用它打包出去的应用需要自己的政策 |
 
 ## 架构说明
 
@@ -376,7 +371,7 @@ App 会同时拉取 `registry.json` 和 `submissions.json`,只展示两边都存
 要求:Android Studio Hedgehog 或更新版本,JDK 17。Gradle wrapper 已锁定 Gradle 9.4.1。
 
 ```bash
-git clone https://github.com/shiaho777/web-to-app.git
+git clone https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder.git
 cd web-to-app
 ./gradlew assembleDebug
 ```
@@ -395,28 +390,24 @@ cd web-to-app
 # 未签名的 F-Droid APK（不含 Firebase、Google 登录、AdMob）
 ```
 
-GitHub/Play 的签名 release 通过 `local.properties` 和 `app/build.gradle.kts` 配置。F-Droid 变体保持未签名。见 [F-Droid](https://shiaho777.github.io/web-to-app/zh/developer/fdroid)。
+GitHub/Play 的签名 release 通过 `local.properties` 和 `app/build.gradle.kts` 配置。F-Droid 变体保持未签名。见 [F-Droid](https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/developer/fdroid)。
 
 ## 参与贡献
 
 | 路径 | 内容 | 指南 |
 | --- | --- | --- |
 | `modules/` | 给应用内市场提交一个社区模块 | [modules/README.md](../../modules/README.md) |
-| Issues | 报告 Bug 或申请功能 | [GitHub Issues](https://github.com/shiaho777/web-to-app/issues) |
+| Issues | 报告 Bug 或申请功能 | [GitHub Issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues) |
 | 代码 | 修 Bug 或在 Android 客户端做新功能 | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | `AGENTS.md` | 面向 AI 编码助手与深度贡献者的权威指南(架构连线、shell 同步、导出流水线、配置漂移、打包约束) | [AGENTS.md](../../AGENTS.md) |
 
 ## 联系方式
 
-开发者:**shiaho**。
+开发者:**Sherwood WTA**。
 
 | 平台 | 链接 |
 | --- | --- |
-| GitHub | [github.com/shiaho777/web-to-app](https://github.com/shiaho777/web-to-app) |
-| Telegram | [t.me/webtoapp777](https://t.me/webtoapp777) |
-| X (Twitter) | [@shiaho777](https://x.com/shiaho777) |
-| Bilibili | [b23.tv/8mGDo2N](https://b23.tv/8mGDo2N) |
-| QQ 群 | 1041130206 |
+| GitHub | [github.com/Konprostart/Sherwood-WTA-webtoapp-builder](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder) |
 
 ## 许可证
 
