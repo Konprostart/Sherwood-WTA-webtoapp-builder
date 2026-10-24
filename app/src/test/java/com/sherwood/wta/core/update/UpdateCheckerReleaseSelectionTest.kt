@@ -4,7 +4,10 @@ import com.google.common.truth.Truth.assertThat
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class UpdateCheckerReleaseSelectionTest {
 
     private fun release(vararg assetNames: String): JSONObject {
