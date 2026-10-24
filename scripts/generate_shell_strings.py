@@ -338,10 +338,10 @@ def parse_members(path: Path):
 
 
 ALIAS_IMPORT_RE = re.compile(
-    r"import\s+com\.webtoapp\.core\.i18n\.Strings([A-E]?)\s+as\s+([A-Za-z_]\w*)"
+    r"import\s+com\.sherwood\.wta\.core\.i18n\.Strings([A-E]?)\s+as\s+([A-Za-z_]\w*)"
 )
 ALIAS_VAL_RE = re.compile(
-    r"\b(?:val|var)\s+([A-Za-z_]\w*)\s*=\s*(?:com\.webtoapp\.core\.i18n\.)?Strings([A-E]?)\b"
+    r"\b(?:val|var)\s+([A-Za-z_]\w*)\s*=\s*(?:com\.sherwood\.wta\.core\.i18n\.)?Strings([A-E]?)\b"
 )
 
 
