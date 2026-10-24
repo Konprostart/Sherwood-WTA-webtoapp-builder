@@ -1,0 +1,126 @@
+name: Release
+
+# Builds signed release artifacts when a version tag is pushed (for example v2.8.2)
+# and publishes them as a GitHub Release. Signing material comes from repository
+# secrets; see the "Release signing" section of README.md.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+    steps:
+      - name: Check signing secrets are configured
+        run: |
+          missing=0
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository secret $name is not set"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Download code
+        uses: actions/checkout@v6
+
+      - name: Check tag matches versionName
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          app_version="$(sed -n 's/^[[:space:]]*versionName = "\(.*\)"$/\1/p' app/build.gradle.kts | head -1)"
+          if [ "$version" != "$app_version" ]; then
+            echo "::error::Tag $tag does not match versionName \"$app_version\" in app/build.gradle.kts"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Prepare Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Prepare Android tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+
+      - name: Prepare Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Install needed tools
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "cmake;3.22.1" \
+            "ndk;28.2.13676358"
+
+      - name: Decode release keystore
+        run: |
+          keystore_path="${RUNNER_TEMP}/wta-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$keystore_path"
+          chmod 600 "$keystore_path"
+          echo "ANDROID_KEYSTORE_PATH=$keystore_path" >> "$GITHUB_ENV"
+
+      - name: Build release artifacts
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -Dkotlin.compiler.execution.strategy=in-process \
+            :app:assembleStandardRelease \
+            :app:bundleGplayRelease
+
+      - name: Verify APK signature
+        run: |
+          apk="app/build/outputs/apk/standard/release/app-standard-release.apk"
+          test -f "$apk" || { echo "::error::Release APK not found at $apk"; exit 1; }
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk"
+
+      - name: Rename artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp app/build/outputs/apk/standard/release/app-standard-release.apk \
+            "release-artifacts/Sherwood-WTA-${VERSION}.apk"
+          cp app/build/outputs/bundle/gplayRelease/app-gplay-release.aab \
+            "release-artifacts/Sherwood-WTA-${VERSION}-gplay.aab"
+
+      - name: Remove keystore from runner
+        if: always()
+        run: |
+          if [ -n "${ANDROID_KEYSTORE_PATH:-}" ]; then
+            rm -f "$ANDROID_KEYSTORE_PATH"
+          fi
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            release-artifacts/Sherwood-WTA-${VERSION}.apk \
+            release-artifacts/Sherwood-WTA-${VERSION}-gplay.aab \
+            --title "Sherwood WTA ${VERSION}" \
+            --generate-notes \
+            --verify-tag

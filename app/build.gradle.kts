@@ -29,13 +29,22 @@ val localProperties = Properties().apply {
     }
 }
 
-val releaseSigningStoreFile = localProperties.getProperty("signing.storeFile")
-    ?.takeIf { it.isNotBlank() }
+// Release signing values come from local.properties (local development) and fall back
+// to environment variables (CI, see .github/workflows/release.yml). A non-blank value in
+// local.properties always wins over the environment.
+fun releaseSigningValue(localKey: String, envKey: String): String? =
+    localProperties.getProperty(localKey)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(envKey)?.takeIf { it.isNotBlank() }
+
+val releaseSigningStoreFile = releaseSigningValue("signing.storeFile", "ANDROID_KEYSTORE_PATH")
     ?.let { rootProject.file(it) }
+val releaseSigningStorePassword = releaseSigningValue("signing.storePassword", "ANDROID_KEYSTORE_PASSWORD")
+val releaseSigningKeyAlias = releaseSigningValue("signing.keyAlias", "ANDROID_KEY_ALIAS")
+val releaseSigningKeyPassword = releaseSigningValue("signing.keyPassword", "ANDROID_KEY_PASSWORD")
 val hasReleaseSigningConfig = releaseSigningStoreFile?.isFile == true &&
-    !localProperties.getProperty("signing.storePassword").isNullOrBlank() &&
-    !localProperties.getProperty("signing.keyAlias").isNullOrBlank() &&
-    !localProperties.getProperty("signing.keyPassword").isNullOrBlank()
+    releaseSigningStorePassword != null &&
+    releaseSigningKeyAlias != null &&
+    releaseSigningKeyPassword != null
 
 // -Pfdroid=true builds the host and the embedded shell template without Firebase,
 // Play Services, or AdMob, and leaves the release APK unsigned for F-Droid to sign.
@@ -62,9 +71,9 @@ android {
         if (hasReleaseSigningConfig) {
             create("release") {
                 storeFile = releaseSigningStoreFile
-                storePassword = localProperties.getProperty("signing.storePassword")
-                keyAlias = localProperties.getProperty("signing.keyAlias")
-                keyPassword = localProperties.getProperty("signing.keyPassword")
+                storePassword = releaseSigningStorePassword
+                keyAlias = releaseSigningKeyAlias
+                keyPassword = releaseSigningKeyPassword
             }
         }
     }
@@ -132,6 +141,8 @@ android {
                 else -> throw GradleException(
                     "Release build has no valid signing config. Configure signing.storeFile / " +
                         "signing.storePassword / signing.keyAlias / signing.keyPassword in local.properties " +
+                        "(or ANDROID_KEYSTORE_PATH / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / " +
+                        "ANDROID_KEY_PASSWORD environment variables) " +
                         "before assembling a release APK for distribution. Refusing to silently sign with " +
                         "the debug key — a debug-signed release breaks upgrades for existing users " +
                         "('signatures do not match'). For a throwaway debug-signed build (e.g. CI smoke " +
