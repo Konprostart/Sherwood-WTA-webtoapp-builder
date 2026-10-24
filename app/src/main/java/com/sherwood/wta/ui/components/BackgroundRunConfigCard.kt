@@ -43,7 +43,7 @@ fun BackgroundRunConfigCard(
     EnhancedElevatedCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // ── 头部：图标 + 标题 + 状态副标题 + 开关 ──────────────────
+            // ── Header: icon + title + status subtitle + switch ──────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -108,7 +108,7 @@ fun BackgroundRunConfigCard(
                     verticalArrangement = Arrangement.spacedBy(WtaSpacing.ContentGap)
                 ) {
 
-                    // ── 保持唤醒 ─────────────────────────────────────
+                    // ── Keep awake ─────────────────────────────────────
                     WtaSettingRow(
                         title = Strings.backgroundRunKeepCpuAwake,
                         subtitle = Strings.backgroundRunKeepCpuAwakeDesc.ifDescriptionsShown(),
@@ -127,7 +127,7 @@ fun BackgroundRunConfigCard(
                         )
                     }
 
-                    // ── 电池优化豁免说明（生成 APK 首启自动请求一次）───
+                    // ── Battery optimization exemption note (requested automatically once on first launch of the generated APK)───
                     if (LocalShowDescriptions.current) Row(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.Top,
@@ -148,7 +148,7 @@ fun BackgroundRunConfigCard(
                         )
                     }
 
-                    // ── 常驻通知（前台服务必需，可自定义文案）───────────
+                    // ── Persistent notification (required for the foreground service; text is customizable)───────────
                     Text(
                         text = Strings.backgroundRunNotificationSection,
                         style = MaterialTheme.typography.labelMedium,

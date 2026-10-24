@@ -1,6 +1,6 @@
 # Agent
 
-A tool-calling assistant inside the app that can operate the entire WebToApp surface. Open it from [⋮ → Agent](/guide/main-screen/more).
+A tool-calling assistant inside the app that can operate the entire Sherwood WTA surface. Open it from [⋮ → Agent](/guide/main-screen/more).
 
 ## What it can do
 

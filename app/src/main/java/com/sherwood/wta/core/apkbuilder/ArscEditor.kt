@@ -15,11 +15,11 @@ class ArscEditor {
 
         val oldNameVariants = listOf(
             oldAppName,
-            "WebToApp - Convert Any Website to Android App",
-            "WebToApp" + "\u00A0".repeat(88),
-            "WebToApp" + "\u00AD".repeat(88),
-            "WebToApp" + "\u200B".repeat(57),
-            "WebToApp",
+            "Sherwood WTA - Convert Any Website to Android App",
+            "Sherwood WTA" + "\u00A0".repeat(88),
+            "Sherwood WTA" + "\u00AD".repeat(88),
+            "Sherwood WTA" + "\u200B".repeat(57),
+            "Sherwood WTA",
             "webtoapp"
         ).distinct()
 

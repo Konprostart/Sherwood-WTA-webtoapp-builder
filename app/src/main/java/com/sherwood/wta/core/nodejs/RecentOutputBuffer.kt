@@ -2,7 +2,7 @@ package com.sherwood.wta.core.nodejs
 
 /**
  * Bounded tail of Node stdout/stderr lines for failure reporting. When the server never
- * comes up the only surfaced message used to be "Node.js 服务器启动超时" while the real
+ * comes up the only surfaced message used to be a generic "Node.js server start timeout" while the real
  * error (missing module, EADDRINUSE, native addon dlopen failure, ...) already streamed
  * through [NodeBridge.OutputCallback] into ShellLogger — a file under Android/data that
  * most users cannot reach. Snapshotting the tail into the IPC failure message makes the

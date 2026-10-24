@@ -74,3 +74,6 @@ node_modules/
 __pycache__/
 *.pyc
 .kotlin/
+*.p12
+*.pfx
+keystore.properties

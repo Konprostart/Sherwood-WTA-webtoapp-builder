@@ -429,7 +429,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;d
 .game-link:hover,.game-link:active{opacity:0.8;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 
-/* 游戏容器 */
+/* Game container */
 .game-overlay{
     position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;
     display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -794,7 +794,7 @@ ${errorDetailsHtml(report, strings)}
         diagnostic: NetworkErrorDiagnostics.Diagnostic?
     ): String {
         val sb = StringBuilder()
-        sb.appendLine("===== WebToApp Page Error =====")
+        sb.appendLine("===== Sherwood WTA Page Error =====")
         sb.appendLine("url: ${failedUrl ?: "-"}")
         sb.appendLine("errorCode: $errorCode (${formatErrorCode(errorCode)})")
         sb.appendLine("description: $description")

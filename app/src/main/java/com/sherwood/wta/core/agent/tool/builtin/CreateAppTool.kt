@@ -22,7 +22,7 @@ import java.util.UUID
 class CreateAppTool : Tool {
     override val name = "CreateApp"
     override val description = """
-        Create a new app in WebToApp and add it to the app list.
+        Create a new app in Sherwood WTA and add it to the app list.
         - Config-only types (WEB, IMAGE, VIDEO, GALLERY, MULTI_WEB): pass `manifest` JSON with the
           config, e.g. {"url":"https://example.com"} for WEB, or galleryConfig / multiWebConfig /
           mediaConfig for the others. GALLERY/MULTI_WEB may instead pass `sourceDir` pointing to a

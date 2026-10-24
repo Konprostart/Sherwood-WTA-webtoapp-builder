@@ -1,4 +1,4 @@
-WebToApp は、サイトやローカルの Web プロジェクトを Android アプリにする、端末上の工房です。パソコンもリモートのビルドサーバーも不要です。
+Sherwood WTA は、サイトやローカルの Web プロジェクトを Android アプリにする、端末上の工房です。パソコンもリモートのビルドサーバーも不要です。
 
 URL を包む、HTML / フロントエンドを梱包する、ギャラリーやメディアプレイヤーにする、生成アプリ内で Node.js / PHP / Python / Go / WordPress を動かす、ができます。既定エンジンはシステム WebView で、GeckoView（Firefox）は後からダウンロードできます。
 

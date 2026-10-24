@@ -668,7 +668,7 @@ ${if (escapedReqs.isNotBlank()) """<div class="section"><div class="section-titl
         val bootstrapFile = File(projectDir, "_w2a_bootstrap.py")
         bootstrapFile.writeText("""#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# WebToApp Python Bootstrap - fixes Android runtime issues
+# Sherwood WTA Python Bootstrap - fixes Android runtime issues
 import os, sys
 
 # === 1. Patch importlib.metadata for --target installed packages ===
@@ -698,7 +698,7 @@ except Exception:
     pass
 
 # === 2. Fix port for Flask/Werkzeug ===
-# WebToApp allocates a dynamic port, but app.py may hardcode a different one.
+# Sherwood WTA allocates a dynamic port, but app.py may hardcode a different one.
 _w2a_port = int(sys.argv[2]) if len(sys.argv) > 2 else int(os.environ.get('PORT', '5000'))
 os.environ['PORT'] = str(_w2a_port)
 os.environ['FLASK_ENV'] = 'production'

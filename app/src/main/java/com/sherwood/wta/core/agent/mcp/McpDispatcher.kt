@@ -285,6 +285,6 @@ class McpDispatcher(
         private const val HEADER_MISMATCH = -32020
         private const val UNSUPPORTED_VERSION = -32022
         private const val INSTRUCTIONS =
-            "WebToApp on this phone. preview opens a saved app (appId) or an http(s) url in its own visible recents task, then reads or changes that page. Other tools match the in-app agent. A write asks the person on the phone before it runs."
+            "Sherwood WTA on this phone. preview opens a saved app (appId) or an http(s) url in its own visible recents task, then reads or changes that page. Other tools match the in-app agent. A write asks the person on the phone before it runs."
     }
 }

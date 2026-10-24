@@ -159,132 +159,132 @@ class NativeBridge(
         )
 
         fun getApiDocumentation(): String = """
-## NativeBridge API 文档
+## NativeBridge API documentation
 
-插件可以通过 `window.NativeBridge` 调用以下原生能力：
+Plugins can call the following native capabilities via `window.NativeBridge`:
 
-### 基础功能
+### Basic functions
 
 #### showToast(message, duration?)
-显示 Toast 提示
-- `message`: string - 提示内容
-- `duration`: string - 可选，"short"(默认) 或 "long"
+Show a Toast message
+- `message`: string - Message content
+- `duration`: string - Optional, "short" (default) or "long"
 ```javascript
-NativeBridge.showToast('操作成功');
-NativeBridge.showToast('请稍候...', 'long');
+NativeBridge.showToast('Operation succeeded');
+NativeBridge.showToast('Please wait...', 'long');
 ```
 
 #### vibrate(milliseconds?)
-触发震动反馈
-- `milliseconds`: number - 震动时长，默认 100ms
+Trigger haptic feedback
+- `milliseconds`: number - Vibration duration, default 100ms
 ```javascript
-NativeBridge.vibrate(); // 短震动
-NativeBridge.vibrate(500); // 震动 500ms
+NativeBridge.vibrate(); // Short vibration
+NativeBridge.vibrate(500); // Vibrate for 500ms
 ```
 
 #### vibratePattern(pattern, repeat?)
-触发模式震动
-- `pattern`: string - 震动模式，逗号分隔的毫秒数，如 "100,200,100"
-- `repeat`: number - 重复次数，-1 表示不重复
+Trigger pattern vibration
+- `pattern`: string - Vibration pattern, comma-separated milliseconds, e.g. "100,200,100"
+- `repeat`: number - Repeat count, -1 means no repeat
 ```javascript
-NativeBridge.vibratePattern('100,200,100,200'); // 震动-暂停-震动-暂停
+NativeBridge.vibratePattern('100,200,100,200'); // Vibrate-pause-vibrate-pause
 ```
 
-### 剪贴板
+### Clipboard
 
 #### copyToClipboard(text)
-复制文本到剪贴板
-- `text`: string - 要复制的文本
-- 返回: boolean - 是否成功
+Copy text to the clipboard
+- `text`: string - Text to copy
+- Returns: boolean - Whether it succeeded
 ```javascript
-const success = NativeBridge.copyToClipboard('要复制的内容');
-if (success) NativeBridge.showToast('已复制');
+const success = NativeBridge.copyToClipboard('Content to copy');
+if (success) NativeBridge.showToast('Copied');
 ```
 
 #### getClipboardText()
-获取剪贴板文本（需要用户授权）
-- 返回: string - 剪贴板内容，失败返回空字符串
+Get clipboard text (requires user authorization)
+- Returns: string - Clipboard content; empty string on failure
 ```javascript
 const text = NativeBridge.getClipboardText();
 ```
 
-### 分享
+### Sharing
 
 #### share(title, text, url?)
-调用系统分享
-- `title`: string - 分享标题
-- `text`: string - 分享内容
-- `url`: string - 可选，分享链接
+Invoke the system share sheet
+- `title`: string - Share title
+- `text`: string - Share content
+- `url`: string - Optional, share link
 ```javascript
-NativeBridge.share('分享标题', '分享内容', 'https://example.com');
+NativeBridge.share('Share title', 'Share content', 'https://example.com');
 ```
 
 #### shareImage(imageUrl, title?)
-分享图片
-- `imageUrl`: string - 图片 URL
-- `title`: string - 可选，分享标题
+Share an image
+- `imageUrl`: string - Image URL
+- `title`: string - Optional, share title
 ```javascript
-NativeBridge.shareImage('https://example.com/image.jpg', '分享图片');
+NativeBridge.shareImage('https://example.com/image.jpg', 'Share image');
 ```
 
-### 外部操作
+### External actions
 
 #### openUrl(url)
-用系统浏览器打开链接
-- `url`: string - 要打开的 URL
+Open a link in the system browser
+- `url`: string - URL to open
 ```javascript
 NativeBridge.openUrl('https://www.google.com');
 ```
 
 #### openApp(packageName)
-打开其他应用
-- `packageName`: string - 应用包名
-- 返回: boolean - 是否成功
+Open another app
+- `packageName`: string - App package name
+- Returns: boolean - Whether it succeeded
 ```javascript
-NativeBridge.openApp('com.tencent.mm'); // 打开微信
+NativeBridge.openApp('com.tencent.mm'); // Open WeChat
 ```
 
-### 媒体保存
+### Media saving
 
 #### saveImageToGallery(imageUrl, filename?)
-保存图片到相册
-- `imageUrl`: string - 图片 URL
-- `filename`: string - 可选，文件名
+Save an image to the gallery
+- `imageUrl`: string - Image URL
+- `filename`: string - Optional, file name
 ```javascript
 NativeBridge.saveImageToGallery('https://example.com/image.jpg', 'my_image.jpg');
 ```
 
 #### saveVideoToGallery(videoUrl, filename?)
-保存视频到相册
-- `videoUrl`: string - 视频 URL
-- `filename`: string - 可选，文件名
+Save a video to the gallery
+- `videoUrl`: string - Video URL
+- `filename`: string - Optional, file name
 ```javascript
 NativeBridge.saveVideoToGallery('https://example.com/video.mp4', 'my_video.mp4');
 ```
 
-### 下载功能
+### Downloads
 
 #### downloadVideo(url, filename)
-下载视频文件
-- `url`: string - 视频 URL
-- `filename`: string - 文件名
+Download a video file
+- `url`: string - Video URL
+- `filename`: string - File name
 ```javascript
 NativeBridge.downloadVideo('https://example.com/video.mp4', 'my_video.mp4');
 ```
 
 #### downloadAudio(url, filename)
-下载音频文件（保存到音乐目录）
-- `url`: string - 音频 URL
-- `filename`: string - 文件名（建议 .m4a / .mp3 / .aac 扩展名）
+Download an audio file (saved to the music directory)
+- `url`: string - Audio URL
+- `filename`: string - File name (recommended extension: .m4a / .mp3 / .aac)
 ```javascript
 NativeBridge.downloadAudio('https://example.com/audio.m4a', 'my_audio.m4a');
 ```
 
 #### downloadWithHeaders(url, filename, headersJson)
-带自定义 Headers 下载文件（用于需要 Referer 等的资源）
-- `url`: string - 文件 URL
-- `filename`: string - 文件名
-- `headersJson`: string - JSON 格式的 Headers
+Download a file with custom headers (for resources that require Referer, etc.)
+- `url`: string - File URL
+- `filename`: string - File name
+- `headersJson`: string - Headers in JSON format
 ```javascript
 NativeBridge.downloadWithHeaders(
     'https://example.com/video.mp4',
@@ -293,25 +293,25 @@ NativeBridge.downloadWithHeaders(
 );
 ```
 
-### 设备信息
+### Device info
 
 #### getDeviceInfo()
-获取设备信息
-- 返回: string - JSON 格式的设备信息
+Get device info
+- Returns: string - Device info in JSON format
 ```javascript
 const info = JSON.parse(NativeBridge.getDeviceInfo());
 console.log(info.model, info.sdkVersion, info.screenWidth);
 ```
 
 #### getAppInfo()
-获取应用信息
-- 返回: string - JSON 格式的应用信息
+Get app info
+- Returns: string - App info in JSON format
 ```javascript
 const info = JSON.parse(NativeBridge.getAppInfo());
 console.log(info.packageName, info.versionName);
 ```
 
-### 安全与开发者选项 / Security & Developer Options
+### Security & Developer Options
 
 #### isDeveloperOptionsEnabled()
 Check if Android Developer Options is enabled in device settings
@@ -348,183 +348,183 @@ const security = JSON.parse(NativeBridge.getSecurityInfo());
 console.log(security.developerOptionsEnabled, security.adbEnabled, security.isDebuggable);
 ```
 
-### 网络状态
+### Network status
 
 #### isNetworkAvailable()
-检查网络是否可用
-- 返回: boolean
+Check whether the network is available
+- Returns: boolean
 ```javascript
 if (NativeBridge.isNetworkAvailable()) {
-    // 有网络
+    // Network is available
 }
 ```
 
 #### getNetworkType()
-获取网络类型
-- 返回: string - "wifi", "mobile", "none", "unknown"
+Get network type
+- Returns: string - "wifi", "mobile", "none", "unknown"
 ```javascript
 const type = NativeBridge.getNetworkType();
 ```
 
-### 存储
+### Storage
 
 #### saveToFile(content, filename, mimeType?)
-保存内容到文件
-- `content`: string - 文件内容
-- `filename`: string - 文件名
-- `mimeType`: string - 可选，MIME 类型
+Save content to a file
+- `content`: string - File content
+- `filename`: string - File name
+- `mimeType`: string - Optional, MIME type
 ```javascript
-NativeBridge.saveToFile('文件内容', 'note.txt', 'text/plain');
+NativeBridge.saveToFile('File content', 'note.txt', 'text/plain');
 ```
 
-### 日志
+### Logging
 
 #### log(message)
-输出日志到 Android Logcat
-- `message`: string - 日志内容
+Output a log to Android Logcat
+- `message`: string - Log content
 ```javascript
-NativeBridge.log('调试信息');
+NativeBridge.log('Debug info');
 ```
 
-### 页内查找
+### In-page find
 
 #### findInPage(query)
-使用 Android WebView 原生查找能力搜索当前页面
-- `query`: string - 搜索关键词
-- 返回: string - JSON 状态，包含 `numberOfMatches`、`activeMatchOrdinal`、`doneCounting`
+Search the current page using Android WebView's native find capability
+- `query`: string - Search keyword
+- Returns: string - JSON status containing `numberOfMatches`, `activeMatchOrdinal`, `doneCounting`
 ```javascript
 const state = JSON.parse(NativeBridge.findInPage('keyword'));
 ```
 
 #### findNextInPage(forward)
-跳转到下一个/上一个匹配项
-- `forward`: boolean - true 下一个，false 上一个
+Jump to the next/previous match
+- `forward`: boolean - true for next, false for previous
 ```javascript
 NativeBridge.findNextInPage(true);
 NativeBridge.findNextInPage(false);
 ```
 
 #### clearFindInPage()
-清除当前查找高亮
+Clear current find highlights
 ```javascript
 NativeBridge.clearFindInPage();
 ```
 
-### 屏幕方向控制
+### Screen orientation control
 
 #### setOrientation(orientation)
-设置屏幕方向
-- `orientation`: string - "portrait"(竖屏), "landscape"(横屏), "auto"(跟随传感器)
+Set screen orientation
+- `orientation`: string - "portrait", "landscape", "auto" (follows sensor)
 ```javascript
-NativeBridge.setOrientation('landscape'); // 切换到横屏
-NativeBridge.setOrientation('portrait');  // 切换回竖屏
-NativeBridge.setOrientation('auto');      // 跟随传感器
+NativeBridge.setOrientation('landscape'); // Switch to landscape
+NativeBridge.setOrientation('portrait');  // Switch back to portrait
+NativeBridge.setOrientation('auto');      // Follow sensor
 ```
 
 #### getOrientation()
-获取当前屏幕方向
-- 返回: string - "portrait", "landscape", "unknown"
+Get current screen orientation
+- Returns: string - "portrait", "landscape", "unknown"
 ```javascript
 const orientation = NativeBridge.getOrientation();
 ```
 
 #### lockOrientation()
-锁定当前屏幕方向
+Lock current screen orientation
 ```javascript
 NativeBridge.lockOrientation();
 ```
 
 #### unlockOrientation()
-解锁屏幕方向
+Unlock screen orientation
 ```javascript
 NativeBridge.unlockOrientation();
 ```
 
-### 屏幕控制
+### Screen control
 
 #### setScreenBrightness(brightness)
-设置屏幕亮度
-- `brightness`: number - 亮度值 0.0-1.0，-1 表示跟随系统
+Set screen brightness
+- `brightness`: number - Brightness value 0.0-1.0; -1 means follow system
 ```javascript
-NativeBridge.setScreenBrightness(0.8); // Set为 80% 亮度
-NativeBridge.setScreenBrightness(-1);  // 跟随系统
+NativeBridge.setScreenBrightness(0.8); // Set to 80% brightness
+NativeBridge.setScreenBrightness(-1);  // Follow system
 ```
 
 #### setKeepScreenOn(keepOn)
-保持屏幕常亮
-- `keepOn`: boolean - true 保持常亮，false 恢复正常
+Keep the screen on
+- `keepOn`: boolean - true keeps it on, false restores normal
 ```javascript
-NativeBridge.setKeepScreenOn(true);  // 保持常亮
-NativeBridge.setKeepScreenOn(false); // 恢复正常
+NativeBridge.setKeepScreenOn(true);  // Keep screen on
+NativeBridge.setKeepScreenOn(false); // Restore normal
 ```
 
-### 全屏控制
+### Fullscreen control
 
 #### enterFullscreen()
-进入全屏模式（隐藏状态栏和导航栏）
+Enter fullscreen mode (hides status bar and navigation bar)
 ```javascript
 NativeBridge.enterFullscreen();
 ```
 
 #### exitFullscreen()
-退出全屏模式
+Exit fullscreen mode
 ```javascript
 NativeBridge.exitFullscreen();
 ```
 
 #### isFullscreen()
-检查是否处于全屏模式
-- 返回: boolean
+Check whether fullscreen mode is active
+- Returns: boolean
 ```javascript
 if (NativeBridge.isFullscreen()) {
-    // 当前是全屏模式
+    // Currently in fullscreen mode
 }
 ```
 
 #### googleSignIn(requestId)
-使用设备上已有的 Google 账户登录（需在 WebToApp 编辑器中启用"Google 原生登录"能力并配置 Web Client ID）
-- `requestId`: string - 页面自定义的请求标识
-- 结果异步回调: `window.NativeBridgeGoogleSignInResult(requestId, payload)`
-- payload: `{ ok: true, idToken, displayName, profilePictureUri, googleUserId }` 或 `{ ok: false, error, message }`
-- 错误码: `DISABLED`(能力未启用), `NO_CLIENT_ID`, `NO_ACTIVITY`(悬浮窗等上下文), `CALLER_NOT_ALLOWED`(非应用自身页面调用), `CANCELLED`(用户取消), `CREDENTIAL_ERROR`(设备无 Google 服务或配置不匹配), `UNAVAILABLE`
-- **idToken 必须由网站后端校验**（audience = 配置的 Web Client ID、签名、有效期）后才可建立会话
+Sign in with an existing Google account on the device (requires enabling the "Google native sign-in" capability in the Sherwood WTA editor and configuring a Web Client ID)
+- `requestId`: string - Page-defined request identifier
+- Async result callback: `window.NativeBridgeGoogleSignInResult(requestId, payload)`
+- payload: `{ ok: true, idToken, displayName, profilePictureUri, googleUserId }` or `{ ok: false, error, message }`
+- Error codes: `DISABLED` (capability not enabled), `NO_CLIENT_ID`, `NO_ACTIVITY` (floating window or similar context), `CALLER_NOT_ALLOWED` (called from a page not belonging to the app itself), `CANCELLED` (user cancelled), `CREDENTIAL_ERROR` (device has no Google services or configuration mismatch), `UNAVAILABLE`
+- **The idToken must be verified by the website backend** (audience = configured Web Client ID, signature, expiry) before a session may be established
 ```javascript
 window.NativeBridgeGoogleSignInResult = function(requestId, payload) {
     if (payload.ok) {
-        // 把 payload.idToken 发给自己的后端验证后建立会话
+        // Send payload.idToken to your own backend for verification, then establish a session
         fetch('/auth/google', { method: 'POST', body: JSON.stringify({ idToken: payload.idToken }) });
     } else {
-        // 回退到网页版 Google 登录
+        // Fall back to web Google sign-in
     }
 };
 NativeBridge.googleSignIn('sign-in-' + Date.now());
 ```
 
-### 本地文件夹
+### Local folder
 
-能力默认关闭。在编辑器的原生桥里打开「文件夹」后，系统 WebView 会注入 `window.WtaDirectory`。页面在用户点击里调用 `pick()`，系统弹出目录选择器；授权保存在本应用里，下次打开不用再选。导出的应用是另一个包名，需要再选一次。GeckoView 没有这组方法。
+Disabled by default. After enabling "Folder" in the editor's native bridge, the system WebView injects `window.WtaDirectory`. The page calls `pick()` from a user click, which opens the system directory picker. The grant is saved within this app, so it does not need to be selected again next time. Exported apps have a different package name and need to be picked again. GeckoView does not provide this set of methods.
 
 #### directoryInfo()
-返回 `{ ok, granted, name?, writable? }`。未授权时 `granted` 为 false。
+Returns `{ ok, granted, name?, writable? }`. When not granted, `granted` is false.
 
 #### pickDirectory(requestId)
-打开系统目录选择器。立即返回 `{ ok: true, pending: true }`，结果经 `window.NativeBridgeDirectoryResult(requestId, payload)` 送回。payload 与 `directoryInfo()` 相同，用户取消时为 `{ ok: false, error: "CANCELLED" }`。
-错误码：`DISABLED`、`CALLER_NOT_ALLOWED`、`NO_ACTIVITY`（悬浮窗）、`PERSIST_FAILED`。
+Opens the system directory picker. Returns `{ ok: true, pending: true }` immediately; the result is delivered via `window.NativeBridgeDirectoryResult(requestId, payload)`. The payload is the same as `directoryInfo()`; if the user cancels, it is `{ ok: false, error: "CANCELLED" }`.
+Error codes: `DISABLED`, `CALLER_NOT_ALLOWED`, `NO_ACTIVITY` (floating window), `PERSIST_FAILED`.
 
 #### listDirectory(relativePath)
-列出授权目录下的条目。`relativePath` 为空表示根。返回 `{ ok, entries: [{ name, directory, size }], truncated }`。
+Lists entries in the granted directory. An empty `relativePath` means the root. Returns `{ ok, entries: [{ name, directory, size }], truncated }`.
 
 #### readDirectoryFile(relativePath, offset, length)
-按块读取。`length` 最大 256 KiB。返回 `{ ok, size, offset, length, data, eof }`，`data` 是 base64。
+Reads in chunks. `length` is at most 256 KiB. Returns `{ ok, size, offset, length, data, eof }`, where `data` is base64.
 
 #### writeDirectoryFile(relativePath, base64, append)
-按块写入。`append` 为 false 时创建或覆盖。中间目录会自动创建。每块最大 256 KiB。
+Writes in chunks. When `append` is false, the file is created or overwritten. Intermediate directories are created automatically. Each chunk is at most 256 KiB.
 
 #### deleteDirectoryEntry(relativePath)
-删除文件或子目录。不能删除授权根目录本身。
+Deletes a file or subdirectory. The granted root directory itself cannot be deleted.
 
 #### releaseDirectory()
-丢掉授权。
+Revokes the grant.
 
 ```javascript
 const grant = await WtaDirectory.pick();
@@ -1382,7 +1382,7 @@ await WtaDirectory.write('exports/image.png', pngBytes);
         return try {
             context.applicationInfo.loadLabel(context.packageManager).toString()
         } catch (_: Exception) {
-            "WebToApp"
+            "Sherwood WTA"
         }
     }
 
@@ -1449,7 +1449,7 @@ await WtaDirectory.write('exports/image.png', pngBytes);
             return privateNetworkBridgeError(
                 "disabled",
                 "Native private network capability disabled. " +
-                    "Enable the private network (or CORS bypass) capability for the native bridge in the WebToApp editor and rebuild."
+                    "Enable the private network (or CORS bypass) capability for the native bridge in the Sherwood WTA editor and rebuild."
             )
         }
         return try {
@@ -1680,7 +1680,7 @@ await WtaDirectory.write('exports/image.png', pngBytes);
             return
         }
         if (capabilities.googleSignInClientId.isBlank()) {
-            dispatchGoogleSignInResult(requestId, googleSignInError("NO_CLIENT_ID", "No Google Web client ID configured in WebToApp"))
+            dispatchGoogleSignInResult(requestId, googleSignInError("NO_CLIENT_ID", "No Google Web client ID configured in Sherwood WTA"))
             return
         }
         val activity = context as? Activity

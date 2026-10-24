@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: WebToApp
+  name: Sherwood WTA
   text: Build Android APKs on your phone
   tagline: An on-device APK workshop that goes far beyond URL wrapping — fork+exec real server runtimes, ship a hardened network stack, and export Play-ready bundles. No PC required.
   image:
     src: /logo.png
-    alt: WebToApp
+    alt: Sherwood WTA
   actions:
     - theme: brand
       text: Get Started

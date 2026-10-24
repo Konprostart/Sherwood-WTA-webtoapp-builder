@@ -15,7 +15,7 @@ Repo: https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder.git
 
 Builds:
   - versionName: "2.8.1"
-    versionCode: 79
+    versionCode: 80
     commit: v2.8.1
     subdir: app
     gradle:
@@ -38,4 +38,4 @@ AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
 UpdateCheckData: app/build.gradle.kts|versionCode = (\d+)|.|versionName = "([^"]+)"
 CurrentVersion: "2.8.1"
-CurrentVersionCode: 79
+CurrentVersionCode: 80

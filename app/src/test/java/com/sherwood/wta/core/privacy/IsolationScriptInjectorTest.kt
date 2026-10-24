@@ -141,11 +141,11 @@ class IsolationScriptInjectorTest {
 
         assertThat(script).contains("Environment spoofing")
         assertThat(script).contains("__wta_tz__ = 'America/New_York'")
-        assertThat(script).contains("formatToParts")           // 动态偏移（含 DST）
+        assertThat(script).contains("formatToParts")           // Dynamic offset (includes DST)
         assertThat(script).contains("getTimezoneOffset")
-        assertThat(script).contains("Date.prototype.getHours") // 本地时间 getter
+        assertThat(script).contains("Date.prototype.getHours") // Local-time getter
         assertThat(script).contains("Date.prototype.toString")
-        assertThat(script).contains("window.Date = WtaDate")   // 构造参数按目标时区解释
+        assertThat(script).contains("window.Date = WtaDate")   // Constructor args interpreted in the target timezone
     }
 
     @Test

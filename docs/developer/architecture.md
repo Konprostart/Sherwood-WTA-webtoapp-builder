@@ -1,6 +1,6 @@
 # Architecture
 
-The single most important mental model in WebToApp: **preview and export are two different execution paths that share the same runtime code.** Most bugs of the form *"works in preview, broken after export"* come from breaking this contract.
+The single most important mental model in Sherwood WTA: **preview and export are two different execution paths that share the same runtime code.** Most bugs of the form *"works in preview, broken after export"* come from breaking this contract.
 
 ## The two paths
 

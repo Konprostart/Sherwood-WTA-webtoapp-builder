@@ -3,7 +3,7 @@
   "name": "Element Blocker",
   "version": "1.1.0",
   "description": "Pick page elements to hide — rules persist per site.",
-  "author": "WebToApp",
+  "author": "Sherwood WTA",
   "icon": "block",
   "matches": [
     "*"

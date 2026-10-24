@@ -11,7 +11,7 @@ if (!$docRoot || !is_dir($docRoot)) {
     exit(1);
 }
 
-// ==================== 启动服务器 ====================
+// ==================== Start server ====================
 $errno  = 0;
 $errstr = '';
 $server = @stream_socket_server(
@@ -28,7 +28,7 @@ fwrite(STDERR, "[RouterServer] Listening on 127.0.0.1:$port\n");
 fwrite(STDERR, "[RouterServer] Document root: $docRoot\n");
 fwrite(STDERR, "[RouterServer] Entry file: $entryFile\n");
 
-// 信号处理
+// Signal handling
 $running  = true;
 $hasPcntl = function_exists('pcntl_fork');
 fwrite(STDERR, "[RouterServer] pcntl_fork=" . ($hasPcntl ? 'yes' : 'NO') . "\n");
@@ -36,19 +36,19 @@ fwrite(STDERR, "[RouterServer] pcntl_fork=" . ($hasPcntl ? 'yes' : 'NO') . "\n")
 if (function_exists('pcntl_signal')) {
     pcntl_signal(SIGTERM, function () use (&$running) { $running = false; });
     pcntl_signal(SIGINT,  function () use (&$running) { $running = false; });
-    pcntl_signal(SIGCHLD, SIG_IGN); // 自动回收子进程
+    pcntl_signal(SIGCHLD, SIG_IGN); // Automatically reap child processes
 }
 
 // ==================== Header Function Polyfill ====================
-// pmmp PHP CLI SAPI 的 header()/headers_list() 不会真正跟踪 HTTP 头。
-// 通过 disable_functions 禁用内置版本后，在此提供自定义实现，
-// 将所有 header() 调用记录到全局数组，确保响应包含正确的 HTTP 头。
+// In the pmmp PHP CLI SAPI, header()/headers_list() do not really track HTTP headers.
+// After disabling the built-in versions via disable_functions, provide custom implementations here,
+// recording every header() call in a global array so responses include the correct HTTP headers.
 
 if (!function_exists('header')) {
     $GLOBALS['__router_custom_headers'] = [];
 
     function header(string $string, bool $replace = true, int $response_code = 0): void {
-        // HTTP 状态行: HTTP/1.1 302 Found
+        // HTTP status line: HTTP/1.1 302 Found
         if (stripos($string, 'HTTP/') === 0) {
             if (preg_match('/HTTP\/[\d.]+\s+(\d+)/', $string, $m)) {
                 http_response_code((int)$m[1]);
@@ -59,7 +59,7 @@ if (!function_exists('header')) {
         $colonPos = strpos($string, ':');
         if ($colonPos !== false && $replace) {
             $headerName = strtolower(trim(substr($string, 0, $colonPos)));
-            // Set-Cookie 不受 replace 影响（多个 Set-Cookie 可共存）
+            // Set-Cookie is not affected by replace (multiple Set-Cookie headers can coexist)
             if ($headerName !== 'set-cookie') {
                 $GLOBALS['__router_custom_headers'] = array_values(array_filter(
                     $GLOBALS['__router_custom_headers'],
@@ -73,7 +73,7 @@ if (!function_exists('header')) {
 
         $GLOBALS['__router_custom_headers'][] = $string;
 
-        // 处理 response_code 参数
+        // Handle the response_code parameter
         if ($response_code > 0) {
             http_response_code($response_code);
         } elseif ($colonPos !== false) {
@@ -174,8 +174,8 @@ if (!function_exists('header')) {
 }
 
 // ==================== Session Polyfill ====================
-// pmmp PHP 没有 session 扩展，提供基于文件的 session 实现
-// 对所有 PHP 项目自动生效（包括已有项目）
+// pmmp PHP has no session extension, so provide a file-based session implementation
+// Applies automatically to all PHP projects (including existing ones)
 
 $GLOBALS['__session_doc_root'] = $docRoot;
 
@@ -192,7 +192,7 @@ if (!function_exists('session_start')) {
         $sessionDir = $docRoot . '/.sessions';
         if (!is_dir($sessionDir)) @mkdir($sessionDir, 0777, true);
 
-        // 从 cookie 获取 session ID，或生成新的
+        // Get the session ID from the cookie, or generate a new one
         $name = $GLOBALS['__session_name'];
         $sid  = $_COOKIE[$name] ?? '';
         if (empty($sid) || !preg_match('/^[a-zA-Z0-9,-]{22,256}$/', $sid)) {
@@ -276,7 +276,7 @@ if (!function_exists('session_start')) {
     }
 }
 
-// ==================== 主循环 ====================
+// ==================== Main loop ====================
 while ($running) {
     if (function_exists('pcntl_signal_dispatch')) {
         pcntl_signal_dispatch();
@@ -298,7 +298,7 @@ while ($running) {
 
     fwrite(STDERR, "[RouterServer] {$request['method']} {$request['path']}\n");
 
-    // 内置健康检查端点 — 不执行任何 PHP 文件
+    // Built-in health check endpoint — does not execute any PHP file
     if ($request['path'] === '/__health') {
         sendRawResponse($client, 200, 'OK', ['Content-Type: text/plain'], 'OK');
         fclose($client);
@@ -308,7 +308,7 @@ while ($running) {
     $filePath = resolveFilePath($request['path'], $docRoot, $entryFile);
     $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-    // 静态文件 — 主进程直接响应
+    // Static files — served directly by the main process
     if ($ext !== 'php' && file_exists($filePath) && !is_dir($filePath)) {
         serveStaticFile($client, $filePath);
         fclose($client);
@@ -321,7 +321,7 @@ while ($running) {
         continue;
     }
 
-    // PHP 文件 — fork 子进程隔离执行
+    // PHP files — executed in a forked child process for isolation
     if ($hasPcntl) {
         $pid = pcntl_fork();
         if ($pid === -1) {
@@ -345,7 +345,7 @@ fclose($server);
 fwrite(STDERR, "[RouterServer] Stopped\n");
 exit(0);
 
-// ==================== HTTP 请求解析 ====================
+// ==================== HTTP request parsing ====================
 
 function readHttpRequest($client): ?array {
     stream_set_timeout($client, 10);
@@ -387,7 +387,7 @@ function readHttpRequest($client): ?array {
     return compact('method', 'uri', 'path', 'queryString', 'headers', 'body');
 }
 
-// ==================== 路径解析 ====================
+// ==================== Path resolution ====================
 
 function resolveFilePath(string $path, string $docRoot, string $entryFile): string {
     $path = '/' . ltrim(str_replace('\\', '/', $path), '/');
@@ -416,7 +416,7 @@ function resolveFilePath(string $path, string $docRoot, string $entryFile): stri
     return $docRoot . '/' . $entryFile;
 }
 
-// ==================== PHP 执行 ====================
+// ==================== PHP execution ====================
 
 function executePHP($client, string $filePath, array $request, string $docRoot, int $port): void {
     $method      = $request['method'];
@@ -426,20 +426,20 @@ function executePHP($client, string $filePath, array $request, string $docRoot, 
     $body        = $request['body'];
     $path        = $request['path'];
 
-    // 标记响应是否已发送，防止 shutdown function 重复发送
+    // Mark whether the response has been sent, to prevent the shutdown function from sending it again
     $GLOBALS['__router_response_sent'] = false;
 
-    // 将 body 写入临时文件并重定向 stdin (fd 0)
-    // 这样 php://input 可以正确读取请求体
+    // Write body to a temp file and redirect stdin (fd 0)
+    // This lets php://input read the request body correctly
     $tmpInput = null;
     if (strlen($body) > 0) {
         $tmpInput = tempnam(sys_get_temp_dir(), 'phpinput_');
         file_put_contents($tmpInput, $body);
         fclose(STDIN);
-        $GLOBALS['STDIN'] = fopen($tmpInput, 'r'); // 获得 fd 0
+        $GLOBALS['STDIN'] = fopen($tmpInput, 'r'); // Get fd 0
     }
 
-    // 构建 $_SERVER
+    // Build $_SERVER
     $_SERVER = [
         'REQUEST_METHOD'    => $method,
         'REQUEST_URI'       => $uri,
@@ -480,7 +480,7 @@ function executePHP($client, string $filePath, array $request, string $docRoot, 
         } elseif (stripos($ct, 'multipart/form-data') !== false) {
             parseMultipart($ct, $body, $_POST, $_FILES);
         } elseif (stripos($ct, 'application/json') !== false) {
-            // JSON body → $_POST fallback（当 php://input 在 CLI SAPI 下不可用时）
+            // JSON body → $_POST fallback (when php://input is unavailable under the CLI SAPI)
             $decoded = json_decode($body, true);
             if (is_array($decoded)) $_POST = $decoded;
         }
@@ -499,10 +499,10 @@ function executePHP($client, string $filePath, array $request, string $docRoot, 
 
     $_REQUEST = array_merge($_GET, $_POST, $_COOKIE);
 
-    // 注册 shutdown function — 安全网：当脚本调用 exit() 或发生致命错误时发送响应
+    // Register shutdown function — safety net: send the response if the script calls exit() or hits a fatal error
     $responseClient = $client;
     register_shutdown_function(function () use ($responseClient, $tmpInput, $uri) {
-        // 如果响应已发送（正常路径），仅清理
+        // If the response was already sent (normal path), only clean up
         if (!empty($GLOBALS['__router_response_sent'])) {
             if ($tmpInput && file_exists($tmpInput)) @unlink($tmpInput);
             return;
@@ -546,8 +546,8 @@ function executePHP($client, string $filePath, array $request, string $docRoot, 
     http_response_code(200);
     if (function_exists('header_remove')) header_remove();
 
-    // 设置全局变量，让 PHP 脚本可以通过 $GLOBALS['__HTTP_RAW_BODY'] 获取原始请求体
-    // 这是 php://input 在 CLI SAPI + fork 模式下的可靠替代方案
+    // Set a global so PHP scripts can read the raw request body via $GLOBALS['__HTTP_RAW_BODY']
+    // This is a reliable replacement for php://input under CLI SAPI + fork mode
     $GLOBALS['__HTTP_RAW_BODY'] = $body;
 
     chdir($docRoot);
@@ -566,12 +566,12 @@ function executePHP($client, string $filePath, array $request, string $docRoot, 
     // Thrown-exception path: response goes through the normal-path sender below,
     // which also stamps X-Wta-Router-Error on 5xx (see the shutdown handler).
 
-    // 自动保存 session 数据（模拟 PHP 原生 session 行为）
+    // Automatically save session data (mimics native PHP session behavior)
     if (function_exists('session_write_close') && ($GLOBALS['__session_started'] ?? false)) {
         session_write_close();
     }
 
-    // 正常路径：显式发送响应（在 fclose 之前！）
+    // Normal path: explicitly send the response (before fclose!)
     if (!$GLOBALS['__router_response_sent']) {
         $GLOBALS['__router_response_sent'] = true;
         $output = '';
@@ -591,7 +591,7 @@ function executePHP($client, string $filePath, array $request, string $docRoot, 
     }
 }
 
-// ==================== Multipart 解析 ====================
+// ==================== Multipart parsing ====================
 
 function parseMultipart(string $contentType, string $body, array &$post, array &$files): void {
     if (!preg_match('/boundary=(.+?)(?:;|$)/i', $contentType, $m)) return;
@@ -624,7 +624,7 @@ function parseMultipart(string $contentType, string $body, array &$post, array &
     }
 }
 
-// ==================== 响应发送 ====================
+// ==================== Response sending ====================
 
 function sendRawResponse($client, int $code, string $status, array $headers, string $body): void {
     $resp = "HTTP/1.1 $code $status\r\n";
@@ -652,7 +652,7 @@ function describeHeaders(array $headers): string {
     return empty($parts) ? 'headers=[]' : 'headers=[' . implode('; ', $parts) . ']';
 }
 
-// ==================== 静态文件服务 ====================
+// ==================== Static file serving ====================
 
 function serveStaticFile($client, string $filePath): void {
     $mime = getMimeType($filePath);

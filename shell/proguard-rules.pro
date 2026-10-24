@@ -1,28 +1,28 @@
-# WebToApp ProGuard Rules
+# Sherwood WTA ProGuard Rules
 #
-# 策略：启用代码收缩（移除未使用代码）+ 资源压缩（移除未使用资源）
-# + 混淆重命名（dex 约 8% 收益），仍关闭激进优化。
+# Strategy: enable code shrinking (remove unused code) + resource shrinking (remove unused resources),
+# + obfuscation renaming (~8% dex savings), while aggressive optimization stays off.
 #
-# 混淆安全性说明：
-#   - com.sherwood.wta.** 仅允许混淆、不允许收缩；字段名单独固定，
-#     Gson/JSON 反射按名取字段不受影响（@SerializedName 成员规则兜底）。
-#   - JNI 回调类（NodeJniOutputBridge 等）与 manifest 组件继续显式 keep。
-#   - 崩溃栈仍能拿到行号（LineNumberTable 保留），类名需 mapping.txt 还原。
+# Obfuscation safety notes:
+#   - com.sherwood.wta.** may be obfuscated but not shrunk; field names are pinned separately,
+#     Gson/JSON reflection that looks up fields by name is unaffected (@SerializedName member rules as fallback).
+#   - JNI callback classes (NodeJniOutputBridge, etc.) and manifest components stay explicitly kept.
+#   - Crash stacks still get line numbers (LineNumberTable kept); class names need mapping.txt to resolve.
 #
-# 出问题时排查方法：
+# Troubleshooting:
 #   1. ./gradlew :shell:assembleRelease -PandroidProguardPrintUsage=true
-#      会在 build/outputs/mapping/release/usage.txt 写出被 R8 删除的所有内容
+#      writes everything R8 removed to build/outputs/mapping/release/usage.txt
 #   2. ./gradlew :shell:assembleRelease -PandroidProguardPrintSeeds=true
-#      会写出被显式 keep 的所有内容
-#   3. 把崩溃栈对照 build/outputs/mapping/release/mapping.txt 反推
+#      writes everything that is explicitly kept
+#   3. Map the crash stack back using build/outputs/mapping/release/mapping.txt
 
-# 关掉一组容易破坏反射 / Compose / 协程语义的优化模式
-# 这些是 R8 历史上反复出现 bug 的优化通道，关掉它们体积代价可忽略
+# Disable a group of optimization passes that tend to break reflection / Compose / coroutine semantics
+# These are R8 optimization passes with a history of recurring bugs; disabling them has negligible size cost
 -optimizations !class/merging/*,!field/*,!method/marking/static,!method/inlining/*,!code/allocation/variable
 -optimizationpasses 1
 
 # ============================================================
-# 调试 / 崩溃堆栈可读
+# Debugging / readable crash stacks
 # ============================================================
 -keepattributes SourceFile,LineNumberTable
 -keepattributes Signature
@@ -36,11 +36,11 @@
 -keepattributes AnnotationDefault
 -keepattributes MethodParameters
 
-# 让崩溃栈打印 R8 重命名前的类名 / 行号
+# Make crash stacks print pre-R8-rename class names / line numbers
 -renamesourcefileattribute SourceFile
 
 # ============================================================
-# Android 组件 — Manifest 引用，必须保名
+# Android components — referenced from the manifest; names must be kept
 # ============================================================
 -keep public class * extends android.app.Activity
 -keep public class * extends android.app.Service
@@ -54,7 +54,7 @@
 -keep public class * extends androidx.lifecycle.AndroidViewModel
 
 # ============================================================
-# 通用反射 — Parcelable / Serializable / enum / native
+# General reflection — Parcelable / Serializable / enum / native
 # ============================================================
 -keepclassmembers enum * {
     public static **[] values();
@@ -74,7 +74,7 @@
     java.lang.Object readResolve();
 }
 
-# JNI native 方法
+# JNI native methods
 -keepclasseswithmembernames class * {
     native <methods>;
 }
@@ -84,7 +84,7 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 
-# View 的 XML inflate / setOnClick 反射回调
+# View XML inflate / setOnClick reflective callbacks
 -keepclassmembers class * extends android.view.View {
     void set*(***);
     *** get*();
@@ -105,7 +105,7 @@
 -dontwarn kotlin.**
 -dontwarn kotlinx.**
 
-# Kotlin Coroutines — ServiceLoader 加载 Dispatchers.Main
+# Kotlin Coroutines — ServiceLoader loads Dispatchers.Main
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory
 -keepnames class kotlinx.coroutines.android.AndroidDispatcherFactory
 -keep class kotlinx.coroutines.android.AndroidDispatcherFactory { *; }
@@ -115,7 +115,7 @@
 -keepclassmembers class kotlinx.coroutines.** {
     volatile <fields>;
 }
-# Coroutines 调试 / 异常 hooks
+# Coroutines debugging / exception hooks
 -keepnames class kotlinx.coroutines.flow.** { *; }
 
 # NOTE: do NOT keepnames kotlin.**/kotlinx.** here — feature stacks bundle
@@ -123,24 +123,24 @@
 # would shadow the stack's complete one on the shared PathClassLoader.
 
 # ============================================================
-# 项目自身代码 — 防收缩，但允许混淆重命名
-# （开源 + 重反射：类全量保留；字段名固定以保护未注解的 Gson 字段）
+# Project code — no shrinking, but obfuscation renaming allowed
+# (open source + heavy reflection: classes fully kept; field names pinned to protect un-annotated Gson fields)
 # ============================================================
 -keep,allowobfuscation class com.sherwood.wta.** { *; }
 -keepclassmembers class com.sherwood.wta.** { <fields>; }
 
-# Feature-stack 契约（issue #1115）：名字必须原样保留——注入的 stack DEX
-# 按源码名 implements/调用这些接口，改名后接口解析会落到 stack 自带的
-# 副本上，AdManager 的 `as?` 转型静默为 null，广告永远不显示。
+# Feature-stack contract (issue #1115): names must be preserved verbatim — the injected stack DEX
+# implements/calls these interfaces by source name; after renaming, interface resolution falls through to the stack's own
+# copy, AdManager's `as?` cast silently yields null, and ads never show.
 -keep class com.sherwood.wta.core.ads.api.** { *; }
 
-# data class 的合成构造器（含默认参数）— Gson 反序列化必须
+# Synthetic constructors of data classes (with default params) — required for Gson deserialization
 -keepclassmembers class com.sherwood.wta.data.model.** {
     <init>(...);
 }
 
 # ============================================================
-# Room — KSP 生成的 _Impl 类已经在 com.sherwood.wta.** 范围内
+# Room — KSP-generated _Impl classes are already covered by com.sherwood.wta.**
 # ============================================================
 -keep class * extends androidx.room.RoomDatabase { *; }
 -keep @androidx.room.Entity class *
@@ -151,7 +151,7 @@
 -dontwarn androidx.room.paging.**
 
 # ============================================================
-# Gson — 序列化 / 反序列化通过反射
+# Gson — serialization / deserialization via reflection
 # ============================================================
 -keep class sun.misc.Unsafe { *; }
 -keep class com.google.gson.** { *; }
@@ -166,14 +166,14 @@
     @com.google.gson.annotations.Expose <fields>;
 }
 
-# Gson TypeToken — R8 full mode 会把 `object : TypeToken<List<...>>() {}`
-# 匿名子类的 Signature 属性剥掉，运行时抛 IllegalStateException。
-# 参考: https://github.com/google/gson/blob/main/Troubleshooting.md#r8
+# Gson TypeToken — R8 full mode strips the Signature attribute of `object : TypeToken<List<...>>() {}`
+# of the anonymous subclass, causing IllegalStateException at runtime.
+# Reference: https://github.com/google/gson/blob/main/Troubleshooting.md#r8
 -keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
 -keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
 
 # ============================================================
-# OkHttp / Okio — Platform 反射检测 OS 安全栈
+# OkHttp / Okio — Platform reflection detects the OS security stack
 # ============================================================
 -keep class okhttp3.internal.platform.** { *; }
 -keep class okhttp3.internal.publicsuffix.** { *; }
@@ -184,7 +184,7 @@
 -dontwarn org.openjsse.**
 
 # ============================================================
-# Coil — ServiceLoader 加载 fetcher / decoder / mapper
+# Coil — ServiceLoader loads fetcher / decoder / mapper
 # ============================================================
 -keep class coil.util.** { *; }
 -keep class coil.fetch.** { *; }
@@ -193,7 +193,7 @@
 -dontwarn coil.**
 
 # ============================================================
-# GeckoView — 大量 JNI / 注解反射
+# GeckoView — heavy JNI / annotation reflection
 # ============================================================
 -keep class org.mozilla.geckoview.** { *; }
 -keep class org.mozilla.gecko.** { *; }
@@ -204,12 +204,12 @@
 -dontwarn org.checkerframework.**
 
 # ============================================================
-# ZXing — shell 未依赖，仅兜底
+# ZXing — not a shell dependency; fallback rules only
 # ============================================================
 -dontwarn com.google.zxing.**
 
 # ============================================================
-# Credentials API + GoogleId — 反射解析 ID Token
+# Credentials API + GoogleId — reflective ID Token parsing
 # ============================================================
 -keep class androidx.credentials.** { *; }
 -keep class com.google.android.libraries.identity.** { *; }
@@ -224,7 +224,7 @@
 -dontwarn androidx.datastore.**
 
 # ============================================================
-# Compress / xz — ServiceLoader 加载格式
+# Compress / xz — ServiceLoader loads formats
 # ============================================================
 -keep class org.apache.commons.compress.compressors.FileNameUtil { *; }
 -keep class org.apache.commons.compress.archivers.** { *; }
@@ -241,12 +241,12 @@
 -dontwarn org.yaml.snakeyaml.**
 
 # ============================================================
-# Compose Runtime — 已有 consumer rules，仅压制 warn
+# Compose Runtime — consumer rules already exist; only suppress warnings
 # ============================================================
 -dontwarn androidx.compose.**
 
 # ============================================================
-# Material / AppCompat — 已有 consumer rules，仅兜底
+# Material / AppCompat — consumer rules already exist; fallback only
 # ============================================================
 -dontwarn com.google.android.material.**
 

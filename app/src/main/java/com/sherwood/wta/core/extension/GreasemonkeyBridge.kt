@@ -151,7 +151,7 @@ class GreasemonkeyBridge(
         if (_bridge.menuCommand) _bridge.menuCommand(_sid, name, true);
     }
 
-    // ===== Script Window API (WebToApp extension) =====
+    // ===== Script Window API (Sherwood WTA extension) =====
     function GM_openScriptWindow(html, options) {
         if (!window.__WTA_SCRIPT_WINDOWS__) return null;
         options = options || {};

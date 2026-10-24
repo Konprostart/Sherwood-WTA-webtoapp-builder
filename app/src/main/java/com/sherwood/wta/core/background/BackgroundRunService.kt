@@ -111,8 +111,8 @@ class BackgroundRunService : Service() {
         }
 
         /**
-         * 生成 APK 首次启动后台服务时请求一次电池优化豁免。
-         * 已白名单/已询问过则跳过——避免每次冷启动都弹系统框骚扰用户。
+         * Request a one-time battery-optimization exemption the first time the background service starts after APK generation.
+         * Skip if already whitelisted or already asked, to avoid showing the system dialog on every cold start.
          */
         fun maybeRequestBatteryExemption(context: Context) {
             try {

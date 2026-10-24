@@ -1903,16 +1903,16 @@ object StringsE {
     }
 
     val pythonRuntimeNotFound: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "Python 运行时未找到。请使用最新版 WebToApp 重新构建此应用，并确保已下载 Python 运行时依赖。"
-        AppLanguage.ENGLISH -> "Python runtime not found. Please rebuild this app with the latest WebToApp and ensure Python runtime dependency is downloaded."
-        AppLanguage.ARABIC -> "لم يتم العثور على وقت تشغيل Python. يرجى إعادة بناء هذا التطبيق باستخدام أحدث إصدار من WebToApp والتأكد من تنزيل تبعيات وقت تشغيل Python."
-        AppLanguage.PORTUGUESE -> "Runtime Python não encontrado. Reconstrua este app com o WebToApp mais recente e certifique-se de que a dependência do runtime Python foi baixada."
-        AppLanguage.SPANISH -> "Runtime de Python no encontrado. Reconstruye esta app con el WebToApp más reciente y asegúrate de que la dependencia del runtime de Python esté descargada."
-        AppLanguage.FRENCH -> "Runtime Python introuvable. Veuillez reconstruire cette application avec le dernier WebToApp et vous assurer que la dépendance du runtime Python est téléchargée."
-        AppLanguage.GERMAN -> "Python-Runtime nicht gefunden. Bitte erstellen Sie diese App mit dem neuesten WebToApp neu und stellen Sie sicher, dass die Python-Runtime-Abhängigkeit heruntergeladen ist."
-        AppLanguage.RUSSIAN -> "Runtime Python не найден. Пересоберите это приложение с последней версией WebToApp и убедитесь, что зависимость runtime Python загружена."
-        AppLanguage.JAPANESE -> "Pythonランタイムが見つかりません。最新のWebToAppでこのアプリを再ビルドし、Pythonランタイムの依存関係がダウンロードされていることを確認してください。"
-        AppLanguage.KOREAN -> "Python 런타임을 찾을 수 없습니다. 최신 WebToApp으로 이 앱을 다시 빌드하고 Python 런타임 종속성이 다운로드되었는지 확인하세요."
+        AppLanguage.CHINESE -> "Python 运行时未找到。请使用最新版 Sherwood WTA 重新构建此应用，并确保已下载 Python 运行时依赖。"
+        AppLanguage.ENGLISH -> "Python runtime not found. Please rebuild this app with the latest Sherwood WTA and ensure Python runtime dependency is downloaded."
+        AppLanguage.ARABIC -> "لم يتم العثور على وقت تشغيل Python. يرجى إعادة بناء هذا التطبيق باستخدام أحدث إصدار من Sherwood WTA والتأكد من تنزيل تبعيات وقت تشغيل Python."
+        AppLanguage.PORTUGUESE -> "Runtime Python não encontrado. Reconstrua este app com o Sherwood WTA mais recente e certifique-se de que a dependência do runtime Python foi baixada."
+        AppLanguage.SPANISH -> "Runtime de Python no encontrado. Reconstruye esta app con el Sherwood WTA más reciente y asegúrate de que la dependencia del runtime de Python esté descargada."
+        AppLanguage.FRENCH -> "Runtime Python introuvable. Veuillez reconstruire cette application avec le dernier Sherwood WTA et vous assurer que la dépendance du runtime Python est téléchargée."
+        AppLanguage.GERMAN -> "Python-Runtime nicht gefunden. Bitte erstellen Sie diese App mit dem neuesten Sherwood WTA neu und stellen Sie sicher, dass die Python-Runtime-Abhängigkeit heruntergeladen ist."
+        AppLanguage.RUSSIAN -> "Runtime Python не найден. Пересоберите это приложение с последней версией Sherwood WTA и убедитесь, что зависимость runtime Python загружена."
+        AppLanguage.JAPANESE -> "Pythonランタイムが見つかりません。最新のSherwood WTAでこのアプリを再ビルドし、Pythonランタイムの依存関係がダウンロードされていることを確認してください。"
+        AppLanguage.KOREAN -> "Python 런타임을 찾을 수 없습니다. 최신 Sherwood WTA으로 이 앱을 다시 빌드하고 Python 런타임 종속성이 다운로드되었는지 확인하세요."
     }
 
     val pythonServerStartFailed: String get() = when (Strings.lang) {
@@ -3598,16 +3598,16 @@ object StringsE {
         AppLanguage.KOREAN -> "갤러리 폴더"
     }
     val mediaAlbumNameHint: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "系统下载进相册时用的子目录名。留空则是 WebToApp。自定义文件夹里的图片、视频和音频会单独登记进相册。"
+        AppLanguage.CHINESE -> "系统下载进相册时用的子目录名。留空则是 Sherwood WTA。自定义文件夹里的图片、视频和音频会单独登记进相册。"
         AppLanguage.ENGLISH -> "Subfolder used when a system download is saved to the gallery. Blank stays WebToApp. Pictures, video, and audio saved to a custom folder are registered with the gallery too."
-        AppLanguage.ARABIC -> "المجلد الفرعي المستخدم عند حفظ تنزيل النظام في المعرض. الفراغ يبقى WebToApp. الصور والفيديو والصوت في مجلد مخصص تُسجَّل أيضًا في المعرض."
-        AppLanguage.PORTUGUESE -> "Subpasta usada quando um download do sistema vai para a galeria. Em branco continua WebToApp. Imagens, vídeo e áudio numa pasta personalizada também entram na galeria."
-        AppLanguage.SPANISH -> "Subcarpeta usada cuando una descarga del sistema va a la galería. En blanco sigue siendo WebToApp. Las imágenes, el vídeo y el audio de una carpeta personalizada también se registran en la galería."
-        AppLanguage.FRENCH -> "Sous-dossier utilisé quand un téléchargement système va dans la galerie. Vide reste WebToApp. Les images, vidéos et sons d'un dossier personnalisé sont aussi inscrits dans la galerie."
-        AppLanguage.GERMAN -> "Unterordner, wenn ein Systemdownload in der Galerie landet. Leer bleibt WebToApp. Bilder, Videos und Audio in einem eigenen Ordner werden ebenfalls in der Galerie eingetragen."
-        AppLanguage.RUSSIAN -> "Подпапка, когда системная загрузка попадает в галерею. Пустое значение — WebToApp. Картинки, видео и аудио из своей папки тоже регистрируются в галерее."
-        AppLanguage.JAPANESE -> "システムのダウンロードをギャラリーに入れるときのサブフォルダです。空欄は WebToApp です。カスタムフォルダの画像、動画、音声もギャラリーに登録します。"
-        AppLanguage.KOREAN -> "시스템 다운로드를 갤러리에 넣을 때 쓰는 하위 폴더입니다. 비우면 WebToApp 입니다. 사용자 폴더의 사진, 동영상, 오디오도 갤러리에 등록합니다."
+        AppLanguage.ARABIC -> "المجلد الفرعي المستخدم عند حفظ تنزيل النظام في المعرض. الفراغ يبقى Sherwood WTA. الصور والفيديو والصوت في مجلد مخصص تُسجَّل أيضًا في المعرض."
+        AppLanguage.PORTUGUESE -> "Subpasta usada quando um download do sistema vai para a galeria. Em branco continua Sherwood WTA. Imagens, vídeo e áudio numa pasta personalizada também entram na galeria."
+        AppLanguage.SPANISH -> "Subcarpeta usada cuando una descarga del sistema va a la galería. En blanco sigue siendo Sherwood WTA. Las imágenes, el vídeo y el audio de una carpeta personalizada también se registran en la galería."
+        AppLanguage.FRENCH -> "Sous-dossier utilisé quand un téléchargement système va dans la galerie. Vide reste Sherwood WTA. Les images, vidéos et sons d'un dossier personnalisé sont aussi inscrits dans la galerie."
+        AppLanguage.GERMAN -> "Unterordner, wenn ein Systemdownload in der Galerie landet. Leer bleibt Sherwood WTA. Bilder, Videos und Audio in einem eigenen Ordner werden ebenfalls in der Galerie eingetragen."
+        AppLanguage.RUSSIAN -> "Подпапка, когда системная загрузка попадает в галерею. Пустое значение — Sherwood WTA. Картинки, видео и аудио из своей папки тоже регистрируются в галерее."
+        AppLanguage.JAPANESE -> "システムのダウンロードをギャラリーに入れるときのサブフォルダです。空欄は Sherwood WTA です。カスタムフォルダの画像、動画、音声もギャラリーに登録します。"
+        AppLanguage.KOREAN -> "시스템 다운로드를 갤러리에 넣을 때 쓰는 하위 폴더입니다. 비우면 Sherwood WTA 입니다. 사용자 폴더의 사진, 동영상, 오디오도 갤러리에 등록합니다."
     }
     val pwaStrategyNetworkFirst: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "网络优先（推荐）— 优先使用最新内容，离线时用缓存"
@@ -4240,19 +4240,19 @@ object StringsE {
     }
 
     val shortcutPermissionXiaomi: String
-        get() = "Detected Xiaomi/Redmi phone. You need to enable 'Desktop Shortcut' permission to create app shortcuts.\n\nGo to: Settings > App Settings > App Management > WebToApp > Permission Management > Desktop Shortcut"
+        get() = "Detected Xiaomi/Redmi phone. You need to enable 'Desktop Shortcut' permission to create app shortcuts.\n\nGo to: Settings > App Settings > App Management > Sherwood WTA > Permission Management > Desktop Shortcut"
 
     val shortcutPermissionHuawei: String
-        get() = "Detected Huawei/Honor phone. You need to enable 'Create Desktop Shortcut' permission.\n\nGo to: Settings > Apps > App Management > WebToApp > Permissions > Create Desktop Shortcut"
+        get() = "Detected Huawei/Honor phone. You need to enable 'Create Desktop Shortcut' permission.\n\nGo to: Settings > Apps > App Management > Sherwood WTA > Permissions > Create Desktop Shortcut"
 
     val shortcutPermissionOppo: String
-        get() = "Detected OPPO phone. You need to enable 'Desktop Shortcut' permission.\n\nGo to: Settings > App Management > WebToApp > Permissions > Desktop Shortcut"
+        get() = "Detected OPPO phone. You need to enable 'Desktop Shortcut' permission.\n\nGo to: Settings > App Management > Sherwood WTA > Permissions > Desktop Shortcut"
 
     val shortcutPermissionVivo: String
-        get() = "Detected vivo phone. You need to enable 'Desktop Shortcut' permission.\n\nGo to: i Manager > App Management > Permission Management > WebToApp > Desktop Shortcut"
+        get() = "Detected vivo phone. You need to enable 'Desktop Shortcut' permission.\n\nGo to: i Manager > App Management > Permission Management > Sherwood WTA > Desktop Shortcut"
 
     val shortcutPermissionMeizu: String
-        get() = "Detected Meizu phone. You need to enable 'Desktop Shortcut' permission.\n\nGo to: Phone Manager > Permission Management > WebToApp > Desktop Shortcut"
+        get() = "Detected Meizu phone. You need to enable 'Desktop Shortcut' permission.\n\nGo to: Phone Manager > Permission Management > Sherwood WTA > Desktop Shortcut"
 
     val shortcutPermissionSamsung: String
         get() = "Detected Samsung phone. Please ensure the home screen is unlocked for editing.\n\nYou can also long-press the app icon and select 'Add to Home Screen' to create a shortcut."

@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WebToApp"
+rootProject.name = "SherwoodWTA"
 include(":app")
 include(":shell")
 include(":clone-host")

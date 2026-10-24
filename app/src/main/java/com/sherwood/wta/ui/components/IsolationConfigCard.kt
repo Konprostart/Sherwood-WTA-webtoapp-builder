@@ -41,7 +41,7 @@ fun IsolationConfigCard(
 ) {
     var showAdvanced by remember { mutableStateOf(false) }
 
-    // 指纹预览：与生成 APK 运行时使用同一种子 → 所见即所得
+    // Fingerprint preview: uses the same seed as the generated APK at runtime → WYSIWYG
     val fingerprint = remember(config.fingerprintConfig.fingerprintId) {
         FingerprintGenerator.generateFingerprint(config.fingerprintConfig.fingerprintId)
     }
@@ -133,7 +133,7 @@ fun IsolationConfigCard(
                     verticalArrangement = Arrangement.spacedBy(WtaSpacing.ContentGap)
                 ) {
 
-                    // ── 防护强度：一键预设 ─────────────────────────────
+                    // ── Protection strength: one-tap presets ─────────────────────────────
                     Text(
                         text = Strings.isolationLevel,
                         style = MaterialTheme.typography.labelMedium,
@@ -173,7 +173,7 @@ fun IsolationConfigCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // ── 当前指纹 ─────────────────────────────────────
+                    // ── Current fingerprint ─────────────────────────────────────
                     Surface(
                         color = if (com.sherwood.wta.ui.theme.LocalIsDarkTheme.current)
                             Color.White.copy(alpha = 0.06f)
@@ -236,7 +236,7 @@ fun IsolationConfigCard(
                         }
                     }
 
-                    // ── 环境伪装：三个维度各一个紧凑选择器 ─────────────
+                    // ── Environment spoofing: one compact selector per dimension ─────────────
                     Text(
                         text = Strings.environmentSpoofing,
                         style = MaterialTheme.typography.labelMedium,
@@ -248,7 +248,7 @@ fun IsolationConfigCard(
                     TimezonePicker(config, onConfigChange, fingerprint)
                     ScreenPicker(config, onConfigChange, fingerprint)
 
-                    // ── 高级：逐项防护开关（折叠） ────────────────────
+                    // ── Advanced: per-item protection toggles (collapsed) ────────────────────
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -333,7 +333,7 @@ fun IsolationConfigCard(
     }
 }
 
-// ──────────────────────────── 伪装维度选择器 ────────────────────────────
+// ──────────────────────────── Spoofing dimension selectors ────────────────────────────
 
 @Composable
 private fun SpoofChoiceRow(
@@ -386,7 +386,7 @@ private fun LanguagePicker(
     val presetLabel = IsolationPresets.locales.firstOrNull { it.tag == config.customLanguage }?.label
     val customActive = config.spoofLanguage && config.customLanguage != null && presetLabel == null
     var customMode by remember { mutableStateOf(customActive) }
-    // 伪装被外部关闭（等级切换/选“关闭”）时退出自定义输入态
+    // Exit custom input state when spoofing is turned off externally (level change / selecting "Off")
     LaunchedEffect(config.spoofLanguage) {
         if (!config.spoofLanguage) customMode = false
     }
@@ -714,7 +714,7 @@ private fun ScreenPicker(
     }
 }
 
-// ──────────────────────────── 指纹展示辅助 ────────────────────────────
+// ──────────────────────────── Fingerprint display helpers ────────────────────────────
 
 private fun primaryLangOf(fp: GeneratedFingerprint): String =
     fp.language.split(",").first().split(";").first().trim()

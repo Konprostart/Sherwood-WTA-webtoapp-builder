@@ -32,7 +32,7 @@
     function toast(m) { hcj.toast(m); hcj.panel.send({ type: 'toast', msg: String(m) }); }
 
 
-    // 多语言支持
+    // Multi-language support
     const LANG = (hcj.lang || 'zh').toLowerCase().startsWith('ar') ? 'ar' :
                  (hcj.lang || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     const I18N = {

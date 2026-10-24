@@ -52,7 +52,7 @@ class AabSigner(private val context: Context) {
 
                     val manifest = StringBuilder()
                     manifest.append("Manifest-Version: $MANIFEST_VERSION\r\n")
-                    manifest.append("Created-By: WebToApp AAB Signer\r\n")
+                    manifest.append("Created-By: Sherwood WTA AAB Signer\r\n")
                     manifest.append("\r\n")
 
                     val perEntryManifestSections = LinkedHashMap<String, String>()
@@ -77,7 +77,7 @@ class AabSigner(private val context: Context) {
 
                     val signatureFile = StringBuilder()
                     signatureFile.append("Signature-Version: $SIGNATURE_VERSION\r\n")
-                    signatureFile.append("Created-By: WebToApp AAB Signer\r\n")
+                    signatureFile.append("Created-By: Sherwood WTA AAB Signer\r\n")
 
                     signatureFile.append(
                         "SHA-256-Digest-Manifest: ${sha256Base64(manifestBytes)}\r\n"

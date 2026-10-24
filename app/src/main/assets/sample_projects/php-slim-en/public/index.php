@@ -11,7 +11,7 @@ $basePath = dirname(__DIR__);
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// ==================== 数据库 ====================
+// ==================== Database ====================
 $storagePath = $basePath . '/storage';
 if (!is_dir($storagePath)) @mkdir($storagePath, 0755, true);
 
@@ -39,7 +39,7 @@ try {
     }
 } catch (Exception $e) { $pdo = null; }
 
-// ==================== API 路由 ====================
+// ==================== API routes ====================
 function jsonResponse(int $code, $data): void {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
@@ -53,7 +53,7 @@ function getInput(): array {
     return json_decode($raw, true) ?: $_POST;
 }
 
-// API 路由
+// API routes
 if (str_starts_with($uri, '/api/')) {
     header('Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE,OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
@@ -125,7 +125,7 @@ if (str_starts_with($uri, '/api/')) {
     jsonResponse(404, ['error' => 'Endpoint not found: ' . $method . ' ' . $uri]);
 }
 
-// ==================== 仪表盘页面 ====================
+// ==================== Dashboard page ====================
 $taskCount = $pdo ? $pdo->query('SELECT COUNT(*) FROM tasks')->fetchColumn() : 0;
 $doneCount = $pdo ? $pdo->query('SELECT COUNT(*) FROM tasks WHERE done=1')->fetchColumn() : 0;
 ?>

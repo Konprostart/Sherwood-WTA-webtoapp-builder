@@ -1,7 +1,7 @@
 <?php
 /**
- * WooCommerce 商店示例配置
- * SQLite 数据库模式（离线运行）
+ * WooCommerce store sample configuration
+ * SQLite database mode (runs offline)
  */
 define('DB_ENGINE', 'sqlite');
 define('DB_DIR', __DIR__ . '/wp-content/database/');

@@ -99,10 +99,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 独立"构建 APK"配置页。
+ * Standalone "Build APK" configuration page.
  *
- * 从应用列表点击"构建 APK"后进入本页，可在全屏页面中调整加密 / 隔离 / 后台运行 /
- * 通知 / 浏览器引擎等构建选项，执行预检、构建，并查看构建摘要与 APK 分析。
+ * Opened by tapping "Build APK" in the app list; this full-screen page lets you adjust encryption / isolation / background run /
+ * notification / browser engine and other build options, run preflight checks and builds, and view the build summary and APK analysis.
  */
 @Composable
 fun BuildApkScreen(
@@ -115,7 +115,7 @@ fun BuildApkScreen(
 
     val app = webApp
     if (app == null) {
-        // 数据尚未加载或应用不存在
+        // Data not loaded yet or app does not exist
         WtaScreen(
             title = Strings.buildDialogTitle,
             onBack = onBack
@@ -142,8 +142,8 @@ private fun BuildApkContent(
     val scope = rememberCoroutineScope()
     val repository = remember { WebToAppApplication.repository }
 
-    // 双阶段渲染：先显示轻量骨架，等导航过渡动画结束（220ms）后再初始化重活，
-    // 避免 ApkBuilder 构造（mkdirs）、包名查询、引擎检查、预检等与过渡动画抢主线程导致掉帧。
+    // Two-phase rendering: show a lightweight skeleton first, and initialize the heavy work only after the navigation transition ends (220ms),
+    // to avoid ApkBuilder construction (mkdirs), package lookup, engine checks, preflight, etc. competing with the transition animation for the main thread and causing dropped frames.
     var uiReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(220L)

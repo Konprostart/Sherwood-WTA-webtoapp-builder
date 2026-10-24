@@ -60,7 +60,7 @@ fun NotificationConfigCard(
     EnhancedElevatedCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // ── 头部 ────────────────────────────────────────────────
+            // ── Header ────────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -125,7 +125,7 @@ fun NotificationConfigCard(
                     verticalArrangement = Arrangement.spacedBy(WtaSpacing.ContentGap)
                 ) {
 
-                    // ── 推送通道 ─────────────────────────────────────
+                    // ── Push channel ─────────────────────────────────────
                     Text(
                         text = Strings.notificationTypeLabel,
                         style = MaterialTheme.typography.labelMedium,
@@ -196,7 +196,7 @@ fun NotificationConfigCard(
     }
 }
 
-// ──────────────────────────── 轮询 ────────────────────────────
+// ──────────────────────────── Polling ────────────────────────────
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -227,7 +227,7 @@ private fun PollingSection(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // 间隔：常用档一键选，其他值走自定义输入
+        // Interval: pick common presets with one tap; other values use custom input
         Text(
             text = Strings.notificationPollInterval,
             style = MaterialTheme.typography.labelMedium,
@@ -278,7 +278,7 @@ private fun PollingSection(
             )
         }
 
-        // 请求方式
+        // Request method
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(WtaSpacing.Small)
@@ -513,9 +513,9 @@ private fun FcmSection(
     }
 }
 
-// ──────────────────────────── 共享小部件 ────────────────────────────
+// ──────────────────────────── Shared widgets ────────────────────────────
 
-/** 一行小字提示：图标 + 说明，替代过去的整幅 Banner。 */
+/** One-line hint: icon + text, replacing the former full-width banner. */
 @Composable
 private fun HintLine(text: String) {
     if (!LocalShowDescriptions.current) return
@@ -539,7 +539,7 @@ private fun HintLine(text: String) {
     }
 }
 
-/** 统一的"高级选项"折叠区。 */
+/** Unified collapsible "Advanced options" section. */
 @Composable
 private fun AdvancedFold(
     expanded: Boolean,

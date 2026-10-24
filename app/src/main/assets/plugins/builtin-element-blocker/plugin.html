@@ -40,7 +40,7 @@
     function pushPanel() { hcj.panel.send({ type: 'panel', html: getPanelHtml() }); }
 
 
-    // 多语言支持
+    // Multi-language support
     const LANG = (hcj.lang || 'zh').toLowerCase().startsWith('ar') ? 'ar' :
                  (hcj.lang || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     const I18N = {
@@ -120,7 +120,7 @@
     let pickerChip = null;
     let applyAttempts = 0;
 
-    // Create高亮覆盖层
+    // Create highlight overlay
     function createOverlay() {
         if (highlightOverlay) return;
         highlightOverlay = document.createElement('div');
@@ -129,7 +129,7 @@
         document.body.appendChild(highlightOverlay);
     }
 
-    // Generate元素的唯一选择器
+    // Generate a unique selector for the element
     function getSelector(el) {
         if (!el || el === document.body || el === document.documentElement) return null;
         if (el.id) return '#' + CSS.escape(el.id);
@@ -156,7 +156,7 @@
         return path.join(' > ');
     }
 
-    // App屏蔽规则
+    // Apply block rules
     function applyBlockedRules() {
         const parent = document.head || document.documentElement;
         if (!parent) {
@@ -179,13 +179,13 @@
         }
     }
 
-    // Save屏蔽规则 (per-origin localStorage — rules are site-scoped by nature)
+    // Save block rules (per-origin localStorage — rules are site-scoped by nature)
     function saveRules() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(blockedSelectors)); } catch (e) {}
         applyBlockedRules();
     }
 
-    // 屏蔽元素
+    // Block element
     function blockElement(selector) {
         if (!selector || blockedSelectors.includes(selector)) return;
         blockedSelectors.push(selector);
@@ -193,9 +193,9 @@
         toast(T.blocked);
     }
 
-    // Copy屏蔽规则到剪贴板 (issue #765)：拼成“域名##选择器”的去广告
-    // 自定义规则格式，粘贴即用。navigator.clipboard 在非安全上下文不可用
-    // （如 http 页面），此时回退到 textarea + execCommand。
+    // Copy block rules to the clipboard (issue #765): builds an ad-block rule of the form "domain##selector"
+    // in the custom-rule format, ready to paste. navigator.clipboard is unavailable in insecure contexts
+    // (e.g. http pages); fall back to a textarea + execCommand in that case.
     function copySelector(index) {
         const selector = blockedSelectors[index];
         if (!selector) return;
@@ -203,7 +203,7 @@
         try {
             const host = window.location.hostname;
             if (host) rule = host + '##' + selector;
-        } catch (e) { /* file/blob 页面无 hostname，用裸选择器 */ }
+        } catch (e) { /* file/blob pages have no hostname; use the bare selector */ }
         function done(ok) {
             toast(ok ? T.ruleCopied : selector);
         }
@@ -233,7 +233,7 @@
         }
     }
 
-    // Cancel屏蔽
+    // Cancel block
     function unblockElement(index) {
         blockedSelectors.splice(index, 1);
         saveRules();
@@ -395,7 +395,7 @@
         if (selector) { blockElement(selector); exitSelectMode(); }
     }
 
-    // 进入选择模式
+    // Enter selection mode
     function enterSelectMode() {
         if (selectMode) return;
         selectMode = true;
@@ -416,7 +416,7 @@
         document.addEventListener('keydown', escHandler);
     }
 
-    // 退出选择模式
+    // Exit selection mode
     function exitSelectMode() {
         if (!selectMode) return;
         selectMode = false;
@@ -432,7 +432,7 @@
         pushPanel();
     }
 
-    // 清除所有屏蔽
+    // Clear all blocks
     function clearAll() {
         blockedSelectors = [];
         saveRules();

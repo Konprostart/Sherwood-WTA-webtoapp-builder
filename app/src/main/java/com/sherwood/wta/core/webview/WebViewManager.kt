@@ -6710,7 +6710,7 @@ class WebViewManager(
                         // bridge; kept actionable in case interface removal races injection.
                         return Promise.reject(new TypeError(
                             'Native private network bridge is unavailable. ' +
-                            'Enable "Private network bridge" (or CORS bypass) for this app in the WebToApp editor and rebuild.'
+                            'Enable "Private network bridge" (or CORS bypass) for this app in the Sherwood WTA editor and rebuild.'
                         ));
                     }
                     return bodyToBase64(payload.body).then(function(bodyBase64) {

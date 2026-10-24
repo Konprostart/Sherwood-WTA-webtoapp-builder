@@ -290,7 +290,7 @@ object UpdateChecker {
                 connectTimeout = CONNECT_TIMEOUT_MS
                 readTimeout = READ_TIMEOUT_MS
                 setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("User-Agent", "WebToApp-UpdateChecker")
+                setRequestProperty("User-Agent", "Sherwood-WTA-UpdateChecker")
             }
             val code = connection.responseCode
             if (code !in 200..299) {

@@ -98,7 +98,7 @@ class IsolationManager(private val context: Context) {
 
     fun getFingerprint(): GeneratedFingerprint? = currentFingerprint
 
-    /** 独立环境指纹的 UA —— WebViewManager 用它覆盖真实请求的 User-Agent。 */
+    /** UA of the isolated-environment fingerprint; WebViewManager uses it to override the User-Agent of real requests. */
     fun getUserAgent(): String? {
         val config = currentConfig ?: return null
         if (!config.enabled) return null

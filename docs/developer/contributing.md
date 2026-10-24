@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for contributing to WebToApp. The canonical contributor guide lives in the repository:
+Thank you for contributing to Sherwood WTA. The canonical contributor guide lives in the repository:
 
 👉 [`.github/CONTRIBUTING.md`](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/.github/CONTRIBUTING.md)
 

@@ -236,7 +236,7 @@ class TranslateBridge(
         val url = URL("$MYMEMORY_API?q=$encoded&langpair=$langPair")
         val conn = TranslateProxyRoute.open(url)
         conn.requestMethod = "GET"
-        conn.setRequestProperty("User-Agent", "WebToApp/1.0")
+        conn.setRequestProperty("User-Agent", "Sherwood-WTA/1.0")
         conn.connectTimeout = CONNECT_TIMEOUT_MS
         conn.readTimeout = READ_TIMEOUT_MS
 
@@ -265,7 +265,7 @@ class TranslateBridge(
         val conn = TranslateProxyRoute.open(url)
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "application/json")
-        conn.setRequestProperty("User-Agent", "WebToApp/1.0")
+        conn.setRequestProperty("User-Agent", "Sherwood-WTA/1.0")
         conn.connectTimeout = CONNECT_TIMEOUT_MS
         conn.readTimeout = READ_TIMEOUT_MS
         conn.doOutput = true
@@ -304,7 +304,7 @@ class TranslateBridge(
         val url = URL("$LINGVA_API/auto/$lang/$encoded")
         val conn = TranslateProxyRoute.open(url)
         conn.requestMethod = "GET"
-        conn.setRequestProperty("User-Agent", "WebToApp/1.0")
+        conn.setRequestProperty("User-Agent", "Sherwood-WTA/1.0")
         conn.connectTimeout = CONNECT_TIMEOUT_MS
         conn.readTimeout = READ_TIMEOUT_MS
 

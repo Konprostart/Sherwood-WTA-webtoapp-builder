@@ -5,7 +5,7 @@ package com.sherwood.wta.core.webview
  *
  * Some video hosts reject the first navigation (hotlink / missing Referer / a cookie
  * that the 403 itself just set) and accept the immediate retry. Showing the error page
- * on that first 403 forces the user to tap 重试. A second 403 for the same URL falls
+ * on that first 403 forces the user to tap Retry. A second 403 for the same URL falls
  * through to the normal error page so a real denial is still visible.
  *
  * The set is not cleared when the error document finishes: that document's history URL

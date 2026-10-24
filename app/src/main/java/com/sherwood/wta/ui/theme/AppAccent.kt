@@ -270,7 +270,7 @@ object AppAccentPalettes {
         inversePrimary = Color(0xFFBE1F3C)
     )
 
-    // Faithful port of the v1.8.0 FROST (冰晶之境) theme: bright cyan primary
+    // Faithful port of the v1.8.0 FROST (ice crystal) theme: bright cyan primary
     // with dark-navy content, lavender containers as in the original screens.
     private val FrostCyanLight = AccentScheme(
         primary = Color(0xFF4FC3F7), onPrimary = Color(0xFF00344A),

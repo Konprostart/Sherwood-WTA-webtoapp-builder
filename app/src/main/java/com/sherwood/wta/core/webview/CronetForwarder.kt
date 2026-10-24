@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Upstream HTTP engine for forced HTTP/3 (issue #721).
  *
- * The TLS-MITM bridge hands every request here once the 强制 HTTP/3 toggle is on:
+ * The TLS-MITM bridge hands every request here once the Force HTTP/3 toggle is on:
  * requests are re-issued through Chromium's own network stack (Cronet) with a QUIC
  * hint for the target host, so the very first request races QUIC against TCP instead
  * of waiting for an Alt-Svc advertisement. Sites without HTTP/3 fall back to Cronet's

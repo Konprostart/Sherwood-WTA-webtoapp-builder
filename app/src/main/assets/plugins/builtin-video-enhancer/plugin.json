@@ -3,7 +3,7 @@
   "name": "Video Enhancer",
   "version": "1.0.0",
   "description": "Playback speed, PiP, loop, seek — plus YouTube cleanup.",
-  "author": "WebToApp",
+  "author": "Sherwood WTA",
   "icon": "movie",
   "matches": [
     "*"

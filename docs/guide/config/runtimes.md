@@ -1,6 +1,6 @@
 # Local Server Runtimes
 
-WebToApp runs real server runtimes on-device and packages them into an installable APK. Depending on the runtime that means fork+exec of native binaries from app storage (like Termux), a JNI-embedded engine (Node.js), or a direct build-and-load driver (Go on locked-down hosts). The WebView in the generated app points at a local port served by the runtime.
+Sherwood WTA runs real server runtimes on-device and packages them into an installable APK. Depending on the runtime that means fork+exec of native binaries from app storage (like Termux), a JNI-embedded engine (Node.js), or a direct build-and-load driver (Go on locked-down hosts). The WebView in the generated app points at a local port served by the runtime.
 
 ## Supported runtimes
 

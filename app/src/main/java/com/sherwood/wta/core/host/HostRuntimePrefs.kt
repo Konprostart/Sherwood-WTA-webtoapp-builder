@@ -33,7 +33,7 @@ data class McpSettings(
 /**
  * Host-only runtime switches. Not shell-synced: generated APKs never read this.
  *
- * [KEY_SEPARATE_TASKS] is the About-screen "WebApp 独立任务" toggle. When on,
+ * [KEY_SEPARATE_TASKS] is the About-screen "separate task" toggle (label "WebApp 独立任务"). When on,
  * home preview and desktop shortcuts open each WebApp as its own recents task.
  *
  * [KEY_MCP_ENABLED] is the About-screen local MCP switch. The token and port

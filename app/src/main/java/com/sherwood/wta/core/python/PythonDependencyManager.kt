@@ -750,17 +750,17 @@ if _MUSL and _LIB:
 import sys
 import os
 
-# ★ sys.executable 必须保持真实的 python ELF 路径，不能改写成 shell wrapper：
-# 1) 运行时 PT_INTERP 已被修补为设备上的绝对 musl loader 路径，pip 派生的
-#    子进程直接 exec 即可；
-# 2) packaging 的 musl 版本探测会读取 sys.executable 的 ELF 头，并把其
-#    PT_INTERP 字符串当命令执行，以计算 musllinux 平台标签。若指向非 ELF
-#    的 wrapper，探测静默失败 → 编译型 wheel（如 MarkupSafe）全部无法匹配
-#    → pip 退回源码构建并在 Android 上失败。补丁未生效的旧运行时由下面的
-#    subprocess/os.execv 劫持兜底。
+# ★ sys.executable must remain the real python ELF path and must not be rewritten as a shell wrapper:
+# 1) The runtime's PT_INTERP has already been patched to the absolute musl loader path on the device, so pip-spawned
+#    subprocesses can exec directly;
+# 2) packaging's musl version probe reads the ELF header of sys.executable and runs its
+#    PT_INTERP string as a command to compute the musllinux platform tag. If it points to a non-ELF
+#    wrapper, the probe fails silently → all compiled wheels (e.g. MarkupSafe) fail to match
+#    → pip falls back to source builds, which fail on Android. Old runtimes whose patch did not apply are covered by the
+#    subprocess/os.execv hijack below.
 
-# 安全网: monkey-patch subprocess.Popen 和 os.execv，把 python 目标的调用
-# 改道到 musl loader（覆盖 PT_INTERP 补丁未生效的情况）
+# Safety net: monkey-patch subprocess.Popen and os.execv to redirect python-target calls
+# to the musl loader (covers the case where the PT_INTERP patch did not take effect)
 import subprocess
 _OrigPopen = subprocess.Popen
 _MUSL = os.environ.get('_WTA_MUSL_LINKER', '')
@@ -782,8 +782,8 @@ class _MPopen(_OrigPopen):
             if _is_py(head):
                 args = [_MUSL, '--library-path', _LIB] + list(args)
             elif head != _MUSL and _is_loader(head):
-                # packaging 的 musl 探测会把 PT_INTERP 字符串当命令执行，
-                # 改道到随包 loader 让 musllinux 标签可解析。
+                # packaging's musl probe runs the PT_INTERP string as a command;
+                # redirect it to the bundled loader so the musllinux tag can be resolved.
                 args = [_MUSL] + list(args)[1:]
         super().__init__(args, *a, **kw)
 
@@ -814,7 +814,7 @@ if hasattr(os, 'execve'):
         return _oexecve(p, a, e)
     os.execve = _mexecve
 
-# 运行 pip
+# Run pip
 from pip._internal.cli.main import main
 sys.exit(main())
 """.trimIndent())

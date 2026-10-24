@@ -1,18 +1,18 @@
 <?php
 /**
- * Mini Laravel 博客 — 自包含 PHP 博客应用
+ * Mini Laravel Blog — a self-contained PHP blog app
  * 
- * 模仿 Laravel MVC 架构，无需 Composer 依赖
- * 特性: SQLite 数据库 | 微型路由器 | CRUD | 响应式 UI
+ * Mimics the Laravel MVC architecture; no Composer dependencies
+ * Features: SQLite database | micro router | CRUD | responsive UI
  */
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 
-// ==================== 引导 ====================
+// ==================== Bootstrap ====================
 $basePath = dirname(__DIR__);
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// ==================== 数据库 ====================
+// ==================== Database ====================
 $storagePath = $basePath . '/storage';
 if (!is_dir($storagePath)) @mkdir($storagePath, 0755, true);
 $dbFile = $storagePath . '/blog.sqlite';
@@ -38,7 +38,7 @@ try {
     $pdo = null;
 }
 
-// ==================== 路由调度 ====================
+// ==================== Routing dispatch ====================
 $routes = include $basePath . '/routes/web.php';
 $handler = null;
 $params = [];
@@ -55,7 +55,7 @@ foreach ($routes as [$rMethod, $rPath, $rHandler]) {
 
 if (!$handler) $handler = 'notFound';
 
-// ==================== 控制器 ====================
+// ==================== Controllers ====================
 $html = '';
 switch ($handler) {
     case 'home':
@@ -100,7 +100,7 @@ switch ($handler) {
 echo renderLayout($html);
 exit;
 
-// ==================== 数据层 ====================
+// ==================== Data layer ====================
 function seedData(PDO $pdo): void {
     $posts = [
         ['PHP 8.4 新特性：属性钩子与不对称可见性',
@@ -147,7 +147,7 @@ function getCategories(?PDO $pdo): array {
     return $pdo->query('SELECT DISTINCT category FROM posts ORDER BY category')->fetchAll(PDO::FETCH_COLUMN);
 }
 
-// ==================== Markdown 简易渲染 ====================
+// ==================== Simple Markdown rendering ====================
 function renderMarkdown(string $text): string {
     $text = htmlspecialchars($text);
     $text = preg_replace('/```(\w*)\n(.*?)```/s', '<pre><code>$2</code></pre>', $text);
@@ -161,7 +161,7 @@ function renderMarkdown(string $text): string {
     return '<p>' . $text . '</p>';
 }
 
-// ==================== 视图 ====================
+// ==================== Views ====================
 function renderHome(array $posts, array $cats, string $activeCat): string {
     $postCards = '';
     foreach ($posts as $p) {
@@ -249,7 +249,7 @@ function renderNotFound(): string {
 
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
-// ==================== 布局 ====================
+// ==================== Layout ====================
 function renderLayout(string $content): string {
     return '<!DOCTYPE html>
 <html lang="zh-CN">

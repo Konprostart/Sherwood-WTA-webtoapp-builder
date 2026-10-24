@@ -1,6 +1,6 @@
 # Config Field Drift
 
-The most common silent failure in WebToApp: a feature works in preview but is quietly skipped in the exported APK because a config field name drifted between the export factory and the shell config class.
+The most common silent failure in Sherwood WTA: a feature works in preview but is quietly skipped in the exported APK because a config field name drifted between the export factory and the shell config class.
 
 ## Why it happens
 

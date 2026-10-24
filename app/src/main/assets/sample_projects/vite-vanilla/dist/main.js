@@ -1,6 +1,6 @@
-// Vite Vanilla JS 天气应用 - 已构建版本
+// Vite Vanilla JS weather app - built version
 
-// 模拟天气数据
+// Mock weather data
 const weatherData = {
     '北京': { temp: 23, icon: '☀️', desc: '晴朗', humidity: 45, wind: 12, feels: 25 },
     '上海': { temp: 26, icon: '⛅', desc: '多云', humidity: 65, wind: 8, feels: 28 },
@@ -14,7 +14,7 @@ const weatherData = {
     '重庆': { temp: 28, icon: '🌫️', desc: '阴天', humidity: 75, wind: 4, feels: 31 }
 };
 
-// DOM 元素
+// DOM elements
 const cityInput = document.getElementById('cityInput');
 const searchBtn = document.getElementById('searchBtn');
 const cityName = document.getElementById('cityName');
@@ -25,7 +25,7 @@ const humidity = document.getElementById('humidity');
 const wind = document.getElementById('wind');
 const feelsLike = document.getElementById('feelsLike');
 
-// 更新天气显示
+// Update weather display
 function updateWeather(city) {
     const data = weatherData[city];
     
@@ -38,13 +38,13 @@ function updateWeather(city) {
         wind.textContent = `${data.wind} km/h`;
         feelsLike.textContent = `${data.feels}°`;
         
-        // 添加动画效果
+        // Add animation effect
         const display = document.querySelector('.weather-display');
         display.style.animation = 'none';
-        display.offsetHeight; // 触发重绘
+        display.offsetHeight; // Trigger reflow
         display.style.animation = 'fadeIn 0.5s ease-out';
     } else {
-        // 随机生成天气数据
+        // Randomly generate weather data
         const icons = ['☀️', '⛅', '🌤️', '🌧️', '🌫️', '⛈️'];
         const descs = ['晴朗', '多云', '晴间多云', '阵雨', '阴天', '雷阵雨'];
         const randomIndex = Math.floor(Math.random() * icons.length);
@@ -60,7 +60,7 @@ function updateWeather(city) {
     }
 }
 
-// 事件监听
+// Event listeners
 searchBtn.addEventListener('click', () => {
     const city = cityInput.value.trim();
     if (city) {
@@ -77,5 +77,5 @@ cityInput.addEventListener('keypress', (e) => {
     }
 });
 
-// 初始化
+// Initialization
 console.log('🌤️ Vite 天气应用已加载');

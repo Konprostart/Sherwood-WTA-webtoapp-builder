@@ -53,7 +53,7 @@ class NodeService : Service() {
 
     /**
      * Tail of the Node process's stdout/stderr for the current start attempt. On failure
-     * its snapshot is appended to the IPC error message — the generic "启动超时" headline
+     * its snapshot is appended to the IPC error message — the generic "start timeout" headline
      * alone gives users nothing to act on while the real error sits in a log file under
      * Android/data they cannot easily reach.
      */
@@ -370,9 +370,9 @@ class NodeService : Service() {
             } else {
                 // Distinguish "the process died" from "alive but never listened" and name
                 // the bootstrap's entry-failure marker explicitly — all three used to
-                // collapse into the same opaque "启动超时". Liveness must be captured
+                // collapse into the same opaque "start timeout". Liveness must be captured
                 // BEFORE stopServerInternal: it nulls nodeThread, so a post-stop check
-                // would misreport every timeout as "进程已退出".
+                // would misreport every timeout as "process exited".
                 val wasAlive = nodeThread?.isAlive == true
                 val entryFailed = recentOutput.contains("[wta-bootstrap] entry failed")
                 stopServerInternal()
@@ -461,7 +461,7 @@ class NodeService : Service() {
             // port from ShellConfig (nodejsConfig.port). Once PortManager reassigned the port
             // (the preferred one was taken by another app's still-running server), forcing the
             // stale value makes the script bind the taken port, crash with EADDRINUSE, and the
-            // health check on the real port then times out as "Node.js 服务器启动超时".
+            // health check on the real port then times out with the generic "Node.js server start timeout".
             envMap["PORT"] = port.toString()
             val dnsProxyPort = LocalDnsBridgeProxy.getListenPort()
             if (dnsProxyPort > 0) {

@@ -198,7 +198,7 @@ android {
             excludes += "**/libc++_shared.so"
 
             // Cronet natives are injected into exported APKs by ApkBuilder when
-            // 强制 HTTP/3 is enabled; the template never carries them.
+            // Force HTTP/3 is enabled; the template never carries them.
             excludes += "**/libcronet*.so"
         }
     }
@@ -624,7 +624,7 @@ dependencies {
     implementation("org.mozilla.geckoview:geckoview-arm64-v8a:142.0.20250827004350")
 
     // Forced HTTP/3 upstream (see app/build.gradle.kts): classes only, natives are
-    // injected into exported APKs by ApkBuilder when 强制 HTTP/3 is enabled.
+    // injected into exported APKs by ApkBuilder when Force HTTP/3 is enabled.
     implementation("org.chromium.net:cronet-embedded:143.7445.0")
 
     implementation("androidx.media:media:1.7.0")

@@ -1,7 +1,7 @@
 
 """
-Flask Analytics Dashboard — 精美的 Python Web 应用示例
-一个现代化的数据分析仪表盘，展示 Flask 的强大功能
+Flask Analytics Dashboard — a polished Python web app example
+A modern data analytics dashboard showcasing Flask's capabilities
 """
 import importlib.metadata
 import os
@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 
 def generate_weekly_data():
-    """生成最近 7 天的模拟数据"""
+    """Generate mock data for the last 7 days"""
     days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
     return [
         {'day': d, 'users': random.randint(180, 420), 'orders': random.randint(30, 95), 'revenue': random.randint(2800, 9500)}
@@ -24,7 +24,7 @@ def generate_weekly_data():
     ]
 
 def generate_activities():
-    """生成最近活动记录"""
+    """Generate recent activity records"""
     actions = [
         ('购买了高级会员计划', '💎', '#7c3aed'),
         ('完成了首笔订单', '🛒', '#3b82f6'),
@@ -472,7 +472,7 @@ body {
 </div>
 
 <script>
-// 给柱状图添加交互式 tooltip
+// Add interactive tooltip to the bar chart
 document.querySelectorAll('.chart-bar').forEach(bar => {
     bar.addEventListener('click', function() {
         this.style.filter = 'brightness(1.3)';
@@ -517,7 +517,7 @@ def index():
 
 @app.route('/api/stats')
 def api_stats():
-    """RESTful API 示例"""
+    """RESTful API example"""
     return jsonify({
         'status': 'ok',
         'data': {
@@ -535,7 +535,7 @@ def api_stats():
 
 @app.route('/api/activities')
 def api_activities():
-    """活动记录 API"""
+    """Activity log API"""
     return jsonify({
         'status': 'ok',
         'data': generate_activities(),

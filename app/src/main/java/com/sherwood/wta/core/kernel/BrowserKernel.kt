@@ -169,7 +169,7 @@ object BrowserKernel {
 
     private fun getFallbackKernelJs(): String {
         return """(function(){'use strict';
-            // 基础反检测
+            // Basic anti-detection
             Object.defineProperty(navigator,'webdriver',{get:function(){return false},enumerable:true,configurable:true});
             // window.chrome
             if(!window.chrome)window.chrome={};
@@ -186,7 +186,7 @@ object BrowserKernel {
             // outerWidth/outerHeight
             if(!window.outerWidth)Object.defineProperty(window,'outerWidth',{get:function(){return window.innerWidth}});
             if(!window.outerHeight)Object.defineProperty(window,'outerHeight',{get:function(){return window.innerHeight+56}});
-            // 清除自动化标志
+            // Clear automation flags
             delete window.__selenium_unwrapped;
             delete window.__webdriver_evaluate;
             delete window.__webdriver_script_function;

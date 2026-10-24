@@ -18,7 +18,7 @@ When this package is already installed, **Launch** sits between AAB and the main
 
 ## What happens
 
-WebToApp patches the shell template, embeds your config and content, prunes unused permissions, and signs the result (V1/V2/V3).
+Sherwood WTA patches the shell template, embeds your config and content, prunes unused permissions, and signs the result (V1/V2/V3).
 
 ## Incremental rebuilds
 

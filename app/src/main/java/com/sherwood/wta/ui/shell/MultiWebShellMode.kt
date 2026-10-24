@@ -449,7 +449,7 @@ private fun TabsMode(
         }
     }
 
-    // 选中项变化时把它滚动到可见区域，避免被挤出屏幕（站点多时可横向滚动）。
+    // When the selection changes, scroll it into view so it is not pushed off-screen (horizontally scrollable when there are many sites).
     LaunchedEffect(highlight) {
         if (sites.size > 1) {
             tabsListState.animateScrollToItem(highlight)
@@ -496,8 +496,8 @@ private fun TabsMode(
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.navigationBars.exclude(WindowInsets.ime))
                 ) {
-                    // 站点少时每个 tab 平分整条底栏（对称布局，回归 #597 报告的行为）；
-                    // 平分后不足 72dp（站点多）则保持 #283 的最小宽度 + 横向滚动。
+                    // With few sites, each tab evenly splits the whole bottom bar (symmetric layout, restoring the behavior reported in #597);
+                    // if the even split is under 72dp (many sites), keep the minimum width from #283 plus horizontal scrolling.
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                         val evenWidth =
                             (maxWidth - 16.dp - 4.dp * (sites.size - 1)) / sites.size

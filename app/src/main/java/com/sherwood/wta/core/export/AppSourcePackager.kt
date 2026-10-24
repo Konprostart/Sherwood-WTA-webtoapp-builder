@@ -26,7 +26,7 @@ import java.util.zip.ZipOutputStream
  * Compilable Android project for one app.
  *
  * The zip is an Android Studio project: Gradle build files, a WebView
- * activity, the manifest, and the app's own files. It is not the WebToApp
+ * activity, the manifest, and the app's own files. It is not the Sherwood WTA
  * shell runtime, and it does not include the signing keystore.
  */
 class AppSourcePackager(private val context: Context) {

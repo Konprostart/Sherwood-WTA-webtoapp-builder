@@ -52,10 +52,10 @@ class LongPressHandler(
                 if (window.__wtaLongPressEnhanced) return;
                 window.__wtaLongPressEnhanced = true;
 
-                // 只阻止 contextmenu 事件，不干扰 touch 事件（以免影响网页的点击事件处理）
-                // 这样可以允许长按保存图片，同时不影响点击功能（如小说阅读器的中央点击设置）
+                // Only block the contextmenu event; do not interfere with touch events (so page click handlers keep working)
+                // This allows long-press image saving while keeping click behavior intact (e.g. center-tap settings in novel readers)
                 document.addEventListener('contextmenu', function(e) {
-                    // Check是否是图片相关元素
+                    // Check whether this is an image-related element
                     var target = e.target;
                     var isImageRelated = false;
                     var current = target;
@@ -67,14 +67,14 @@ class LongPressHandler(
                             isImageRelated = true;
                             break;
                         }
-                        // Check背景图片
+                        // Check background image
                         var style = window.getComputedStyle(current);
                         if (style.backgroundImage && style.backgroundImage !== 'none' &&
                             style.backgroundImage.includes('url(')) {
                             isImageRelated = true;
                             break;
                         }
-                        // Check小红书特殊容器
+                        // Check Xiaohongshu-specific container
                         if (current.className && (
                             current.className.includes('note-image') ||
                             current.className.includes('swiper') ||
@@ -94,21 +94,21 @@ class LongPressHandler(
                     }
                 }, true);
 
-                // 移除元素上的长按阻止属性（仅针对图片元素）
-                // 注意：不移除 touch 事件处理器，以免影响网页的点击功能
+                // Remove long-press blocking attributes from elements (image elements only)
+                // Note: do not remove touch event handlers, so page click behavior is preserved
                 function removeEventBlockers() {
                     var elements = document.querySelectorAll('img, canvas');
                     elements.forEach(function(el) {
-                        // 只允许图片元素的长按操作
+                        // Only allow long-press on image elements
                         el.style.webkitTouchCallout = 'default';
                         el.removeAttribute('oncontextmenu');
-                        // 不移除 touch 事件，以免影响网页的点击事件处理
+                        // Do not remove touch events, so page click handling is not affected
                     });
                 }
 
                 removeEventBlockers();
 
-                // ListenDOM变化持续移除
+                // Keep removing on DOM changes (listen for DOM mutations)
                 var observer = new MutationObserver(function() {
                     removeEventBlockers();
                 });
@@ -163,7 +163,7 @@ class LongPressHandler(
         val js = """
             (function() {
                 try {
-                    // 使用传入的坐标（已经是 CSS 像素）
+                    // Use the given coordinates (already in CSS pixels)
                     var x = $pageX;
                     var y = $pageY;
 
@@ -174,12 +174,12 @@ class LongPressHandler(
 
                     var result = {type: 'none'};
 
-                    // 辅助函数：提取背景图片URL
+                    // Helper: extract background image URL
                     function extractBgImageUrl(element) {
                         var style = window.getComputedStyle(element);
                         var bgImage = style.backgroundImage;
                         if (bgImage && bgImage !== 'none') {
-                            // Support多个 url() 的情况
+                            // Support multiple url() values
                             var matches = bgImage.match(/url\(['"]?([^'")\s]+)['"]?\)/g);
                             if (matches && matches.length > 0) {
                                 var url = matches[0].replace(/url\(['"]?/, '').replace(/['"]?\)/, '');
@@ -191,9 +191,9 @@ class LongPressHandler(
                         return null;
                     }
 
-                    // 辅助函数：检测小红书等网站的特殊图片容器
+                    // Helper: detect special image containers on sites such as Xiaohongshu
                     function findXhsImage(element) {
-                        // 小红书图片通常在特定的容器中
+                        // Xiaohongshu images are usually inside specific containers
                         var selectors = [
                             'img[src*="xhscdn"]',
                             'img[src*="xiaohongshu"]',
@@ -202,16 +202,16 @@ class LongPressHandler(
                             '[class*="carousel"] img',
                             '[class*="image-container"] img',
                             '[class*="media"] img',
-                            '[data-v-] img'  // Vue 组件中的图片
+                            '[data-v-] img'  // Images in Vue components
                         ];
 
-                        // 先检查当前元素及其子元素
+                        // First check the current element and its children
                         for (var i = 0; i < selectors.length; i++) {
                             var img = element.querySelector(selectors[i]);
                             if (img && img.src) return img.src;
                         }
 
-                        // 向上查找父容器中的图片
+                        // Search upward for images in parent containers
                         var parent = element;
                         var depth = 0;
                         while (parent && depth < 5) {
@@ -226,7 +226,7 @@ class LongPressHandler(
                         return null;
                     }
 
-                    // 辅助函数：从 canvas 提取图片
+                    // Helper: extract image from canvas
                     function extractCanvasImage(canvas) {
                         try {
                             if (canvas.width > 10 && canvas.height > 10) {
@@ -238,7 +238,7 @@ class LongPressHandler(
                         return null;
                     }
 
-                    // 向上遍历查找可交互元素（最多 15 层，增加深度以适应复杂DOM）
+                    // Walk up to find interactive elements (up to 15 levels, deeper to handle complex DOM)
                     var current = elem;
                     var depth = 0;
                     var foundBgImage = null;
@@ -246,14 +246,14 @@ class LongPressHandler(
                     while (current && depth < 15) {
                         var tagName = current.tagName ? current.tagName.toUpperCase() : '';
 
-                        // Check是否是图片
+                        // Check whether this is an image
                         if (tagName === 'IMG' && current.src) {
                             result = {
                                 type: 'image',
                                 url: current.src,
                                 alt: current.alt || ''
                             };
-                            // Resume向上查找是否在链接内
+                            // Search upward to see whether this is inside a link
                             var parent = current.parentElement;
                             while (parent) {
                                 if (parent.tagName && parent.tagName.toUpperCase() === 'A' && parent.href) {
@@ -266,7 +266,7 @@ class LongPressHandler(
                             break;
                         }
 
-                        // Check canvas 元素
+                        // Check canvas element
                         if (tagName === 'CANVAS') {
                             var canvasUrl = extractCanvasImage(current);
                             if (canvasUrl) {
@@ -275,7 +275,7 @@ class LongPressHandler(
                             }
                         }
 
-                        // Check是否是视频
+                        // Check whether this is a video
                         if (tagName === 'VIDEO') {
                             var videoUrl = current.src || current.currentSrc || '';
                             if (!videoUrl) {
@@ -288,7 +288,7 @@ class LongPressHandler(
                             }
                         }
 
-                        // Check是否是链接
+                        // Check whether this is a link
                         if (tagName === 'A' && current.href) {
                             var href = current.href;
                             if (href.match(/\.(mp4|webm|ogg|mov|avi|mkv|m3u8)(\?|#|$)/i)) {
@@ -303,7 +303,7 @@ class LongPressHandler(
                             break;
                         }
 
-                        // Check背景图片（保存第一个找到的，但继续向上查找更好的结果）
+                        // Check background image (keep the first match, but keep searching upward for a better result)
                         if (!foundBgImage) {
                             var bgUrl = extractBgImageUrl(current);
                             if (bgUrl) {
@@ -311,7 +311,7 @@ class LongPressHandler(
                             }
                         }
 
-                        // Check小红书等特殊图片容器
+                        // Check special image containers such as Xiaohongshu
                         if (result.type === 'none') {
                             var xhsImg = findXhsImage(current);
                             if (xhsImg) {
@@ -324,7 +324,7 @@ class LongPressHandler(
                         depth++;
                     }
 
-                    // 如果没找到标准图片，使用背景图片
+                    // If no standard image was found, use the background image
                     if (result.type === 'none' && foundBgImage) {
                         result = {type: 'image', url: foundBgImage, alt: 'background'};
                     }
@@ -370,7 +370,7 @@ class LongPressHandler(
         }
     }
 
-    fun copyToClipboard(text: String, label: String = "WebToApp") {
+    fun copyToClipboard(text: String, label: String = "Sherwood WTA") {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
         clipboard.setPrimaryClip(clip)

@@ -45,7 +45,7 @@ A consolidated reference for the plugin APIs. Status legend:
 | `GM_log` | ✅ | |
 | `GM_getResourceText` / `GM_getResourceURL` | ✅ | |
 | `GM_registerMenuCommand` / `GM_unregisterMenuCommand` | ✅ | Floating-window menu |
-| `GM_openScriptWindow` / `GM_updateScriptWindow` / `GM_closeScriptWindow` | ✅ | WebToApp-specific |
+| `GM_openScriptWindow` / `GM_updateScriptWindow` / `GM_closeScriptWindow` | ✅ | Sherwood WTA-specific |
 | `GM_info` | ✅ | |
 | `unsafeWindow` | ✅ | Equals `window` (no sandbox) |
 | `GM_notification` | 🟡 | Logs only; no system notification |

@@ -1,14 +1,14 @@
 <?php
 /**
- * PHP 能力展示 — 系统信息仪表盘
+ * PHP capability showcase — system info dashboard
  * 
- * 无框架纯 PHP 应用，展示 PHP 在 Android 上的完整能力
- * 特性: 系统信息 | 扩展检测 | 表单处理 | 会话管理 | 性能测试
+ * Framework-free pure PHP app showing PHP's full capabilities on Android
+ * Features: system info | extension detection | form handling | session management | performance testing
  */
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 @session_start();
 
-// 表单处理
+// Form handling
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['session_key'], $_POST['session_val'])) {
         $_SESSION[$_POST['session_key']] = $_POST['session_val'];
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Location: /'); exit;
 }
 
-// 收集系统信息
+// Collect system info
 $info = [
     'PHP 版本' => phpversion(),
     'SAPI' => php_sapi_name(),
@@ -39,7 +39,7 @@ $extensions = get_loaded_extensions();
 sort($extensions);
 $extCount = count($extensions);
 
-// 功能检测
+// Feature detection
 $features = [
     'PDO' => extension_loaded('pdo'),
     'SQLite3' => extension_loaded('pdo_sqlite') || extension_loaded('sqlite3'),
@@ -55,7 +55,7 @@ $features = [
     'BCMath' => extension_loaded('bcmath'),
 ];
 
-// 性能基准
+// Performance benchmark
 $benchStart = hrtime(true);
 $n = 0; for ($i = 0; $i < 1000000; $i++) $n += $i;
 $intTime = round((hrtime(true) - $benchStart) / 1e6, 2);

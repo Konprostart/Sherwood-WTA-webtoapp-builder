@@ -1,6 +1,6 @@
 # Userscripts
 
-WebToApp runs Tampermonkey/Greasemonkey-style `.user.js` scripts with a `GM_*` bridge. Import a script and it is parsed, stored, and injected like any other extension.
+Sherwood WTA runs Tampermonkey/Greasemonkey-style `.user.js` scripts with a `GM_*` bridge. Import a script and it is parsed, stored, and injected like any other extension.
 
 ## Metadata block
 
@@ -50,7 +50,7 @@ Both the classic `GM_*` functions and the Promise-based `GM.*` (Tampermonkey 4.x
 | `GM_notification` | **Simplified — logs only; does not show a system notification.** |
 | `GM_getResourceText` / `GM_getResourceURL` | Read `@resource` contents. |
 | `GM_registerMenuCommand` / `GM_unregisterMenuCommand` | Integrated into the floating window menu. |
-| `GM_openScriptWindow` / `GM_updateScriptWindow` / `GM_closeScriptWindow` | WebToApp-specific script windows. |
+| `GM_openScriptWindow` / `GM_updateScriptWindow` / `GM_closeScriptWindow` | Sherwood WTA-specific script windows. |
 | `GM_info` | `{script:{name,version,description,author,namespace,grants,resources}, scriptHandler:'WebToApp', version:'1.0'}` |
 | `unsafeWindow` | Equals `window` (no sandbox). |
 

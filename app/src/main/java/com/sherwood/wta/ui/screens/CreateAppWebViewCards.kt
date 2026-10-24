@@ -4108,7 +4108,7 @@ fun SpecialSettingsCard(
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     label = { Text(Strings.mediaAlbumNameLabel) },
-                                    placeholder = { Text("WebToApp") },
+                                    placeholder = { Text("Sherwood WTA") },
                                     supportingText = if (LocalShowDescriptions.current) {
                                         { Text(Strings.mediaAlbumNameHint) }
                                     } else {

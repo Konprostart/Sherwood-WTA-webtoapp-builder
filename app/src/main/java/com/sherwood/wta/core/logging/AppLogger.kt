@@ -391,7 +391,7 @@ object AppLogger {
         val separator = "═".repeat(70)
         val info = buildString {
             append("\n$separator\n")
-            append("  应用启动 - WebToApp 运行日志\n")
+            append("  应用启动 - Sherwood WTA 运行日志\n")
             append("$separator\n")
             append("  会话 ID:      $sessionId\n")
             append("  启动时间:     ${dateFormat.get()!!.format(Date(startTime))}\n")

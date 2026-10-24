@@ -1,6 +1,6 @@
 # F-Droid flavor
 
-WebToApp ships one source tree for GitHub, Play, and F-Droid. The F-Droid build is a Gradle property, not a long-lived git branch.
+Sherwood WTA ships one source tree for GitHub, Play, and F-Droid. The F-Droid build is a Gradle property, not a long-lived git branch.
 
 ```bash
 ./gradlew :app:assembleStandardRelease -Pfdroid=true
@@ -37,7 +37,7 @@ The `check` job compiles this flavor in a **second** Gradle invocation so the fl
 
 Fastlane files live at `fastlane/metadata/android/<locale>/`. F-Droid reads those from this repository.
 
-The fdroiddata recipe to copy into a [fdroiddata](https://gitlab.com/fdroid/fdroiddata) merge request is `metadata/com.sherwood.wta.yml` at the repo root of **this** project (path `metadata/com.sherwood.wta.yml`). MR title: `New app: WebToApp`.
+The fdroiddata recipe to copy into a [fdroiddata](https://gitlab.com/fdroid/fdroiddata) merge request is `metadata/com.sherwood.wta.yml` at the repo root of **this** project (path `metadata/com.sherwood.wta.yml`). MR title: `New app: Sherwood WTA`.
 
 ```yaml
 Categories:
@@ -54,7 +54,7 @@ Repo: https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder.git
 
 Builds:
   - versionName: "2.8.1"
-    versionCode: 79
+    versionCode: 80
     commit: v2.8.1
     subdir: app
     gradle:

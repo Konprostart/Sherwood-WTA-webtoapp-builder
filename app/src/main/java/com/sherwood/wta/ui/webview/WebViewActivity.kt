@@ -3220,7 +3220,7 @@ fun WebViewScreen(
                                             window.AndroidDownload.saveBase64File(base64Data, filename, mimeType);
                                         }
                                     } else if (blobUrl.startsWith('blob:')) {
-                                        // 优先从 DownloadBridge 的缓存里拿 Blob（页面可能已同步 revoke URL）
+                                        // Prefer getting the Blob from DownloadBridge's cache (the page may have already revoked the URL)
                                         const cachedBlob = window.__wtaBlobMap && window.__wtaBlobMap.get(blobUrl);
                                         function dispatch(blob) {
                                             if (blob.size > LARGE_FILE_THRESHOLD) {
@@ -3238,7 +3238,7 @@ fun WebViewScreen(
                                         if (cachedBlob) {
                                             dispatch(cachedBlob);
                                         } else if (window.__wtaResolveBlob) {
-                                            // 跨上下文解析（sandboxed iframe / worker 里创建的 blob:null 等）
+                                            // Cross-context resolution (e.g. blob:null created in sandboxed iframes / workers)
                                             window.__wtaResolveBlob(blobUrl)
                                                 .then(function(blob) {
                                                     if (blob) dispatch(blob);
@@ -4517,7 +4517,7 @@ fun WebViewScreen(
                                 contextLines = listOf("url=${webApp?.url ?: directUrl ?: testUrl ?: "-"}")
                             )
                             val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                            cm?.setPrimaryClip(android.content.ClipData.newPlainText("WebToApp Error", report))
+                            cm?.setPrimaryClip(android.content.ClipData.newPlainText("Sherwood WTA Error", report))
                             android.widget.Toast.makeText(context, Strings.errorCopied, android.widget.Toast.LENGTH_SHORT).show()
                         }) {
                             Text(Strings.errorCopyDetails)

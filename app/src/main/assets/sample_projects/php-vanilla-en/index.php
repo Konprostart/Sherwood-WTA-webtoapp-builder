@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Location: /'); exit;
 }
 
-// 收集System Info
+// Collect System Info
 $info = [
     'PHP Version' => phpversion(),
     'SAPI' => php_sapi_name(),
@@ -59,7 +59,7 @@ $features = [
     'BCMath' => extension_loaded('bcmath'),
 ];
 
-// 性能基准
+// Performance benchmark
 $benchStart = hrtime(true);
 $n = 0; for ($i = 0; $i < 1000000; $i++) $n += $i;
 $intTime = round((hrtime(true) - $benchStart) / 1e6, 2);

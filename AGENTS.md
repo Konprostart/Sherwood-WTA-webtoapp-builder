@@ -19,12 +19,12 @@ Instructions for coding agents working in this repository.
 | `clone-host/` | Host-side APK clone / identity reshape support library. Its DEX asset generation (`syncCloneHostDex`) is deliberately disabled (`enabled = false`, AV false-positive mitigation, e0d2d4d6) — `AppCloner` runs fail-soft without the asset. |
 | `modules/` | Module Market catalog (`registry.json` + per-module folders). |
 | `sample-bundles/` | Heavy sample dependency packs (`python-*-shared.zip` + sha256-pinned `manifest.json`) fetched on demand by `SampleSharedPackManager` — deliberately NOT in `app/assets` (saves ~30MB raw / ~7MB compressed from the host APK). Regenerate via `scripts/build_sample_bundles.py`. |
-| `docs/` | VitePress documentation site (guide / developer / extensions, EN + ZH), published to https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/ by `.github/workflows/docs-deploy.yml`. Site URL paths map 1:1 to files under `docs/` (`/zh/...` → `docs/zh/...`). |
+| `docs/` | VitePress documentation site (guide / developer / extensions), published to https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/ by `.github/workflows/docs-deploy.yml`. Site URL paths map 1:1 to files under `docs/` (`/zh/...` → `docs/zh/...`). |
 | `scripts/` | Build helpers and gates (`check_config_field_drift.py`). |
 
 Runtime Kotlin is authored under `app/` and synced into `shell` by `syncShellRuntimeSources`. Edit the `app/` source once; do not permanently fork copies under shell.
 
-User-facing product docs: `README.md`, `.github/docs/README_CN.md`, `.github/CONTRIBUTING.md`, `modules/README.md`. The published documentation site is https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/ (source: `docs/`, deployed by `.github/workflows/docs-deploy.yml`).
+User-facing product docs: `README.md`, `.github/CONTRIBUTING.md`, `modules/README.md`. The published documentation site is https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/ (source: `docs/`, deployed by `.github/workflows/docs-deploy.yml`).
 
 ## How the main pieces connect
 

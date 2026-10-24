@@ -1,4 +1,4 @@
-WebToApp est un atelier sur l’appareil pour transformer des sites et projets web locaux en applications Android. Il tourne sur le téléphone : pas de PC, pas de serveur de compilation distant.
+Sherwood WTA est un atelier sur l’appareil pour transformer des sites et projets web locaux en applications Android. Il tourne sur le téléphone : pas de PC, pas de serveur de compilation distant.
 
 Vous pouvez encapsuler une URL, empaqueter du HTML ou un frontend, livrer une galerie ou un lecteur, ou exécuter un serveur local Node.js, PHP, Python, Go ou WordPress dans l’application générée. Le WebView système est le moteur par défaut ; GeckoView (Firefox) peut être téléchargé plus tard.
 

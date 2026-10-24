@@ -1,6 +1,6 @@
 # Wta Design System
 
-This package is the single source of truth for the WebToApp UI. Every new screen
+This package is the single source of truth for the Sherwood WTA UI. Every new screen
 and every new component must consume it; nothing outside `com.sherwood.wta.ui.design`
 should define shapes, spacing, button styling, card styling, or bespoke color
 tokens.

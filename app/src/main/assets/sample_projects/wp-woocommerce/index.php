@@ -1,10 +1,10 @@
 <?php
 /**
- * WooCommerce 商店示例 - 前端入口
+ * WooCommerce store sample - front-end entry
  * 
- * 站点类型：电子商务
- * 插件：WooCommerce
- * 数据库：SQLite（离线模式）
+ * Site type: e-commerce
+ * Plugin: WooCommerce
+ * Database: SQLite (offline mode)
  */
 define('WP_USE_THEMES', true);
 require __DIR__ . '/wp-blog-header.php';

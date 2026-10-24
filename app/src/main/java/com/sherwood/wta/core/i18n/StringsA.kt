@@ -5,7 +5,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 
 object StringsA {
-    val appTitle: String get() = "WebToApp"
+    val appTitle: String get() = "Sherwood WTA"
 
     val translationInProgressBadge: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "翻译进行中"
@@ -20,7 +20,7 @@ object StringsA {
         AppLanguage.KOREAN -> "번역 중"
     }
 
-    val typewriterText1: String get() = "WebToApp"
+    val typewriterText1: String get() = "Sherwood WTA"
     val typewriterText2: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "探索网页与APK的边界"
         AppLanguage.ENGLISH -> "Explore the boundary of Web & APK"
@@ -3606,11 +3606,11 @@ object StringsA {
 
             - app/src/main/java 里的 MainActivity：用 WebView 打开这个应用的页面或本地文件。
             - app/src/main/AndroidManifest.xml：包名、权限和图标。
-            - app/src/main/assets/app_config.json：WebToApp 写入 APK 的运行时配置。资源加密的安装包里这份文件是密文，这里是明文。
+            - app/src/main/assets/app_config.json：Sherwood WTA 写入 APK 的运行时配置。资源加密的安装包里这份文件是密文，这里是明文。
             - app/src/main/res/xml/network_security_config.xml 与 res/raw/：网络信任设置。
             - app/src/main/assets/www/ 与 assets/files/：本地 HTML、前端、画廊、启动画面和音频。不含 node_modules 与 .git。
 
-            用 Android Studio 打开这个文件夹即可同步并构建。压缩包不含签名密钥库，也不包含 WebToApp 壳的全部运行时。它可能包含你配置的激活密钥和代理凭据。
+            用 Android Studio 打开这个文件夹即可同步并构建。压缩包不含签名密钥库，也不包含 Sherwood WTA 壳的全部运行时。它可能包含你配置的激活密钥和代理凭据。
         """.trimIndent()
         AppLanguage.ENGLISH -> """
             # $name
@@ -3619,11 +3619,11 @@ object StringsA {
 
             - MainActivity under app/src/main/java opens this app's page or local files in a WebView.
             - app/src/main/AndroidManifest.xml holds the package name, permissions, and icon.
-            - app/src/main/assets/app_config.json is the runtime configuration WebToApp embeds in the APK. An encrypted build stores that file as ciphertext; this copy is plaintext.
+            - app/src/main/assets/app_config.json is the runtime configuration Sherwood WTA embeds in the APK. An encrypted build stores that file as ciphertext; this copy is plaintext.
             - app/src/main/res/xml/network_security_config.xml and res/raw/ are the network-trust settings.
             - app/src/main/assets/www/ and assets/files/ hold local HTML, frontend, gallery, splash, and audio. node_modules and .git are omitted.
 
-            Open this folder in Android Studio to sync and build it. The archive does not include the signing keystore or the full WebToApp shell runtime. It may include activation secrets and proxy credentials you configured.
+            Open this folder in Android Studio to sync and build it. The archive does not include the signing keystore or the full Sherwood WTA shell runtime. It may include activation secrets and proxy credentials you configured.
         """.trimIndent()
         AppLanguage.ARABIC -> """
             # $name
@@ -3632,11 +3632,11 @@ object StringsA {
 
             - MainActivity ضمن app/src/main/java يفتح صفحة التطبيق أو ملفاته المحلية في WebView.
             - app/src/main/AndroidManifest.xml يحتوي اسم الحزمة والأذونات والأيقونة.
-            - app/src/main/assets/app_config.json هو إعداد التشغيل الذي يضمّنه WebToApp في APK. البناء المشفّر يخزّنه كنص مشفّر، وهذه النسخة نص واضح.
+            - app/src/main/assets/app_config.json هو إعداد التشغيل الذي يضمّنه Sherwood WTA في APK. البناء المشفّر يخزّنه كنص مشفّر، وهذه النسخة نص واضح.
             - app/src/main/res/xml/network_security_config.xml و res/raw/ إعدادات الثقة بالشبكة.
             - app/src/main/assets/www/ و assets/files/ ملفات HTML والواجهة والمعرض وشاشة البدء والصوت. يُستبعد node_modules و .git.
 
-            افتح هذا المجلد في Android Studio للمزامنة والبناء. الأرشيف لا يحتوي مخزن مفاتيح التوقيع ولا كامل بيئة WebToApp. قد يحتوي أسرار التفعيل وبيانات اعتماد الوكيل.
+            افتح هذا المجلد في Android Studio للمزامنة والبناء. الأرشيف لا يحتوي مخزن مفاتيح التوقيع ولا كامل بيئة Sherwood WTA. قد يحتوي أسرار التفعيل وبيانات اعتماد الوكيل.
         """.trimIndent()
         AppLanguage.PORTUGUESE -> """
             # $name
@@ -3645,11 +3645,11 @@ object StringsA {
 
             - MainActivity em app/src/main/java abre a página ou os arquivos locais deste aplicativo num WebView.
             - app/src/main/AndroidManifest.xml traz o nome do pacote, as permissões e o ícone.
-            - app/src/main/assets/app_config.json é a configuração de execução que o WebToApp embute no APK. Um build criptografado guarda esse arquivo como texto cifrado; esta cópia é texto puro.
+            - app/src/main/assets/app_config.json é a configuração de execução que o Sherwood WTA embute no APK. Um build criptografado guarda esse arquivo como texto cifrado; esta cópia é texto puro.
             - app/src/main/res/xml/network_security_config.xml e res/raw/ são os ajustes de confiança de rede.
             - app/src/main/assets/www/ e assets/files/ guardam HTML, frontend, galeria, splash e áudio locais. node_modules e .git ficam de fora.
 
-            Abra esta pasta no Android Studio para sincronizar e compilar. O arquivo não inclui a keystore de assinatura nem todo o runtime do shell WebToApp. Pode incluir segredos de ativação e credenciais de proxy.
+            Abra esta pasta no Android Studio para sincronizar e compilar. O arquivo não inclui a keystore de assinatura nem todo o runtime do shell Sherwood WTA. Pode incluir segredos de ativação e credenciais de proxy.
         """.trimIndent()
         AppLanguage.SPANISH -> """
             # $name
@@ -3658,11 +3658,11 @@ object StringsA {
 
             - MainActivity en app/src/main/java abre la página o los archivos locales de esta aplicación en un WebView.
             - app/src/main/AndroidManifest.xml lleva el nombre del paquete, los permisos y el icono.
-            - app/src/main/assets/app_config.json es la configuración de ejecución que WebToApp incluye en el APK. Una compilación cifrada guarda ese archivo como texto cifrado; esta copia es texto plano.
+            - app/src/main/assets/app_config.json es la configuración de ejecución que Sherwood WTA incluye en el APK. Una compilación cifrada guarda ese archivo como texto cifrado; esta copia es texto plano.
             - app/src/main/res/xml/network_security_config.xml y res/raw/ son los ajustes de confianza de red.
             - app/src/main/assets/www/ y assets/files/ guardan HTML, frontend, galería, splash y audio locales. Se omiten node_modules y .git.
 
-            Abre esta carpeta en Android Studio para sincronizar y compilar. El archivo no incluye el almacén de claves de firma ni todo el runtime del shell de WebToApp. Puede incluir secretos de activación y credenciales de proxy.
+            Abre esta carpeta en Android Studio para sincronizar y compilar. El archivo no incluye el almacén de claves de firma ni todo el runtime del shell de Sherwood WTA. Puede incluir secretos de activación y credenciales de proxy.
         """.trimIndent()
         AppLanguage.FRENCH -> """
             # $name
@@ -3671,11 +3671,11 @@ object StringsA {
 
             - MainActivity sous app/src/main/java ouvre la page ou les fichiers locaux de cette application dans une WebView.
             - app/src/main/AndroidManifest.xml contient le nom du paquet, les autorisations et l'icône.
-            - app/src/main/assets/app_config.json est la configuration d'exécution que WebToApp intègre à l'APK. Une compilation chiffrée stocke ce fichier en texte chiffré ; cette copie est en clair.
+            - app/src/main/assets/app_config.json est la configuration d'exécution que Sherwood WTA intègre à l'APK. Une compilation chiffrée stocke ce fichier en texte chiffré ; cette copie est en clair.
             - app/src/main/res/xml/network_security_config.xml et res/raw/ sont les réglages de confiance réseau.
             - app/src/main/assets/www/ et assets/files/ contiennent le HTML, le frontend, la galerie, l'écran de démarrage et l'audio locaux. node_modules et .git sont omis.
 
-            Ouvrez ce dossier dans Android Studio pour le synchroniser et le compiler. L'archive ne contient pas le keystore de signature ni tout le runtime du shell WebToApp. Elle peut contenir des secrets d'activation et des identifiants de proxy.
+            Ouvrez ce dossier dans Android Studio pour le synchroniser et le compiler. L'archive ne contient pas le keystore de signature ni tout le runtime du shell Sherwood WTA. Elle peut contenir des secrets d'activation et des identifiants de proxy.
         """.trimIndent()
         AppLanguage.GERMAN -> """
             # $name
@@ -3684,11 +3684,11 @@ object StringsA {
 
             - MainActivity unter app/src/main/java öffnet die Seite oder die lokalen Dateien dieser App in einer WebView.
             - app/src/main/AndroidManifest.xml enthält Paketname, Berechtigungen und Symbol.
-            - app/src/main/assets/app_config.json ist die Laufzeitkonfiguration, die WebToApp in die APK einbettet. Ein verschlüsselter Build speichert diese Datei als Geheimtext; diese Kopie ist Klartext.
+            - app/src/main/assets/app_config.json ist die Laufzeitkonfiguration, die Sherwood WTA in die APK einbettet. Ein verschlüsselter Build speichert diese Datei als Geheimtext; diese Kopie ist Klartext.
             - app/src/main/res/xml/network_security_config.xml und res/raw/ sind die Netzvertrauens-Einstellungen.
             - app/src/main/assets/www/ und assets/files/ enthalten lokale HTML-, Frontend-, Galerie-, Startbildschirm- und Audiodateien. node_modules und .git fehlen.
 
-            Öffnen Sie diesen Ordner in Android Studio, um ihn zu synchronisieren und zu bauen. Das Archiv enthält keinen Signatur-Keystore und nicht die gesamte WebToApp-Shell. Es kann Aktivierungsgeheimnisse und Proxy-Zugangsdaten enthalten.
+            Öffnen Sie diesen Ordner in Android Studio, um ihn zu synchronisieren und zu bauen. Das Archiv enthält keinen Signatur-Keystore und nicht die gesamte Sherwood WTA-Shell. Es kann Aktivierungsgeheimnisse und Proxy-Zugangsdaten enthalten.
         """.trimIndent()
         AppLanguage.RUSSIAN -> """
             # $name
@@ -3697,11 +3697,11 @@ object StringsA {
 
             - MainActivity в app/src/main/java открывает страницу или локальные файлы этого приложения в WebView.
             - app/src/main/AndroidManifest.xml содержит имя пакета, разрешения и значок.
-            - app/src/main/assets/app_config.json — конфигурация выполнения, которую WebToApp встраивает в APK. В зашифрованной сборке этот файл хранится как шифротекст; здесь он в открытом виде.
+            - app/src/main/assets/app_config.json — конфигурация выполнения, которую Sherwood WTA встраивает в APK. В зашифрованной сборке этот файл хранится как шифротекст; здесь он в открытом виде.
             - app/src/main/res/xml/network_security_config.xml и res/raw/ — параметры доверия сети.
             - app/src/main/assets/www/ и assets/files/ — локальные HTML, фронтенд, галерея, заставка и аудио. node_modules и .git не включаются.
 
-            Откройте эту папку в Android Studio, чтобы синхронизировать и собрать проект. Архив не содержит хранилище ключа подписи и не включает всю оболочку WebToApp. В нём могут быть секреты активации и данные прокси.
+            Откройте эту папку в Android Studio, чтобы синхронизировать и собрать проект. Архив не содержит хранилище ключа подписи и не включает всю оболочку Sherwood WTA. В нём могут быть секреты активации и данные прокси.
         """.trimIndent()
         AppLanguage.JAPANESE -> """
             # $name
@@ -3710,11 +3710,11 @@ object StringsA {
 
             - app/src/main/java の MainActivity は、このアプリのページまたはローカルファイルを WebView で開きます。
             - app/src/main/AndroidManifest.xml はパッケージ名、権限、アイコンです。
-            - app/src/main/assets/app_config.json は WebToApp が APK に埋め込む実行時設定です。リソース暗号化ビルドでは暗号文になり、ここにあるのは平文です。
+            - app/src/main/assets/app_config.json は Sherwood WTA が APK に埋め込む実行時設定です。リソース暗号化ビルドでは暗号文になり、ここにあるのは平文です。
             - app/src/main/res/xml/network_security_config.xml と res/raw/ はネットワーク信頼の設定です。
             - app/src/main/assets/www/ と assets/files/ はローカル HTML、フロントエンド、ギャラリー、スプラッシュ、音声です。node_modules と .git は含みません。
 
-            このフォルダを Android Studio で開くと同期してビルドできます。書庫に署名キーストアと WebToApp シェルの全ランタイムは含まれません。設定した認証の秘密やプロキシ資格情報が含まれることがあります。
+            このフォルダを Android Studio で開くと同期してビルドできます。書庫に署名キーストアと Sherwood WTA シェルの全ランタイムは含まれません。設定した認証の秘密やプロキシ資格情報が含まれることがあります。
         """.trimIndent()
         AppLanguage.KOREAN -> """
             # $name
@@ -3723,11 +3723,11 @@ object StringsA {
 
             - app/src/main/java 의 MainActivity 는 이 앱의 페이지나 로컬 파일을 WebView 로 엽니다.
             - app/src/main/AndroidManifest.xml 에는 패키지 이름, 권한, 아이콘이 있습니다.
-            - app/src/main/assets/app_config.json 은 WebToApp 이 APK 에 넣는 런타임 설정입니다. 리소스 암호화 빌드에서는 암호문이고, 여기 있는 것은 평문입니다.
+            - app/src/main/assets/app_config.json 은 Sherwood WTA 이 APK 에 넣는 런타임 설정입니다. 리소스 암호화 빌드에서는 암호문이고, 여기 있는 것은 평문입니다.
             - app/src/main/res/xml/network_security_config.xml 과 res/raw/ 는 네트워크 신뢰 설정입니다.
             - app/src/main/assets/www/ 와 assets/files/ 는 로컬 HTML, 프런트엔드, 갤러리, 스플래시, 오디오입니다. node_modules 와 .git 은 빠집니다.
 
-            이 폴더를 Android Studio 에서 열면 동기화하고 빌드할 수 있습니다. 압축 파일에는 서명 키 저장소와 WebToApp 셸의 전체 런타임이 없습니다. 설정한 활성화 비밀과 프록시 자격 증명이 들어 있을 수 있습니다.
+            이 폴더를 Android Studio 에서 열면 동기화하고 빌드할 수 있습니다. 압축 파일에는 서명 키 저장소와 Sherwood WTA 셸의 전체 런타임이 없습니다. 설정한 활성화 비밀과 프록시 자격 증명이 들어 있을 수 있습니다.
         """.trimIndent()
     }
 
@@ -4616,16 +4616,16 @@ object StringsA {
     }
 
     val portManagerSubtitle: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "查看、打开或释放本机与其它 WebToApp 实例的端口"
-        AppLanguage.ENGLISH -> "Inspect, open, or free ports used by this and other WebToApp instances"
-        AppLanguage.ARABIC -> "اعرض وافتح أو حرّر المنافذ المستخدمة بواسطة هذا التطبيق ونسخ WebToApp الأخرى"
-        AppLanguage.PORTUGUESE -> "Veja, abra ou libere portas usadas por esta e outras instâncias do WebToApp"
-        AppLanguage.SPANISH -> "Consulta, abre o libera puertos usados por esta y otras instancias de WebToApp"
-        AppLanguage.FRENCH -> "Consultez, ouvrez ou libérez les ports de cette instance et d'autres WebToApp"
-        AppLanguage.GERMAN -> "Ports dieser und anderer WebToApp-Instanzen ansehen, öffnen oder freigeben"
-        AppLanguage.RUSSIAN -> "Просматривайте, открывайте или освобождайте порты этого и других экземпляров WebToApp"
-        AppLanguage.JAPANESE -> "このアプリや他の WebToApp インスタンスが使うポートを確認・開放・解放"
-        AppLanguage.KOREAN -> "이 앱과 다른 WebToApp 인스턴스가 사용하는 포트 확인·열기·해제"
+        AppLanguage.CHINESE -> "查看、打开或释放本机与其它 Sherwood WTA 实例的端口"
+        AppLanguage.ENGLISH -> "Inspect, open, or free ports used by this and other Sherwood WTA instances"
+        AppLanguage.ARABIC -> "اعرض وافتح أو حرّر المنافذ المستخدمة بواسطة هذا التطبيق ونسخ Sherwood WTA الأخرى"
+        AppLanguage.PORTUGUESE -> "Veja, abra ou libere portas usadas por esta e outras instâncias do Sherwood WTA"
+        AppLanguage.SPANISH -> "Consulta, abre o libera puertos usados por esta y otras instancias de Sherwood WTA"
+        AppLanguage.FRENCH -> "Consultez, ouvrez ou libérez les ports de cette instance et d'autres Sherwood WTA"
+        AppLanguage.GERMAN -> "Ports dieser und anderer Sherwood WTA-Instanzen ansehen, öffnen oder freigeben"
+        AppLanguage.RUSSIAN -> "Просматривайте, открывайте или освобождайте порты этого и других экземпляров Sherwood WTA"
+        AppLanguage.JAPANESE -> "このアプリや他の Sherwood WTA インスタンスが使うポートを確認・開放・解放"
+        AppLanguage.KOREAN -> "이 앱과 다른 Sherwood WTA 인스턴스가 사용하는 포트 확인·열기·해제"
     }
     val portManagerSearchHint: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "搜索端口、项目或类型…"
@@ -11480,7 +11480,7 @@ object StringsA {
     }
 
     // Shown on the activation record inside the code prompt when a valid grant
-    // exists but this launch still requires verification. Never claims "已激活"
+    // exists but this launch still requires verification. Never claims "activated"
     // while a code is being demanded.
     val activationNeedsReverify: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "需重新验证"

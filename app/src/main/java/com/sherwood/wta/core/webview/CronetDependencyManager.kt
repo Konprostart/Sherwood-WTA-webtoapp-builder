@@ -19,7 +19,7 @@ import java.util.zip.ZipInputStream
  * host/shell APKs — the .so files are excluded from packaging in both build files,
  * mirroring the GeckoView / libnode precedents (heavy natives are never bundled):
  *  - Host preview loads the library from [getDepsDir] via Cronet's LibraryLoader.
- *  - ApkBuilder injects the same file into exported APKs when 强制 HTTP/3 is on,
+ *  - ApkBuilder injects the same file into exported APKs when Force HTTP/3 is on,
  *    so generated apps load it straight from their own nativeLibraryDir.
  */
 object CronetDependencyManager {

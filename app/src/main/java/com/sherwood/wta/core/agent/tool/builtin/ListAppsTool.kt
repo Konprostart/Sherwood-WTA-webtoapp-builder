@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.first
 class ListAppsTool : Tool {
     override val name = "ListApps"
     override val description = """
-        List the apps in the user's WebToApp app list. Returns each app's id, type, and name.
+        List the apps in the user's Sherwood WTA app list. Returns each app's id, type, and name.
         Use this to find an app's id before calling GetApp or UpdateApp.
     """.trimIndent()
 

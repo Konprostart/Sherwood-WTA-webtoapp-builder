@@ -203,8 +203,8 @@ fun BoxScope.ShellScaffoldLayout(
 
         val actualStatusBarPadding = if (statusBarHeightDp >= 0) statusBarHeightDp.dp else systemStatusBarHeightDp
 
-        // 全屏模式下可选的内容内边距：把网页交互区从屏幕边缘内移，让角落按钮易于点按，
-        // 同时缓解与系统返回手势边缘带的冲突。默认 0 → 向后兼容旧行为。
+        // Optional content padding in fullscreen mode: insets the web interaction area from the screen edges so corner buttons are easier to tap,
+        // and reduces conflicts with the system back-gesture edge zone. Default 0 → backward compatible with the old behavior.
         // #916: each side may override the uniform value; null follows the base.
         val padTop = config.webViewConfig.fullscreenPadTop.dp
         val padStart = config.webViewConfig.fullscreenPadStart.dp

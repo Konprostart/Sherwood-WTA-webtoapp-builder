@@ -9,7 +9,7 @@ Coordinates the local-server ports used by runtime apps across all your generate
 - **Auto-refresh** — keep the list current.
 - **Port ranges** — view the configured port ranges.
 - **Copy port / open** — quick actions per entry.
-- **Filters** — show all services or filter; detects WebToApp apps specifically.
+- **Filters** — show all services or filter; detects Sherwood WTA apps specifically.
 - **Status** — responding / not responding indicators.
 
 ## Conflict policy

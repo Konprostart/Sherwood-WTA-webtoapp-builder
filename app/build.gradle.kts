@@ -105,11 +105,10 @@ android {
     flavorDimensions += "distribution"
     productFlavors {
         create("standard") {
-            // Sideloaded variant (GitHub releases, keeps `com.sherwood.wta` for the existing
-            // update path). Same minSdk, targetSdk, and code as gplay.
+            // Sideloaded variant (GitHub releases). Same minSdk, targetSdk, and code as gplay.
         }
         create("gplay") {
-            // Google Play variant. `com.sherwood.wta` is registered on Play by another party.
+            // Google Play variant with its own application id, so it can be published next to the standard flavor.
             applicationId = "com.sherwood.wta.play"
         }
     }
@@ -688,7 +687,7 @@ dependencies {
     // Forced HTTP/3 (issue #721): Chromium's own network stack as the MITM bridge's
     // upstream leg. Java classes ship in the APK; libcronet is NEVER bundled — the host
     // downloads it on demand (filesDir/cronet_deps) and ApkBuilder injects it into
-    // exported APKs only when the app enables 强制 HTTP/3 (libnode/GeckoView precedent).
+    // exported APKs only when the app enables Force HTTP/3 (libnode/GeckoView precedent).
     // Version must match CronetDependencyManager.CRONET_ARTIFACT_VERSION.
     implementation("org.chromium.net:cronet-embedded:143.7445.0")
 

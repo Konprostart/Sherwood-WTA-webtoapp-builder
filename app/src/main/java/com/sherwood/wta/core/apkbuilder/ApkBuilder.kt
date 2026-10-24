@@ -318,7 +318,7 @@ class ApkBuilder(private val context: Context) {
     private fun pkgWorkDir(packageName: String): File =
         File(tempDir, "pkg_" + packageName.replace(Regex("[^A-Za-z0-9_.-]"), "_")).apply { mkdirs() }
 
-    private val originalAppName = "WebToApp"
+    private val originalAppName = "Sherwood WTA"
     private val originalPackageName = "com.sherwood.wta"
 
     fun clearIncrementalCache(webApp: WebApp, packageName: String) {
@@ -2546,7 +2546,7 @@ class ApkBuilder(private val context: Context) {
         if (phpBinary == null || !phpBinary.canRead()) {
             throw IllegalStateException(
                 "WordPress export needs the PHP runtime, but the PHP binary is missing or unreadable. " +
-                    "Download the PHP runtime in WebToApp (Linux Environment) and rebuild."
+                    "Download the PHP runtime in Sherwood WTA (Linux Environment) and rebuild."
             )
         }
         try {
@@ -2836,7 +2836,7 @@ class ApkBuilder(private val context: Context) {
         if (phpBinary == null || !phpBinary.canRead()) {
             throw IllegalStateException(
                 "PHP app export needs the PHP runtime, but the PHP binary is missing or unreadable. " +
-                    "Download the PHP runtime in WebToApp (Linux Environment) and rebuild."
+                    "Download the PHP runtime in Sherwood WTA (Linux Environment) and rebuild."
             )
         }
         try {
@@ -3013,7 +3013,7 @@ builtins.__import__ = _w2a_import
             throw IllegalStateException(
                 "Python app export needs the Python runtime, but the interpreter is missing or unreadable " +
                     "(looked for $versionedPythonBinaryName / python3 under $pythonHome). " +
-                    "Download the Python runtime in WebToApp (Linux Environment) and rebuild."
+                    "Download the Python runtime in Sherwood WTA (Linux Environment) and rebuild."
             )
         }
         try {
@@ -3125,7 +3125,7 @@ builtins.__import__ = _w2a_import
         }
 
         throw IllegalStateException(
-            "Go project has no runnable binary for export. WebToApp no longer compiles Go source during APK build. Build the binary first and retry export."
+            "Go project has no runnable binary for export. Sherwood WTA no longer compiles Go source during APK build. Build the binary first and retry export."
         )
     }
 

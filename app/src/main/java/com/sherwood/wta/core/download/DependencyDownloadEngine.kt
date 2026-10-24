@@ -118,7 +118,7 @@ object DependencyDownloadEngine {
 
     val isActive: Boolean get() = _state.value is State.Downloading || _state.value is State.Paused
 
-    private const val USER_AGENT = "WebToApp/1.0 (Android; DependencyDownloadEngine)"
+    private const val USER_AGENT = "Sherwood-WTA/1.0 (Android; DependencyDownloadEngine)"
 
     private val httpClient: OkHttpClient by lazy {
         NetworkModule.downloadClient.newBuilder()

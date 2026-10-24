@@ -1,5 +1,5 @@
 /**
- * WebToApp remote activation — reference verification server (Cloudflare Worker).
+ * Sherwood WTA remote activation — reference verification server (Cloudflare Worker).
  *
  * Speaks the contract documented in `.github/docs/remote-activation.md` and
  * implemented client-side by `RemoteActivationVerifier.kt`. Two details in that

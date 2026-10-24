@@ -364,7 +364,7 @@ class RemoteActivationVerifier(private val context: Context) {
      * result — but only when the rejected code is the one the cache is for, so
      * a mistyped different code can't destroy a still-valid cached grant. When
      * the rejected code DID back the grant, the local activated flag goes too:
-     * leaving it behind showed a stale "已激活" while the launch gate demanded
+     * leaving it behind showed a stale "activated" state while the launch gate demanded
      * a code, and let a revoked grant masquerade as valid.
      */
     private suspend fun clearRejectedGrant(appId: Long, rejectedCode: String) {

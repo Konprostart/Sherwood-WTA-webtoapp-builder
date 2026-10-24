@@ -1,6 +1,6 @@
 # Chrome MV3 Extensions
 
-WebToApp runs Manifest V3 (and V2) Chrome extensions: content scripts, popups, options pages, a background context, and `declarativeNetRequest` rules. You can import a `.crx`/`.zip`, or install live from the Chrome Web Store via the **Browser Extensions** tab.
+Sherwood WTA runs Manifest V3 (and V2) Chrome extensions: content scripts, popups, options pages, a background context, and `declarativeNetRequest` rules. You can import a `.crx`/`.zip`, or install live from the Chrome Web Store via the **Browser Extensions** tab.
 
 ## Supported `manifest.json` fields
 

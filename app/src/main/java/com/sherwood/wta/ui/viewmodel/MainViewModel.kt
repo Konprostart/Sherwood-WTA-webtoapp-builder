@@ -422,7 +422,7 @@ class MainViewModel(
     /**
      * Icon/splash files referenced by a saved app's DB row must not be deleted during the
      * editing session: the DB row is only rewritten on save, so discarding the edit (back
-     * press → 放弃更改) would leave the row pointing at a deleted file — a permanently
+     * press → discard changes) would leave the row pointing at a deleted file — a permanently
      * broken icon/splash. Deletes are deferred to [deleteReplacedIconIfUnused] /
      * [deleteReplacedSplashIfUnused], which run after the save has committed the new path.
      */
@@ -1364,14 +1364,14 @@ class MainViewModel(
         val finalHtmlConfig = if (htmlConfig != null && (htmlConfig != existingApp.htmlConfig || htmlContentChanged(existingApp.htmlConfig, htmlConfig))) {
             AppLogger.d("MainViewModel", "HTML files changed, re-processing...")
 
-            // ⚠ 顺序很重要:不能先删旧项目目录再处理文件。
-            // 编辑界面恢复出来的 htmlConfig.files,其 path 往往直接指向**旧项目目录**
-            // (html_projects/<oldProjectId>/...)。如果先删旧目录,processAndSaveHtmlFiles
-            // 读取这些源文件时就会全部失败,导致 savedHtmlFiles 为空 → 抛
-            // saveFailedCannotProcessHtml 并把新目录也删掉 → 最终一个项目目录都不剩,
-            // 应用还能打开是因为 DB 里的 config 没回滚,但缩略图解析(依赖目录存在)
-            // 就会失败,表现为“保存后缩略图过一会消失、无法刷新”。
-            // 正确做法:先把文件写进新目录,确认成功后再删旧目录。
+            // ⚠ Order matters: do not delete the old project directory before processing the files.
+            // The htmlConfig.files restored from the edit screen often have paths pointing directly at the **old project directory**
+            // (html_projects/<oldProjectId>/...). If the old directory is deleted first, processAndSaveHtmlFiles
+            // fails to read these source files, leaving savedHtmlFiles empty → throws
+            // saveFailedCannotProcessHtml and also deletes the new directory → ending with no project directory left,
+            // the app can still open because the DB config is not rolled back, but thumbnail resolution (which depends on the directory existing)
+            // fails, showing up as "thumbnail disappears shortly after saving and cannot be refreshed".
+            // Correct approach: write the files into the new directory first, and delete the old directory only after that succeeds.
             val oldProjectId = existingApp.htmlConfig?.projectId
 
             val projectId = HtmlStorage.generateProjectId()
@@ -1383,7 +1383,7 @@ class MainViewModel(
                 throw Exception(Strings.saveFailedCannotProcessHtml)
             }
 
-            // 新项目目录已成功写好,此时再安全地删除旧目录(且避免误删 == 新目录的情况)。
+            // The new project directory was written successfully; now it is safe to delete the old directory (avoiding accidental deletion when it equals the new directory).
             if (!oldProjectId.isNullOrBlank() && oldProjectId != projectId) {
                 withContext(Dispatchers.IO) { HtmlStorage.deleteProject(context, oldProjectId) }
             }

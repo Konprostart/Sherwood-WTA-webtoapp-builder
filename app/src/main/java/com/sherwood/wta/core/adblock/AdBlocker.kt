@@ -1521,7 +1521,7 @@ class AdBlocker {
         try {
             connection.connectTimeout = 15000
             connection.readTimeout = 30000
-            connection.setRequestProperty("User-Agent", "WebToApp/1.0")
+            connection.setRequestProperty("User-Agent", "Sherwood-WTA/1.0")
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return@withContext null
             connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } catch (_: Exception) {
@@ -2334,7 +2334,7 @@ class AdBlocker {
                 val connection = URL(url).openConnection() as HttpURLConnection
                 connection.connectTimeout = 15000
                 connection.readTimeout = 30000
-                connection.setRequestProperty("User-Agent", "WebToApp/1.0")
+                connection.setRequestProperty("User-Agent", "Sherwood-WTA/1.0")
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) {
                     connection.disconnect()
                     return@withContext Result.failure(

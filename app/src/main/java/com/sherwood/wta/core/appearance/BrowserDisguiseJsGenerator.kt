@@ -44,8 +44,8 @@ object BrowserDisguiseJsGenerator {
 
     private const val PROTOTYPE_SHIELD_JS = """
 // ══════════════════════════════════════════════════════════════
-// [L0] PROTOTYPE SHIELD — toString() / getOwnPropertyDescriptor 保护
-// 所有后续 hook 调用 _mn(fn) 注册后, toString 返回 [native code]
+// [L0] PROTOTYPE SHIELD — protect toString() / getOwnPropertyDescriptor
+// After all later hooks register via _mn(fn), toString returns [native code]
 // ══════════════════════════════════════════════════════════════
 var _ht=new WeakSet();
 var _ots=Function.prototype.toString;
@@ -54,7 +54,7 @@ Function.prototype.toString=_mn(function(){
     if(_ht.has(this))return'function '+this.name+'() { [native code] }';
     return _ots.call(this);
 });
-// Object.getOwnPropertyDescriptor 防检测
+// Object.getOwnPropertyDescriptor anti-detection
 var _ogopd=Object.getOwnPropertyDescriptor;
 Object.getOwnPropertyDescriptor=_mn(function(obj,prop){
     var d=_ogopd.call(Object,obj,prop);
@@ -65,7 +65,7 @@ Object.getOwnPropertyDescriptor=_mn(function(obj,prop){
 
     private val UNIVERSAL_STEALTH_CORE_JS = """
 // ══════════════════════════════════════════════════════════════
-// [CORE] UNIVERSAL STEALTH — 表层 API 全伪装
+// [CORE] UNIVERSAL STEALTH — full disguise of surface APIs
 // ══════════════════════════════════════════════════════════════
 
 // ── navigator.webdriver ──
@@ -102,7 +102,7 @@ try{navigator.javaEnabled=_mn(function(){return false});}catch(e){}
 // ── navigator.globalPrivacyControl ──
 try{Object.defineProperty(navigator,'globalPrivacyControl',{get:_mn(function(){return false}),enumerable:true,configurable:true});}catch(e){}
 
-// ── window.chrome 完整模拟 (runtime/app/loadTimes/csi) ──
+// ── Full window.chrome emulation (runtime/app/loadTimes/csi) ──
 try{
 if(!window.chrome)window.chrome={};
 if(!window.chrome.runtime)window.chrome.runtime={
@@ -144,7 +144,7 @@ if(!window.chrome.csi)window.chrome.csi=_mn(function(){
 });
 }catch(e){}
 
-// ── navigator.plugins + mimeTypes 完整模拟 ──
+// ── Full navigator.plugins + mimeTypes emulation ──
 try{
 var _mkPlg=function(n,d,f,mt){
     var p={name:n,description:d,filename:f,length:mt.length};
@@ -186,7 +186,7 @@ var fakeConn={
 Object.defineProperty(navigator,'connection',{get:_mn(function(){return fakeConn}),enumerable:true,configurable:true});
 }catch(e){}
 
-// ── navigator.permissions.query 拦截 ──
+// ── navigator.permissions.query interception ──
 try{
 if(navigator.permissions){
     var _oq=navigator.permissions.query;
@@ -202,7 +202,7 @@ if(navigator.permissions){
 }
 }catch(e){}
 
-// ── Notification API 完整补全 ──
+// ── Complete Notification API ──
 try{
 if(!window.Notification){
     window.Notification=_mn(function Notification(title,opt){this.title=title;this.body=(opt||{}).body||'';this.onclick=null;this.onclose=null;this.onerror=null;this.onshow=null;});
@@ -263,7 +263,7 @@ try{
 });
 }catch(e){}
 
-// ── navigator.storage.estimate 标准化 ──
+// ── Normalize navigator.storage.estimate ──
 try{
 if(navigator.storage&&navigator.storage.estimate){
     var _oe=navigator.storage.estimate;
@@ -326,7 +326,7 @@ window.matchMedia=_mn(function(q){
 });
 }catch(e){}
 
-// ── performance.now() 精度降低 + Event.timeStamp 一致化 ──
+// ── Reduce performance.now() precision + make Event.timeStamp consistent ──
 try{
 var _opn=performance.now;
 var _po=(Math.random()-0.5)*0.1;
@@ -337,7 +337,7 @@ if(performance.timeOrigin){
 }
 }catch(e){}
 
-// ── 自动化标志全清除 ──
+// ── Clear all automation flags ──
 try{
 var autoFlags=['__selenium_unwrapped','__webdriver_evaluate','__webdriver_script_function',
     '__webdriver_script_func','__webdriver_script_fn','_Selenium_IDE_Recorder',
@@ -349,7 +349,7 @@ var autoFlags=['__selenium_unwrapped','__webdriver_evaluate','__webdriver_script
 autoFlags.forEach(function(f){try{if(f in window){delete window[f];Object.defineProperty(window,f,{get:_mn(function(){return undefined}),configurable:true})}}catch(e){}});
 }catch(e){}
 
-// ── Error.prepareStackTrace 痕迹清理 ──
+// ── Clean up Error.prepareStackTrace traces ──
 try{
 var _opst=Error.prepareStackTrace;
 Error.prepareStackTrace=_mn(function(err,stack){
@@ -361,7 +361,7 @@ Error.prepareStackTrace=_mn(function(err,stack){
 });
 }catch(e){}
 
-// ── Error().stack 属性拦截 ──
+// ── Error().stack property interception ──
 try{
 var _OE=Error;
 window.Error=_mn(function Error(msg){
@@ -382,7 +382,7 @@ window.Error.stackTraceLimit=_OE.stackTraceLimit;
 });
 }catch(e){}
 
-// ── console.debug 检测防护 ──
+// ── console.debug detection protection ──
 try{
 var _ocd=console.debug;
 console.debug=_mn(function(){
@@ -400,13 +400,13 @@ if(document.documentElement){
 }
 }catch(e){}
 
-// ── Intl 对象一致性 (确保 locale 相关 API 可用) ──
+// ── Intl object consistency (ensure locale-related APIs are available) ──
 try{
 if(!Intl.ListFormat)Intl.ListFormat=_mn(function(l,o){this.format=_mn(function(a){return a.join(', ')});this.formatToParts=_mn(function(a){return a.map(function(v){return{type:'element',value:v}})});this.resolvedOptions=_mn(function(){return{locale:'en-US',type:'conjunction',style:'long'}})});
 if(!Intl.Segmenter)Intl.Segmenter=_mn(function(l,o){this.segment=_mn(function(s){var r=[];for(var i=0;i<s.length;i++)r.push({segment:s[i],index:i,input:s});return r;});this.resolvedOptions=_mn(function(){return{locale:'en-US',granularity:'grapheme'}})});
 }catch(e){}
 
-// ── VisualViewport 补全 ──
+// ── VisualViewport completion ──
 try{
 if(!window.visualViewport){
     window.visualViewport={
@@ -418,10 +418,10 @@ if(!window.visualViewport){
 }
 }catch(e){}
 
-// ── navigator.brave 检测防护 (如果存在就删除) ──
+// ── navigator.brave detection protection (delete if present) ──
 try{if(navigator.brave)delete navigator.brave;}catch(e){}
 
-// ── window.cdc_ / document.cdc_ (ChromeDriver 检测) ──
+// ── window.cdc_ / document.cdc_ (ChromeDriver detection) ──
 try{
 Object.keys(window).forEach(function(k){if(k.match(/^cdc_/)||k.match(/^\${"$"}cdc_/)){delete window[k];}});
 Object.keys(document).forEach(function(k){if(k.match(/^cdc_/)||k.match(/^\${"$"}cdc_/)){delete document[k];}});
@@ -593,7 +593,7 @@ _idtf.prototype.resolvedOptions=_mn(function(){var r=_iro.call(this);r.timeZone=
 var _tzMap={'America/New_York':300,'America/Los_Angeles':480,'America/Chicago':360,'America/Denver':420,'Europe/London':0,'Europe/Paris':-60,'Europe/Berlin':-60,'Asia/Tokyo':-540,'Asia/Shanghai':-480,'Asia/Kolkata':-330,'Asia/Seoul':-540,'Australia/Sydney':-600,'Pacific/Auckland':-720};
 var _tzo=_tzMap['$timezone'];if(_tzo===undefined)_tzo=new Date().getTimezoneOffset();
 Date.prototype.getTimezoneOffset=_mn(function(){return _tzo});
-// toString/toLocaleString 一致化
+// Make toString/toLocaleString consistent
 var _dts=Date.prototype.toString;
 Date.prototype.toString=_mn(function(){
     var s=_dts.call(this);
@@ -620,7 +620,7 @@ Object.defineProperty(navigator,'languages',{get:_mn(function(){return Object.fr
 try{
 Object.defineProperty(navigator,'platform',{get:_mn(function(){return '$platform'}),enumerable:true,configurable:true});
 Object.defineProperty(navigator,'oscpu',{get:_mn(function(){return undefined}),enumerable:true,configurable:true});
-// 匹配 maxTouchPoints: Win32/MacIntel = 0, Linux = maybe 0
+// Match maxTouchPoints: Win32/MacIntel = 0, Linux = maybe 0
 Object.defineProperty(navigator,'maxTouchPoints',{get:_mn(function(){return ${if (platform.contains("Win") || platform.contains("Mac")) "0" else "1"}}),enumerable:true,configurable:true});
 }catch(e){}
 """
@@ -677,10 +677,10 @@ Object.defineProperty(navigator,'userAgentData',{get:_mn(function(){return _uad}
 
     private const val DEEP_DISGUISE_JS = """
 // ══════════════════════════════════════════════════════════════
-// [DEEP] MediaDevices / WebRTC / Font / Battery 深度伪装
+// [DEEP] Deep disguise of MediaDevices / WebRTC / Font / Battery
 // ══════════════════════════════════════════════════════════════
 
-// ── MediaDevices.enumerateDevices 匿名化 ──
+// ── Anonymize MediaDevices.enumerateDevices ──
 try{
 if(navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices){
     var _oed=navigator.mediaDevices.enumerateDevices;
@@ -695,7 +695,7 @@ if(navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices){
 }
 }catch(e){}
 
-// ── WebRTC 本地 IP 完全屏蔽 ──
+// ── Fully block WebRTC local IP ──
 try{
 var _RTC=window.RTCPeerConnection||window.webkitRTCPeerConnection;
 if(_RTC){
@@ -720,7 +720,7 @@ if(_RTC){
 }
 }catch(e){}
 
-// ── Font fingerprinting 防护 (measureText noise) ──
+// ── Font fingerprinting protection (measureText noise) ──
 try{
 var _omt=CanvasRenderingContext2D.prototype.measureText;
 var _fc={};
@@ -734,7 +734,7 @@ CanvasRenderingContext2D.prototype.measureText=_mn(function(text){
 });
 }catch(e){}
 
-// ── Battery API 屏蔽 ──
+// ── Block Battery API ──
 try{
 navigator.getBattery=_mn(function getBattery(){
     return Promise.resolve({
@@ -745,7 +745,7 @@ navigator.getBattery=_mn(function getBattery(){
 });
 }catch(e){}
 
-// ── document.elementFromPoint (HeadlessChrome 检测) ──
+// ── document.elementFromPoint (HeadlessChrome detection) ──
 try{
 var _oefp=document.elementFromPoint;
 document.elementFromPoint=_mn(function(x,y){
@@ -753,7 +753,7 @@ document.elementFromPoint=_mn(function(x,y){
 });
 }catch(e){}
 
-// ── window.chrome.webstore (已弃用但仍被检测) ──
+// ── window.chrome.webstore (deprecated but still detected) ──
 try{
 if(window.chrome&&!window.chrome.webstore){
     window.chrome.webstore={
@@ -767,7 +767,7 @@ if(window.chrome&&!window.chrome.webstore){
 
     private const val IFRAME_PROPAGATION_JS = """
 // ══════════════════════════════════════════════════════════════
-// [SEAL] iframe 全伪装传播
+// [SEAL] Propagate full disguise to iframes
 // ══════════════════════════════════════════════════════════════
 try{
 var _oce=document.createElement;
@@ -798,23 +798,23 @@ document.createElement=_mn(function(tag){
 
     private const val FINAL_SEAL_JS = """
 // ══════════════════════════════════════════════════════════════
-// [FINAL] 最终封印 — 属性枚举顺序 & 冻结关键对象
+// [FINAL] Final seal — property enumeration order & freeze key objects
 // ══════════════════════════════════════════════════════════════
 
-// ── Reflect.ownKeys(navigator) 顺序保护 ──
-// 某些检测工具通过 key 的顺序来判断是否被 hook 过
-// 无需额外操作: defineProperty 保持了原始枚举顺序
+// ── Reflect.ownKeys(navigator) order protection ──
+// Some detection tools check key order to tell whether an object was hooked
+// No extra action needed: defineProperty preserves the original enumeration order
 
-// ── instanceof 一致性检查 ──
+// ── instanceof consistency check ──
 try{
-// 确保 navigator instanceof Navigator 返回 true (某些 hook 会破坏原型链)
-// 这里不做任何修改，只是验证不破坏
+// Ensure navigator instanceof Navigator returns true (some hooks break the prototype chain)
+// No changes here; this only verifies nothing was broken
 }catch(e){}
 
-// ── 清理我们自己的全局变量 ──
+// ── Clean up our own globals ──
 try{
-// _mn, _ht 等辅助变量留在闭包内，不泄露到全局
-// __wta_browser_disguise__ 是唯一的标记，用于防重复注入
+// Helpers such as _mn and _ht stay inside the closure and do not leak to the global scope
+// __wta_browser_disguise__ is the only marker, used to prevent double injection
 }catch(e){}
 """
 }

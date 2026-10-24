@@ -1,4 +1,4 @@
-# CMakeLists.txt for WebToApp native components
+# CMakeLists.txt for Sherwood WTA native components
 
 cmake_minimum_required(VERSION 3.22.1)
 
@@ -7,18 +7,18 @@ project("webtoapp_native" C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 添加编译选项
-# 注意：不使用全局 add_compile_options，因为 node_bridge 需要导出 JNI 符号
+# Add compile options
+# Note: do not use global add_compile_options, because node_bridge must export JNI symbols
 
 # ==================== Node.js Bridge ====================
-# JNI 桥接层：通过 dlopen 加载 libnode.so 并调用 node::Start()
+# JNI bridge layer: loads libnode.so via dlopen and calls node::Start()
 add_library(
     node_bridge
     SHARED
     node_bridge.cpp
 )
 
-# 查找 Android 日志库
+# Find the Android log library
 find_library(
     log-lib
     log
@@ -29,15 +29,15 @@ find_library(
     dl
 )
 
-# ★ 16KB 页面大小对齐：Android 15+ 设备使用 16KB 页面大小，
-# ELF LOAD 段必须对齐到 16KB (16384) 边界，否则应用运行在兼容模式
+# ★ 16KB page size alignment: Android 15+ devices use a 16KB page size,
+# ELF LOAD segments must be aligned to a 16KB (16384) boundary, otherwise the app runs in compatibility mode
 
 target_link_libraries(
     node_bridge
     ${log-lib}
 )
 
-# node_bridge 编译选项：保留 JNI 导出符号（不使用 -fvisibility=hidden）
+# node_bridge compile options: keep JNI export symbols (do not use -fvisibility=hidden)
 target_compile_options(node_bridge PRIVATE
     -ffunction-sections
     -fdata-sections
@@ -45,7 +45,7 @@ target_compile_options(node_bridge PRIVATE
     -DNDEBUG
 )
 
-# node_bridge 只 gc-sections，不 strip（保留 JNI 导出符号）
+# node_bridge uses gc-sections only, no strip (keeps JNI export symbols)
 set_target_properties(node_bridge PROPERTIES
     LINK_FLAGS "-Wl,--gc-sections -Wl,-z,max-page-size=16384"
 )
@@ -122,8 +122,8 @@ set_target_properties(go_exec_loader PROPERTIES
     LINK_FLAGS "-Wl,--gc-sections -Wl,-z,max-page-size=16384"
 )
 
-# ==================== Performance Engine (极致性能优化引擎) ====================
-# C 级热路径加速：URL 解析、MIME 查找、mmap I/O、性能 JS 注入
+# ==================== Performance Engine (extreme performance optimization engine) ====================
+# C-level hot-path acceleration: URL parsing, MIME lookup, mmap I/O, performance JS injection
 add_library(
     perf_engine
     SHARED
@@ -132,7 +132,7 @@ add_library(
 
 set_property(TARGET perf_engine PROPERTY C_STANDARD 11)
 
-# -O3 最大速度优化 (性能引擎不需要体积优化)
+# -O3 maximum speed optimization (the performance engine does not need size optimization)
 target_compile_options(perf_engine PRIVATE
     -fvisibility=hidden
     -ffunction-sections
@@ -152,8 +152,8 @@ set_target_properties(perf_engine PROPERTIES
     LINK_FLAGS "-Wl,--gc-sections -Wl,--strip-all -Wl,-z,max-page-size=16384"
 )
 
-# ==================== System Optimizer (系统层极致性能优化) ====================
-# C 级系统调优：CPU 亲和性、线程优先级、OOM 评分、I/O 预读、温度监控
+# ==================== System Optimizer (system-level extreme performance optimization) ====================
+# C-level system tuning: CPU affinity, thread priority, OOM score, I/O readahead, temperature monitoring
 add_library(
     sys_optimizer
     SHARED
@@ -162,7 +162,7 @@ add_library(
 
 set_property(TARGET sys_optimizer PROPERTY C_STANDARD 11)
 
-# -O3 最大速度优化
+# -O3 maximum speed optimization
 target_compile_options(sys_optimizer PRIVATE
     -fvisibility=hidden
     -ffunction-sections
@@ -182,8 +182,8 @@ set_target_properties(sys_optimizer PROPERTIES
     LINK_FLAGS "-Wl,--gc-sections -Wl,--strip-all -Wl,-z,max-page-size=16384"
 )
 
-# ==================== Browser Kernel (浏览器内核伪装引擎) ====================
-# 反 WebView 检测: navigator/chrome/WebGL/Permissions/Error stack 全面伪装
+# ==================== Browser Kernel (browser kernel spoofing engine) ====================
+# Anti-WebView detection: comprehensive spoofing of navigator/chrome/WebGL/Permissions/Error stack
 add_library(
     browser_kernel
     SHARED
@@ -192,7 +192,7 @@ add_library(
 
 set_property(TARGET browser_kernel PROPERTY C_STANDARD 11)
 
-# -Os 体积优化 (此库主要是静态字符串, 不需要 -O3 速度优化)
+# -Os size optimization (this library is mostly static strings; no need for -O3 speed optimization)
 target_compile_options(browser_kernel PRIVATE
     -fvisibility=hidden
     -ffunction-sections

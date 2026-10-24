@@ -97,8 +97,8 @@ class ArscRebuilder {
 
             var modified = false
             val appNamePatterns = listOf(
-                "WebToApp - Convert Any Website to Android App",
-                "WebToApp"
+                "Sherwood WTA - Convert Any Website to Android App",
+                "Sherwood WTA"
             )
 
             for (i in strings.indices) {
@@ -120,7 +120,7 @@ class ArscRebuilder {
 
                 for (i in strings.indices) {
                     val str = strings[i]
-                    if (str.trim().startsWith("WebToApp") &&
+                    if (str.trim().startsWith("Sherwood WTA") &&
                         str.length < 100 &&
                         !str.contains("Theme") &&
                         !str.contains("http") &&

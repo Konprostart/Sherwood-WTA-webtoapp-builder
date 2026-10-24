@@ -86,12 +86,12 @@ private fun resolveHtmlPreviewSpec(context: Context, app: WebApp): AppPreviewSpe
         return AppPreviewSpec()
     }
 
-    // 入口选择,与 WebViewActivity 的加载逻辑保持一致:只要项目目录在,就一定
-    // 产出一个可截图的 captureUrl,不能因为入口文件名对不上就退回空 spec
-    // （那会让缩略图变成 “</>” 占位且没有刷新按钮——但应用其实能正常打开）。
-    // 优先级:配置入口文件 → 目录里任意 .html/.htm → 兜底直接用配置入口名
-    // （即便文件系统检查没命中,file:// 仍能让 WebView 尝试加载,失败也只是
-    //  截到一张空白图,而不是连刷新入口都没有）。
+    // Entry selection, consistent with WebViewActivity's loading logic: as long as the project directory exists, it always
+    // yields a capturable captureUrl; it must not fall back to an empty spec just because the entry filename does not match
+    // (that would turn the thumbnail into a "</>" placeholder with no refresh button, even though the app actually opens fine).
+    // Priority: configured entry file → any .html/.htm in the directory → fall back to the configured entry name
+    // (even if the filesystem check finds nothing, file:// still lets the WebView try to load; failure merely
+    //  captures a blank image instead of having no refresh entry at all).
     val entry = File(rootDir, entryFile).takeIf { it.exists() && it.isFile }
         ?: findStaticHtmlEntry(rootDir, listOf(""))
         ?: File(rootDir, entryFile)

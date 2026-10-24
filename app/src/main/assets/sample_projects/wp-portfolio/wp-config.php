@@ -1,7 +1,7 @@
 <?php
 /**
- * WordPress 作品集示例配置
- * SQLite 数据库模式（离线运行）
+ * WordPress portfolio sample configuration
+ * SQLite database mode (runs offline)
  */
 define('DB_ENGINE', 'sqlite');
 define('DB_DIR', __DIR__ . '/wp-content/database/');

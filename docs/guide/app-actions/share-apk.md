@@ -4,7 +4,7 @@ Builds the APK, then opens the system share sheet to send it. Tap ⋮ on an app 
 
 ## How it works
 
-1. WebToApp builds the APK (showing a "building" notice).
+1. Sherwood WTA builds the APK (showing a "building" notice).
 2. On success, it reports the incremental build mode used.
 3. The system share sheet opens with the APK attached, ready to send to any app.
 

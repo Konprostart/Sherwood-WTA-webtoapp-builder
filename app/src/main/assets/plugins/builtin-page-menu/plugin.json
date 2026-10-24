@@ -3,7 +3,7 @@
   "name": "Page Menu",
   "version": "1.0.0",
   "description": "Floating page tools: refresh, back/forward, jump to URL, share link, open externally, clear data, hide menu, exit.",
-  "author": "WebToApp",
+  "author": "Sherwood WTA",
   "icon": "page_menu",
   "matches": [
     "*"

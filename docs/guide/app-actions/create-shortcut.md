@@ -4,7 +4,7 @@ Adds a launcher shortcut to the generated app on your home screen. Tap ⋮ on an
 
 ## How it works
 
-- WebToApp requests the launcher to pin a shortcut for the app.
+- Sherwood WTA requests the launcher to pin a shortcut for the app.
 - On success, a confirmation appears and the shortcut is on your home screen.
 
 ## Possible outcomes

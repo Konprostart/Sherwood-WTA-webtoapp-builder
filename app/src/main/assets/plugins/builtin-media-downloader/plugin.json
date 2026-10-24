@@ -3,7 +3,7 @@
   "name": "Media Downloader",
   "version": "1.0.0",
   "description": "Detect and download videos, images and audio on popular sites.",
-  "author": "WebToApp",
+  "author": "Sherwood WTA",
   "icon": "download",
   "matches": [
     "*"

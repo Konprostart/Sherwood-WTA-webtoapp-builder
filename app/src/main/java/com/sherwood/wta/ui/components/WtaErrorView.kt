@@ -50,7 +50,7 @@ fun buildErrorReport(
     contextLines: List<String> = emptyList()
 ): String {
     val sb = StringBuilder()
-    sb.appendLine("===== WebToApp Error Report =====")
+    sb.appendLine("===== Sherwood WTA Error Report =====")
     sb.appendLine("scope: $scope")
     sb.appendLine("androidSdk: ${android.os.Build.VERSION.SDK_INT}")
     sb.appendLine("device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")

@@ -105,7 +105,7 @@ object IsolationScriptInjector {
         """.trimIndent()
     }
 
-    /** 解析 (primaryTag, languages[]) —— 语言伪装开启时优先用户选定标签，否则取随机指纹值。 */
+    /** Resolves (primaryTag, languages[]): when language spoofing is on, prefers the user-selected tag; otherwise uses the random fingerprint value. */
     private fun resolveLanguages(config: IsolationConfig, fp: GeneratedFingerprint): Pair<String, List<String>> {
         val custom = config.customLanguage
         if (config.spoofLanguage && !custom.isNullOrBlank()) {
@@ -117,7 +117,7 @@ object IsolationScriptInjector {
         return primary to arr
     }
 
-    /** 仅输出 JS 字符串字面量安全的字符，防止配置值破坏注入脚本。 */
+    /** Outputs only characters that are safe inside a JS string literal, so config values cannot break the injected script. */
     private fun jsStr(raw: String): String =
         raw.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ").replace("\r", " ")
 
@@ -623,7 +623,7 @@ object IsolationScriptInjector {
         """.trimIndent()
     }
 
-    /** 语言伪装（navigator.language/languages 独立块，指纹随机化关闭时也可用）。 */
+    /** Language spoofing (navigator.language/languages as a separate block; available even when fingerprint randomization is off). */
     private fun generateLanguageSpoofScript(langs: Pair<String, List<String>>): String {
         val (primary, arr) = langs
         return """
@@ -634,10 +634,10 @@ object IsolationScriptInjector {
     }
 
     /**
-     * 环境伪装核心块：Intl 语言环境注入 + 完整时区伪装。
-     * 时区通过 Intl.formatToParts 按时刻动态求偏移（自动处理夏令时），
-     * 并补齐 Date 本地时间 getter / toString 家族 / 构造函数参数解释，
-     * 使 new Date().toString() 与 getHours() 等全部落在目标时区。
+     * Core environment-spoofing block: Intl locale injection + full timezone spoofing.
+     * The timezone offset is computed per instant via Intl.formatToParts (handles DST automatically),
+     * and the Date local-time getters, toString family, and constructor argument interpretation are filled in,
+     * so new Date().toString() and getHours() etc. all resolve to the target timezone.
      */
     private fun generateEnvSpoofScript(localeTag: String?, timezone: String?): String {
         val localeLine = localeTag?.let { "var __wta_locale__ = '${jsStr(it)}';" } ?: "var __wta_locale__ = null;"
@@ -689,7 +689,7 @@ object IsolationScriptInjector {
                 __wta_dtfStr__.formatToParts(ms).forEach(function(x){ p[x.type] = x.value; });
                 return p;
             }
-            // 目标时区墙钟 - UTC，单位毫秒（对具体时刻求值 → 自动含 DST）
+            // Target timezone wall-clock minus UTC, in milliseconds (evaluated at the specific instant, so DST is included)
             function __wta_tzoff__(ms) {
                 var p = __wta_tzparts__(ms);
                 var h = +p.hour === 24 ? 0 : +p.hour;
@@ -732,7 +732,7 @@ object IsolationScriptInjector {
                     __wta_gmtstr__(ms) + ' (' + p.timeZoneName + ')';
             };
 
-            // new Date(y, m, d, ...) 的参数按目标时区墙钟解释
+            // Arguments of new Date(y, m, d, ...) are interpreted as target-timezone wall-clock time
             var WtaDate = function(y, mo, d, h, mi, s, msec) {
                 if (!(this instanceof WtaDate)) return __wta_OrigDate__.apply(null, arguments);
                 var argc = arguments.length;
@@ -740,7 +740,7 @@ object IsolationScriptInjector {
                 if (argc === 1) return new __wta_OrigDate__(y);
                 var guess = __wta_OrigDate__.UTC(y, mo, d === undefined ? 1 : d, h || 0, mi || 0, s || 0, msec || 0);
                 var t = guess - __wta_tzoff__(guess);
-                t = guess - __wta_tzoff__(t); // 迭代一次消除 DST 边界误差
+                t = guess - __wta_tzoff__(t); // One iteration to remove the DST-boundary error
                 return new __wta_OrigDate__(t);
             };
             WtaDate.prototype = __wta_OrigDate__.prototype;

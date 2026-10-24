@@ -31,7 +31,7 @@ object PerformanceOptimizer {
     if (window.__wta_perf_injected) return;
     window.__wta_perf_injected = true;
 
-    // 1. 图片懒加载 (Intersection Observer)
+    // 1. Lazy-load images (Intersection Observer)
     if ('IntersectionObserver' in window) {
         var lazyObserver = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
@@ -56,7 +56,7 @@ object PerformanceOptimizer {
         });
     }
 
-    // 2. 被动事件监听器（滚动性能优化）
+    // 2. Passive event listeners (scroll performance)
     var origAdd = EventTarget.prototype.addEventListener;
     var passiveEvents = { touchstart: 1, touchmove: 1, wheel: 1, mousewheel: 1, scroll: 1 };
     EventTarget.prototype.addEventListener = function(type, fn, opts) {
@@ -68,7 +68,7 @@ object PerformanceOptimizer {
         return origAdd.call(this, type, fn, opts);
     };
 
-    // 3. 预连接常见 CDN
+    // 3. Preconnect to common CDNs
     var cdnDomains = [];
     document.querySelectorAll('script[src], link[href]').forEach(function(el) {
         try {
@@ -88,7 +88,7 @@ object PerformanceOptimizer {
         }
     });
 
-    // 4. 长任务监控 + 自动让步
+    // 4. Long-task monitoring + automatic yielding
     if ('PerformanceObserver' in window) {
         try {
             var longTaskObserver = new PerformanceObserver(function(list) {
@@ -102,7 +102,7 @@ object PerformanceOptimizer {
         } catch(e) { /* PerformanceObserver not supported */ }
     }
 
-    // 5. 资源加载优先级优化
+    // 5. Resource loading priority optimization
     document.querySelectorAll('img').forEach(function(img) {
         if (img.getBoundingClientRect().top > window.innerHeight * 1.5) {
             img.loading = 'lazy';
@@ -112,20 +112,20 @@ object PerformanceOptimizer {
         }
     });
 
-    // 6. CSS 动画性能优化（will-change 提示）
+    // 6. CSS animation performance (will-change hints)
     var style = document.createElement('style');
     style.textContent = '.wta-animate{will-change:transform,opacity}.wta-gpu{transform:translateZ(0)}';
     document.head.appendChild(style);
 
-    // 7. 内存优化：页面隐藏时释放非关键资源
+    // 7. Memory optimization: release non-critical resources when the page is hidden
     document.addEventListener('visibilitychange', function() {
         if (document.hidden) {
-            // 暂停视频
+            // Pause video
             document.querySelectorAll('video').forEach(function(v) {
                 if (!v.paused) { v.dataset.wtaWasPlaying = '1'; v.pause(); }
             });
         } else {
-            // 恢复视频
+            // Resume video
             document.querySelectorAll('video[data-wta-was-playing]').forEach(function(v) {
                 v.play().catch(function(){ /* autoplay blocked */ });
                 delete v.dataset.wtaWasPlaying;
@@ -133,7 +133,7 @@ object PerformanceOptimizer {
         }
     });
 
-    // 8. 首次内容绘制加速：关键 CSS 阻塞检测
+    // 8. First contentful paint: critical CSS blocking detection
     if (window.performance && performance.getEntriesByType) {
         var cssEntries = performance.getEntriesByType('resource').filter(function(r) {
             return r.initiatorType === 'link' && r.name.endsWith('.css');

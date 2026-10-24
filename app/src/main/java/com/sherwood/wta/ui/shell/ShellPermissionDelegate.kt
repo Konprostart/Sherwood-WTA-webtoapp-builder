@@ -880,7 +880,7 @@ class ShellPermissionDelegate(private val activity: AppCompatActivity) {
                                 window.AndroidDownload.saveBase64File(base64Data, filename, mimeType);
                             }
                         } else if (blobUrl.startsWith('blob:')) {
-                            // 先查 DownloadBridge 拦截时缓存的 Blob（页面可能已同步 revoke 了 URL）
+                            // First check the Blob cached by DownloadBridge when intercepted (the page may have already synchronously revoked the URL)
                             const cachedBlob = window.__wtaBlobMap && window.__wtaBlobMap.get(blobUrl);
                             function dispatch(blob) {
                                 if (blob.size > LARGE_FILE_THRESHOLD) {

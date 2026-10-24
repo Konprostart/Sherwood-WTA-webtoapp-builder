@@ -1,6 +1,6 @@
 # My Apps
 
-**My Apps** is the home screen of WebToApp — the hub where every app you create lives. From here you preview, configure, build, and organize your apps.
+**My Apps** is the home screen of Sherwood WTA — the hub where every app you create lives. From here you preview, configure, build, and organize your apps.
 
 ## Layout
 

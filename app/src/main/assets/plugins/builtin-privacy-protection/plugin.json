@@ -3,7 +3,7 @@
   "name": "Privacy Protection",
   "version": "1.0.0",
   "description": "Block trackers, blur fingerprint signals, clear cookies on exit.",
-  "author": "WebToApp",
+  "author": "Sherwood WTA",
   "icon": "shield",
   "matches": [
     "*"

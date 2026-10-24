@@ -1102,7 +1102,7 @@ class DataBackupManager(private val context: Context) {
     /**
      * Pends a local entry (files/shared_prefs/datastore) for deferred restore instead of
      * writing it during zip streaming. Writing live config files before apps.json is parsed
-     * meant a corrupt/truncated backup aborted with "格式无效" AFTER already overwriting
+     * meant a corrupt/truncated backup aborted with an "invalid format" error AFTER already overwriting
      * presets, extension storage and theme prefs — with no rollback. Entries are buffered
      * to temp files first and only swapped in after the backup validates.
      */

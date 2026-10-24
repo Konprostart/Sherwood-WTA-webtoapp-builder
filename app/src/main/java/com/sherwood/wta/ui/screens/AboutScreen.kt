@@ -507,7 +507,7 @@ private fun AuthorHeroCard(
             Spacer(Modifier.height(18.dp))
 
             Text(
-                text = "WebToApp",
+                text = "Sherwood WTA",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
@@ -554,8 +554,8 @@ private fun AuthorHeroCard(
                     }
                 },
                 onCopy = {
-                    val label = "WebToApp version"
-                    val text = "WebToApp v$versionName ($versionCode)"
+                    val label = "Sherwood WTA version"
+                    val text = "Sherwood WTA v$versionName ($versionCode)"
                     context.copyToClipboard(label, text)
                     Toast.makeText(
                         context,

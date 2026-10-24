@@ -1,10 +1,10 @@
 # Introduction
 
-WebToApp is an Android application that turns web projects into installable APKs **on the device**. This page describes what it actually is, in terms of the code, so you know what to expect before you start.
+Sherwood WTA is an Android application that turns web projects into installable APKs **on the device**. This page describes what it actually is, in terms of the code, so you know what to expect before you start.
 
 ## What the app is, concretely
 
-At its core, WebToApp manages a list of **app definitions**. Each definition is a `WebApp` record stored in a local Room database (the `web_apps` table). A `WebApp` holds:
+At its core, Sherwood WTA manages a list of **app definitions**. Each definition is a `WebApp` record stored in a local Room database (the `web_apps` table). A `WebApp` holds:
 
 - **Identity** — `name`, `url`, `iconPath`, `packageName`, and an `appType`.
 - **A type-specific config** — one of `mediaConfig`, `galleryConfig`, `htmlConfig`, `wordpressConfig`, `nodejsConfig`, `phpAppConfig`, `pythonAppConfig`, `goAppConfig`, or `multiWebConfig`, depending on the type.

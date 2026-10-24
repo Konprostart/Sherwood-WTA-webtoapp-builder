@@ -2,7 +2,7 @@
   "name": "webtoapp-activation-worker",
   "version": "1.0.0",
   "private": true,
-  "description": "Reference remote-activation verification server for WebToApp (Cloudflare Worker)",
+  "description": "Reference remote-activation verification server for Sherwood WTA (Cloudflare Worker)",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

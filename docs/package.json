@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Official documentation site for WebToApp",
+  "description": "Official documentation site for Sherwood WTA",
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",

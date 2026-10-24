@@ -26,15 +26,15 @@ object ErrorPageGames {
         C.style.width=W+'px';C.style.height=H+'px';
         ctx.scale(dpr,dpr);
 
-        // 配色
+        // Palette
         var colors=['#667eea','#764ba2','#f093fb','#4facfe','#43e97b','#fa709a'];
         var bgColor='rgba(0,0,0,0.85)';
 
-        // 挡板
+        // Paddle
         var pw=70,ph=10,px=W/2-pw/2,py=H-30;
-        // 球
+        // Ball
         var br=5,bx=W/2,by=H-50,bdx=2.5,bdy=-2.5;
-        // 砖块
+        // Bricks
         var cols=6,rows=4,bw,bh=14,bp=4,bricks=[];
         bw=(W-bp*(cols+1))/cols;
         for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
@@ -42,29 +42,29 @@ object ErrorPageGames {
         }
         var score=0,lives=3,running=true;
 
-        // 触摸
+        // Touch
         C.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];var r=C.getBoundingClientRect();px=t.clientX-r.left-pw/2;if(px<0)px=0;if(px>W-pw)px=W-pw;},{passive:false});
         C.addEventListener('mousemove',function(e){var r=C.getBoundingClientRect();px=e.clientX-r.left-pw/2;if(px<0)px=0;if(px>W-pw)px=W-pw;});
 
         function draw(){
             ctx.fillStyle=bgColor;ctx.fillRect(0,0,W,H);
-            // 砖块
+            // Brick
             bricks.forEach(function(b){
                 if(!b.alive)return;
                 ctx.fillStyle=b.color;
                 ctx.beginPath();
                 ctx.roundRect(b.x,b.y,b.w,b.h,3);
                 ctx.fill();
-                // 玻璃高光
+                // Glass highlight
                 ctx.fillStyle='rgba(255,255,255,0.2)';
                 ctx.fillRect(b.x+2,b.y+1,b.w-4,b.h/3);
             });
-            // 挡板
+            // Paddle
             var g=ctx.createLinearGradient(px,py,px,py+ph);
             g.addColorStop(0,'#e0e0e0');g.addColorStop(1,'#999');
             ctx.fillStyle=g;
             ctx.beginPath();ctx.roundRect(px,py,pw,ph,5);ctx.fill();
-            // 球
+            // Ball
             ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.fill();
             ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.arc(bx-1.5,by-1.5,br*0.4,0,Math.PI*2);ctx.fill();
             // HUD
@@ -76,29 +76,29 @@ object ErrorPageGames {
         function update(){
             if(!running)return;
             bx+=bdx;by+=bdy;
-            // 墙壁
+            // Walls
             if(bx<br||bx>W-br)bdx=-bdx;
             if(by<br)bdy=-bdy;
-            // 挡板碰撞
+            // Paddle collision
             if(by+br>=py&&by+br<=py+ph&&bx>=px&&bx<=px+pw){
                 bdy=-Math.abs(bdy);
                 var hit=(bx-(px+pw/2))/(pw/2);
                 bdx=hit*3.5;
             }
-            // 掉落
+            // Falling
             if(by>H+br){
                 lives--;
                 if(lives<=0){running=false;return;}
                 bx=W/2;by=H-50;bdx=2.5;bdy=-2.5;
             }
-            // 砖块碰撞
+            // Brick collision
             bricks.forEach(function(b){
                 if(!b.alive)return;
                 if(bx+br>b.x&&bx-br<b.x+b.w&&by+br>b.y&&by-br<b.y+b.h){
                     b.alive=false;bdy=-bdy;score+=10;
                 }
             });
-            // 胜利检查
+            // Win check
             if(bricks.every(function(b){return !b.alive;})){running=false;}
         }
 
@@ -126,7 +126,7 @@ object ErrorPageGames {
         var cols=11,rows=13,cw=Math.floor(W/cols),ch=Math.floor(H/rows);
         var grid=[],stack=[];
 
-        // 生成迷宫 (DFS)
+        // Generate maze (DFS)
         for(var r=0;r<rows;r++){grid[r]=[];for(var c=0;c<cols;c++)grid[r][c]={v:false,w:{t:true,r:true,b:true,l:true}};}
         function neighbors(r,c){
             var n=[];
@@ -148,13 +148,13 @@ object ErrorPageGames {
             }else{var p=stack.pop();cr=p[0];cc=p[1];}
         }
 
-        // 玩家
+        // Player
         var px=0,py=0,trail=[[0,0]];
         var goalR=rows-1,goalC=cols-1;
         var won=false;
         var accentColor='#667eea';
 
-        // 触摸滑动
+        // Touch swipe
         var sx=0,sy=0;
         C.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0];sx=t.clientX;sy=t.clientY;},{passive:false});
         C.addEventListener('touchend',function(e){e.preventDefault();var t=e.changedTouches[0];var dx=t.clientX-sx,dy=t.clientY-sy;
@@ -179,7 +179,7 @@ object ErrorPageGames {
 
         function draw(){
             ctx.fillStyle='rgba(0,0,0,0.9)';ctx.fillRect(0,0,W,H);
-            // 迷宫墙壁
+            // Maze walls
             ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1.5;
             for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
                 var x=c*cw,y=r*ch,cell=grid[r][c];
@@ -188,20 +188,20 @@ object ErrorPageGames {
                 if(cell.w.b){ctx.beginPath();ctx.moveTo(x,y+ch);ctx.lineTo(x+cw,y+ch);ctx.stroke();}
                 if(cell.w.l){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+ch);ctx.stroke();}
             }
-            // 尾迹
+            // Trail
             ctx.strokeStyle=accentColor;ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';
             ctx.globalAlpha=0.4;ctx.beginPath();
             trail.forEach(function(p,i){var tx=p[0]*cw+cw/2,ty=p[1]*ch+ch/2;if(i===0)ctx.moveTo(tx,ty);else ctx.lineTo(tx,ty);});
             ctx.stroke();ctx.globalAlpha=1;
-            // 终点
+            // Exit
             ctx.fillStyle='#4ade80';ctx.beginPath();
             ctx.arc(goalC*cw+cw/2,goalR*ch+ch/2,cw*0.25,0,Math.PI*2);ctx.fill();
-            // 玩家
+            // Player
             ctx.fillStyle=accentColor;ctx.beginPath();
             ctx.arc(px*cw+cw/2,py*ch+ch/2,cw*0.3,0,Math.PI*2);ctx.fill();
             ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();
             ctx.arc(px*cw+cw/2-2,py*ch+ch/2-2,cw*0.12,0,Math.PI*2);ctx.fill();
-            // 胜利
+            // Win
             if(won){
                 ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(0,0,W,H);
                 ctx.fillStyle='#4ade80';ctx.font='bold 18px sans-serif';ctx.textAlign='center';
@@ -230,7 +230,7 @@ object ErrorPageGames {
         var starColors=['#ffd700','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff'];
         var spawnRate=60,frame=0;
 
-        // 触摸
+        // Touch
         C.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];var r=C.getBoundingClientRect();cx=t.clientX-r.left;},{passive:false});
         C.addEventListener('mousemove',function(e){var r=C.getBoundingClientRect();cx=e.clientX-r.left;});
 
@@ -255,40 +255,40 @@ object ErrorPageGames {
                 ctx.lineTo(ix,iy);
             }
             ctx.closePath();ctx.fill();
-            // 高光
+            // Highlight
             ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.arc(-r*0.2,-r*0.2,r*0.25,0,Math.PI*2);ctx.fill();
             ctx.restore();
         }
 
         function loop(){
             ctx.fillStyle='rgba(0,0,10,0.85)';ctx.fillRect(0,0,W,H);
-            // 背景星星
+            // Background stars
             ctx.fillStyle='rgba(255,255,255,0.3)';
             for(var i=0;i<20;i++){var sx=(i*137.5)%W,sy=((i*97.3+frame*0.1)%H);ctx.fillRect(sx,sy,1,1);}
             frame++;
-            // 生成
+            // Spawn
             if(frame%spawnRate===0)spawnStar();
             if(score>10&&spawnRate>30)spawnRate=45;
             if(score>25)spawnRate=35;
-            // 收集器
+            // Collector
             var cw=50,ch=8;
             ctx.fillStyle='rgba(255,255,255,0.7)';
             ctx.beginPath();ctx.roundRect(cx-cw/2,H-25,cw,ch,4);ctx.fill();
             ctx.fillStyle='rgba(255,255,255,0.3)';
             ctx.beginPath();ctx.moveTo(cx-cw/2-5,H-25+ch);ctx.lineTo(cx-cw/2+5,H-25);
             ctx.lineTo(cx+cw/2-5,H-25);ctx.lineTo(cx+cw/2+5,H-25+ch);ctx.closePath();ctx.fill();
-            // 星星
+            // Star
             for(var i=stars.length-1;i>=0;i--){
                 var s=stars[i];
                 s.y+=s.vy;s.rot+=s.rv;
                 drawStar(s.x,s.y,s.size,s.rot,s.color);
-                // 收集检测
+                // Collection check
                 if(s.y>=H-30&&s.y<=H-15&&Math.abs(s.x-cx)<cw/2+s.size){
                     score++;burst(s.x,s.y,s.color);stars.splice(i,1);continue;
                 }
                 if(s.y>H+10){missed++;stars.splice(i,1);if(missed>=maxMissed)running=false;}
             }
-            // 粒子
+            // Particles
             for(var i=particles.length-1;i>=0;i--){
                 var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=0.04;p.size*=0.97;
                 if(p.life<=0){particles.splice(i,1);continue;}
@@ -324,9 +324,9 @@ object ErrorPageGames {
         C.style.width=W+'px';C.style.height=H+'px';
         ctx.scale(dpr,dpr);
 
-        // 宣纸背景
+        // Xuan paper background
         ctx.fillStyle='#f5f0e8';ctx.fillRect(0,0,W,H);
-        // 纸纹理
+        // Paper texture
         for(var i=0;i<2000;i++){
             ctx.fillStyle='rgba(0,0,0,'+Math.random()*0.015+')';
             ctx.fillRect(Math.random()*W,Math.random()*H,Math.random()*3,1);
@@ -336,7 +336,7 @@ object ErrorPageGames {
         var inkDrops=[];
         var brushSize=4;
 
-        // 墨滴扩散
+        // Ink drop spread
         function addInkDrop(x,y,size){
             inkDrops.push({x:x,y:y,r:size*0.5,maxR:size*3+Math.random()*8,opacity:0.15+Math.random()*0.1,growing:true});
         }
@@ -349,16 +349,16 @@ object ErrorPageGames {
                 var cx=x0+dx*t,cy=y0+dy*t;
                 var pressure=1-Math.min(dist/100,0.7);
                 var sz=brushSize*pressure+Math.random()*1.5;
-                // 主笔触
+                // Main brush stroke
                 ctx.fillStyle='rgba(20,15,10,'+(0.5+Math.random()*0.3)+')';
                 ctx.beginPath();ctx.arc(cx+Math.random()*1.5-0.75,cy+Math.random()*1.5-0.75,sz,0,Math.PI*2);ctx.fill();
-                // 飞白效果
+                // Dry-brush effect
                 if(Math.random()<0.3){
                     ctx.fillStyle='rgba(20,15,10,0.08)';
                     ctx.beginPath();ctx.arc(cx+Math.random()*6-3,cy+Math.random()*6-3,sz*0.5,0,Math.PI*2);ctx.fill();
                 }
             }
-            // 偶尔墨滴
+            // Occasional ink drop
             if(Math.random()<0.05)addInkDrop(x1,y1,brushSize);
         }
 
@@ -385,12 +385,12 @@ object ErrorPageGames {
         C.addEventListener('mousemove',function(e){if(!painting)return;var p=getPos(e);drawBrush(lastX,lastY,p.x,p.y);lastX=p.x;lastY=p.y;});
         C.addEventListener('mouseup',function(){painting=false;});
 
-        // 提示文字
+        // Hint text
         ctx.fillStyle='rgba(0,0,0,0.12)';ctx.font='14px serif';ctx.textAlign='center';
         ctx.fillText('${Strings.gameTouchToPaint}',W/2,H/2);
         ctx.fillText('${Strings.gameZen}',W/2,H/2+25);ctx.textAlign='left';
 
-        // 墨滴动画
+        // Ink drop animation
         function animate(){updateDrops();requestAnimationFrame(animate);}
         animate();
     })();

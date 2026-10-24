@@ -395,7 +395,7 @@ private fun EnhancedActivationStatusCard(status: ActivationStatus) {
     val semantic = com.sherwood.wta.ui.design.WtaColors.semantic
     // A still-valid grant inside a code prompt is not "done" — the launch gate
     // just refused it (re-verify required, card revoked, remote recheck failed).
-    // Show the record for context but label it honestly instead of "已激活".
+    // Show the record for context but label it honestly instead of "activated".
     val primaryColor = when {
         isValid -> semantic.warning
         else -> MaterialTheme.colorScheme.error

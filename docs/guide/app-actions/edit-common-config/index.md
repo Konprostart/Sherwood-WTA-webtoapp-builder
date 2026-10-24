@@ -1,6 +1,6 @@
 # Edit Common Config
 
-**Edit Common Config** is the heart of WebToApp. It opens the shared editor that every app has — a scroll of capability cards covering appearance, behavior, networking, privacy, extensions, and packaging. Tap ⋮ on an app card, then **Edit Common Config** (for Web apps this entry is simply called **Edit**).
+**Edit Common Config** is the heart of Sherwood WTA. It opens the shared editor that every app has — a scroll of capability cards covering appearance, behavior, networking, privacy, extensions, and packaging. Tap ⋮ on an app card, then **Edit Common Config** (for Web apps this entry is simply called **Edit**).
 
 This section documents **every card**, one page each, in the order they appear in the editor.
 

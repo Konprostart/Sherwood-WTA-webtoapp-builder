@@ -99,11 +99,11 @@ class DemoApkExportTest {
         // upload step expects it.
         val outDir = File(System.getProperty("wta.demoOutDir") ?: "build/outputs/demo")
         outDir.mkdirs()
-        val destApk = File(outDir, "WebToApp-Demo.apk")
+        val destApk = File(outDir, "Sherwood-WTA-Demo.apk")
         apk.copyTo(destApk, overwrite = true)
         result.metadataPath?.let { File(it) }
             ?.takeIf { it.exists() }
-            ?.copyTo(File(outDir, "WebToApp-Demo.build.json"), overwrite = true)
+            ?.copyTo(File(outDir, "Sherwood-WTA-Demo.build.json"), overwrite = true)
 
         assertThat(destApk.exists()).isTrue()
     }
@@ -166,7 +166,7 @@ class DemoApkExportTest {
                 assertThat(info.activities.orEmpty().map { it.name }).containsAtLeastElementsIn(activities)
                 assertThat(activities).containsExactly(SaepPolicy.SHELL_ACTIVITY)
                 val outDir = File(System.getProperty("wta.demoOutDir") ?: "build/outputs/demo").apply { mkdirs() }
-                apk.copyTo(File(outDir, "WebToApp-SAEP-encrypted-$encrypted.apk"), overwrite = true)
+                apk.copyTo(File(outDir, "Sherwood-WTA-SAEP-encrypted-$encrypted.apk"), overwrite = true)
             }
         }
     }

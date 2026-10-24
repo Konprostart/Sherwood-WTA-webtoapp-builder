@@ -204,7 +204,7 @@ object NativePerfEngine {
         val css = getPerfCss()
 
         return buildString {
-            appendLine("<!-- WebToApp Performance Optimization -->")
+            appendLine("<!-- Sherwood WTA Performance Optimization -->")
             appendLine("<script>")
             appendLine("// DOCUMENT_START optimizations (passive events, visibility)")
             appendLine(startJs)

@@ -18,15 +18,15 @@ static void enable_16kb_app_compat_if_needed(void) {
 
     set_16kb_appcompat_fn fn = NULL;
 
-    // Android 16+ loader 符号（首选）
+    // Android 16+ loader symbol (preferred)
     fn = (set_16kb_appcompat_fn)dlsym(RTLD_DEFAULT, "__loader_android_set_16kb_appcompat_mode");
 
-    // Android 15/16 通用符号
+    // Generic Android 15/16 symbol
     if (fn == NULL) {
         fn = (set_16kb_appcompat_fn)dlsym(RTLD_DEFAULT, "android_set_16kb_appcompat_mode");
     }
 
-    // 极端 fallback（防止符号被移除）
+    // Last-resort fallback (in case the symbol was removed)
     if (fn == NULL) {
         fn = (set_16kb_appcompat_fn)dlsym(RTLD_DEFAULT, "__android_set_16kb_appcompat_mode");
     }

@@ -1,10 +1,10 @@
 import { defineConfig } from 'vitepress'
 
-// GitHub Pages serves this under /web-to-app/. Override with DOCS_BASE for a
+// GitHub Pages serves this under /Sherwood-WTA-webtoapp-builder/. Override with DOCS_BASE for a
 // custom domain (e.g. DOCS_BASE=/ npm run build).
-const base = process.env.DOCS_BASE || '/web-to-app/'
+const base = process.env.DOCS_BASE || '/Sherwood-WTA-webtoapp-builder/'
 
-type Lang = 'en' | 'zh'
+type Lang = 'en'
 
 const t = {
   en: {
@@ -129,128 +129,6 @@ const t = {
       publish: 'Publish to the Market'
     }
   },
-  zh: {
-    nav: { guide: '使用手册', developer: '开发者', extensions: '插件', privacy: '隐私权政策' },
-    cc: {
-      title: '通用配置',
-      basicInfo: '基本信息',
-      browserUi: '浏览器与界面',
-      mediaInteraction: '媒体与互动',
-      extensionsNetwork: '扩展与网络',
-      disguise: '伪装',
-      launchRuntime: '启动与运行',
-      advancedExport: '高级与导出',
-      appIcon: '应用图标',
-      appName: '应用名称',
-      configTemplates: '配置模板',
-      urlWebpage: '网址/网页',
-      activation: '激活码验证',
-      browserToolbar: '浏览器工具栏',
-      fullscreen: '全屏模式',
-      orientation: '屏幕方向',
-      keepScreenOn: '保持屏幕常亮',
-      floatingWindow: '悬浮小窗',
-      longPressMenu: '长按菜单',
-      splash: '启动动画',
-      bgm: '背景音乐',
-      announcement: '弹窗公告',
-      translate: '网页自动翻译',
-      extensionModules: '插件',
-      adBlocking: '广告拦截',
-      customDns: '自定义DNS',
-      deviceDisguise: '设备伪装',
-      autoStart: '自启动设置',
-      advancedSettings: '高级设置',
-      specialSettings: '特殊设置',
-      apkExport: 'APK导出配置'
-    },
-    guide: {
-      start: '开始',
-      intro: '简介',
-      gettingStarted: '快速开始',
-      mainScreen: '主界面',
-      myApps: '我的应用',
-      darkLight: '暗亮色',
-      language: '语言',
-      search: '搜索',
-      more: '更多菜单',
-      categories: '应用分类',
-      appList: '应用列表',
-      createButton: '创建按钮',
-      create: '创建应用',
-      typesOverview: '总览',
-      web: '网页',
-      multiWeb: '多站点',
-      html: 'HTML',
-      offlinePack: '离线包',
-      frontend: '前端',
-      php: 'PHP',
-      wordpress: 'WordPress',
-      nodejs: 'Node.js',
-      python: 'Python',
-      go: 'Go',
-      media: '媒体',
-      gallery: '画廊',
-      appActions: '应用功能',
-      editCore: '编辑核心配置',
-      editCommon: '编辑通用配置',
-      createShortcut: '创建快捷方式',
-      buildApk: '构建 APK',
-      shareApk: '分享 APK',
-      exportApk: '导出',
-      moveToCategory: '移动到分类',
-      delete: '删除',
-      moreFeatures: '更多功能',
-      moreAiTools: 'AI 工具',
-      moreDevTools: '开发工具',
-      moreBrowser: '浏览器',
-      moreSystem: '系统',
-      agent: 'Agent',
-      aiSettings: 'AI 设置',
-      extensionModules: '插件',
-      appModifier: '应用修改器',
-      linuxEnvironment: 'Linux 环境',
-      runtimeManagement: '运行时管理',
-      portManager: '端口管理',
-      browserKernel: '浏览器内核',
-      hostsAdblock: 'Hosts 拦截',
-      shareReceive: '接收分享内容',
-      usageStats: '使用统计',
-      googlePlay: 'Google Play',
-      fileManager: '文件管理',
-      dataBackup: '数据备份',
-      about: '关于',
-      config: '应用配置',
-      configOverview: '总览',
-      network: '网络',
-      privacy: '隐私',
-      appearance: '外观',
-      runtimes: '运行时',
-      faq: '常见问题'
-    },
-    dev: {
-      title: '开发者文档',
-      overview: '总览',
-      architecture: '架构',
-      exportPipeline: '导出管线',
-      shellSync: 'Shell 同步与模板',
-      configDrift: '配置字段漂移',
-      i18n: '国际化',
-      recipes: '常见改动配方',
-      fdroid: 'F-Droid',
-      contributing: '贡献指南'
-    },
-    ext: {
-      title: '扩展开发',
-      overview: '总览',
-      jsModule: 'HCJ 插件',
-      cssModule: 'CSS 插件',
-      userscript: '油猴脚本',
-      chromeMv3: 'Chrome MV3 扩展',
-      apiRef: 'API 参考',
-      publish: '发布到市场'
-    }
-  }
 } as const
 
 function nav(lang: Lang, prefix: string) {
@@ -481,39 +359,36 @@ function sidebar(lang: Lang, prefix: string) {
 
 function themeConfig(lang: Lang, prefix: string) {
   const s = t[lang]
-  const isZh = lang === 'zh'
   return {
     nav: nav(lang, prefix),
     sidebar: sidebar(lang, prefix),
-    outline: { label: isZh ? '本页目录' : 'On this page' },
+    outline: { label: 'On this page' },
     docFooter: {
-      prev: isZh ? '上一页' : 'Prev',
-      next: isZh ? '下一页' : 'Next'
+      prev: 'Prev',
+      next: 'Next'
     },
-    darkModeSwitchLabel: isZh ? '外观' : 'Appearance',
-    lightModeSwitchText: isZh ? '浅色' : 'Light',
-    darkModeSwitchText: isZh ? '深色' : 'Dark',
-    sidebarMenuLabel: isZh ? '菜单' : 'Menu',
-    returnToTopLabel: isZh ? '返回顶部' : 'Return to top',
+    darkModeSwitchLabel: 'Appearance',
+    lightModeSwitchText: 'Light',
+    darkModeSwitchText: 'Dark',
+    sidebarMenuLabel: 'Menu',
+    returnToTopLabel: 'Return to top',
     lastUpdated: {
-      text: isZh ? '最后更新' : 'Last updated',
+      text: 'Last updated',
       formatOptions: { dateStyle: 'medium' }
     },
     editLink: {
       pattern: 'https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/edit/main/docs/:path',
-      text: isZh ? '在 GitHub 上编辑此页' : 'Edit this page on GitHub'
+      text: 'Edit this page on GitHub'
     },
     footer: {
-      message: isZh ? '以 Unlicense 发布。' : 'Released under the Unlicense.',
-      copyright: isZh
-        ? 'Built by Sherwood WTA · <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/zh/privacy">隐私权政策</a>'
-        : 'Built by Sherwood WTA · <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/privacy">Privacy Policy</a>'
+      message: 'Released under the Unlicense.',
+      copyright: 'Built by Sherwood WTA · <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/privacy">Privacy Policy</a>'
     }
   }
 }
 
 export default defineConfig({
-  title: 'WebToApp',
+  title: 'Sherwood WTA',
   description:
     'Build Android APKs from web projects, directly on your phone — on-device runtimes, hardened networking, and Play-ready export.',
   lang: 'en',
@@ -524,7 +399,7 @@ export default defineConfig({
     ['link', { rel: 'icon', type: 'image/png', href: `${base}logo.png` }],
     ['meta', { name: 'theme-color', content: '#3b82f6' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'WebToApp' }],
+    ['meta', { property: 'og:title', content: 'Sherwood WTA' }],
     [
       'meta',
       {
@@ -539,34 +414,14 @@ export default defineConfig({
       label: 'English',
       lang: 'en',
       themeConfig: themeConfig('en', '')
-    },
-    zh: {
-      label: '简体中文',
-      lang: 'zh-CN',
-      title: 'WebToApp',
-      description: '在手机上直接把网页项目构建成 Android APK —— 设备端运行时、加固网络栈、Play 级导出。',
-      themeConfig: themeConfig('zh', '/zh')
     }
   },
   themeConfig: {
     logo: '/logo.png',
-    siteTitle: 'WebToApp',
+    siteTitle: 'Sherwood WTA',
     search: {
       provider: 'local',
-      options: {
-        locales: {
-          zh: {
-            translations: {
-              button: { buttonText: '搜索文档', buttonAriaLabel: '搜索文档' },
-              modal: {
-                noResultsText: '无法找到相关结果',
-                resetButtonTitle: '清除查询条件',
-                footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' }
-              }
-            }
-          }
-        }
-      }
+      options: {}
     },
     socialLinks: [
       { icon: 'github', link: 'https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder' }

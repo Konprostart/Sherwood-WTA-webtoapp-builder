@@ -134,7 +134,7 @@ fun BgmCard(
                         }
                     )
 
-                    // 播放控制块：模式 chips + 音量滑杆
+                    // Playback controls: mode chips + volume slider
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(WtaRadius.Card),

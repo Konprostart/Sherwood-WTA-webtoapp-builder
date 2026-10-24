@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "WTA Native Bridge",
   "version": "1.2",
-  "description": "Exposes the WebToApp native HTTP bridge to pages (CORS bypass / private network).",
+  "description": "Exposes the Sherwood WTA native HTTP bridge to pages (CORS bypass / private network).",
   "browser_specific_settings": {
     "gecko": {
       "id": "wta-native-bridge@webtoapp"

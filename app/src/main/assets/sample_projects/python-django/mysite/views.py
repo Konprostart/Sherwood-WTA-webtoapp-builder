@@ -1,6 +1,6 @@
 """
-Django Admin Dashboard — 精美的管理后台仪表盘
-展示 Django 的 MTV 架构和模板渲染能力
+Django Admin Dashboard — a polished admin dashboard
+Showcases Django's MTV architecture and template rendering
 """
 import os
 import random
@@ -8,7 +8,7 @@ from datetime import datetime
 from django.http import HttpResponse, JsonResponse
 
 def dashboard(request):
-    """主仪表盘视图"""
+    """Main dashboard view"""
     stats = {
         'users': f'{random.randint(8000,15000):,}',
         'posts': f'{random.randint(2000,5000):,}',

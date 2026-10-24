@@ -49,7 +49,7 @@ class ElementBlockerPluginTest {
         // confirm/minimize/cancel buttons keep working.
         val onTap = pageJs.substringAfter("function onTap").substringBefore("function onDblClick")
         assertThat(onTap).contains("inPickerUi(e.target)")
-        val onDblClick = pageJs.substringAfter("function onDblClick").substringBefore("// 进入选择模式")
+        val onDblClick = pageJs.substringAfter("function onDblClick").substringBefore("// Enter selection mode")
         assertThat(onDblClick).contains("inPickerUi(e.target)")
     }
 

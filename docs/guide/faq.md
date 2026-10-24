@@ -4,9 +4,9 @@ Practical questions, organized by topic. For full detail, follow the links.
 
 ## Basics
 
-### Is WebToApp free?
+### Is Sherwood WTA free?
 
-Yes. WebToApp is open source under [The Unlicense](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/LICENSE).
+Yes. Sherwood WTA is open source under [The Unlicense](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/blob/main/LICENSE).
 
 ### What Android version do I need?
 
@@ -14,11 +14,11 @@ Android 6.0 (API 23) or newer.
 
 ### Do I need a PC to build apps?
 
-No. The entire build — binary patching, signing, and AAB export — happens on-device. A PC is only needed if you want to build WebToApp itself from source.
+No. The entire build — binary patching, signing, and AAB export — happens on-device. A PC is only needed if you want to build Sherwood WTA itself from source.
 
 ### How is this different from a URL-wrapper app?
 
-A URL wrapper just opens a website in a WebView. WebToApp additionally runs **real server runtimes on-device** (Node.js, PHP, Python, Go, WordPress via fork+exec), ships a hardened network stack (DoH, TLS fingerprint, ECH), patches and signs APKs at the binary level, and supports modules/userscripts/MV3 extensions — all without a PC or remote build server.
+A URL wrapper just opens a website in a WebView. Sherwood WTA additionally runs **real server runtimes on-device** (Node.js, PHP, Python, Go, WordPress via fork+exec), ships a hardened network stack (DoH, TLS fingerprint, ECH), patches and signs APKs at the binary level, and supports modules/userscripts/MV3 extensions — all without a PC or remote build server.
 
 ### What app types can I create?
 
@@ -105,7 +105,7 @@ See [Custom DNS](/guide/app-actions/edit-common-config/custom-dns) — choose a 
 
 ### What's the difference between modules, userscripts, and MV3 extensions?
 
-- **JS/CSS modules** — WebToApp's native format with a config UI and panel. See [JS Modules](/extensions/js-module).
+- **JS/CSS modules** — Sherwood WTA's native format with a config UI and panel. See [JS Modules](/extensions/js-module).
 - **Userscripts** — Tampermonkey/Greasemonkey-style `.user.js` with `GM_*` APIs. See [Userscripts](/extensions/userscript).
 - **MV3 extensions** — Chrome Manifest V3 extensions with `chrome.*` APIs. See [Chrome MV3](/extensions/chrome-mv3).
 

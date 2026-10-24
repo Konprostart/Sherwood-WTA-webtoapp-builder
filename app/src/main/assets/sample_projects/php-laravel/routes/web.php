@@ -1,9 +1,9 @@
 <?php
 /**
- * 路由定义 — 模仿 Laravel Route 风格
+ * Route definitions — modeled after Laravel's Route style
  * 
- * 格式: [HTTP方法, 路径模式, 处理器名称]
- * 路径支持 {param} 参数占位符
+ * Format: [HTTP method, path pattern, handler name]
+ * Paths support {param} placeholders
  */
 return [
     ['GET',  '/',            'home'],

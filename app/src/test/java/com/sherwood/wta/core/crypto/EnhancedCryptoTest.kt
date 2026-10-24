@@ -38,7 +38,7 @@ class EnhancedCryptoTest {
 
     @Test
     fun `encrypt and decrypt roundtrip with aad`() {
-        val plaintext = "Hello WebToApp".toByteArray()
+        val plaintext = "Hello Sherwood WTA".toByteArray()
         val aad = "metadata".toByteArray()
 
         val encrypted = EnhancedCrypto.encrypt(plaintext, secretKey, aad)

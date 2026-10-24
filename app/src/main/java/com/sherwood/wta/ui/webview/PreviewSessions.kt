@@ -78,7 +78,7 @@ object PreviewSessions {
         }
         if (!appInForeground(context)) {
             return Result.failure(
-                IllegalStateException("WebToApp is in the background. Bring it to the front, then call preview again.")
+                IllegalStateException("Sherwood WTA is in the background. Bring it to the front, then call preview again.")
             )
         }
         val deferred = CompletableDeferred<WebViewDocumentActivity>()

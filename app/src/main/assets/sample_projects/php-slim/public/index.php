@@ -1,9 +1,9 @@
 <?php
 /**
- * Mini Slim — 自包含 REST API 仪表盘
+ * Mini Slim — self-contained REST API dashboard
  * 
- * 模仿 Slim 4 风格，无需 Composer 依赖
- * 特性: RESTful API | 交互式测试面板 | SQLite 存储 | JSON 响应
+ * Mimics the Slim 4 style; no Composer dependencies
+ * Features: RESTful API | interactive test panel | SQLite storage | JSON responses
  */
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 
@@ -11,7 +11,7 @@ $basePath = dirname(__DIR__);
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// ==================== 数据库 ====================
+// ==================== Database ====================
 $storagePath = $basePath . '/storage';
 if (!is_dir($storagePath)) @mkdir($storagePath, 0755, true);
 
@@ -39,7 +39,7 @@ try {
     }
 } catch (Exception $e) { $pdo = null; }
 
-// ==================== API 路由 ====================
+// ==================== API routes ====================
 function jsonResponse(int $code, $data): void {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
@@ -49,12 +49,12 @@ function jsonResponse(int $code, $data): void {
 }
 
 function getInput(): array {
-    // 优先使用路由服务器提供的原始请求体（CLI SAPI 下 php://input 可能不可用）
+    // Prefer the raw request body provided by the router server (php://input may be unavailable under the CLI SAPI)
     $raw = $GLOBALS['__HTTP_RAW_BODY'] ?? file_get_contents('php://input');
     return json_decode($raw, true) ?: $_POST;
 }
 
-// API 路由
+// API routes
 if (str_starts_with($uri, '/api/')) {
     header('Access-Control-Allow-Methods: GET,POST,PUT,PATCH,DELETE,OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
@@ -126,7 +126,7 @@ if (str_starts_with($uri, '/api/')) {
     jsonResponse(404, ['error' => '接口不存在: ' . $method . ' ' . $uri]);
 }
 
-// ==================== 仪表盘页面 ====================
+// ==================== Dashboard page ====================
 $taskCount = $pdo ? $pdo->query('SELECT COUNT(*) FROM tasks')->fetchColumn() : 0;
 $doneCount = $pdo ? $pdo->query('SELECT COUNT(*) FROM tasks WHERE done=1')->fetchColumn() : 0;
 ?>

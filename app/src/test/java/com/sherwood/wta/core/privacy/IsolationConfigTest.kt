@@ -38,7 +38,7 @@ class IsolationConfigTest {
 
     @Test
     fun `legacy json with removed fields still deserializes`() {
-        // 旧版本 JSON 携带已删除的 headerConfig/ipSpoofConfig/storageIsolation —— Gson 忽略未知字段。
+        // Old-version JSON carries removed headerConfig/ipSpoofConfig/storageIsolation; Gson ignores unknown fields.
         val legacy = """
             {
               "enabled": true,
@@ -88,7 +88,7 @@ class IsolationConfigTest {
         assertThat(IsolationConfig.MAXIMUM.level()).isEqualTo(IsolationLevel.MAXIMUM)
         assertThat(IsolationConfig.DISABLED.level()).isNull()
 
-        // 自定义取值不改变等级判定（伪装的具体值不算防护强度的一部分）
+        // Custom values don't change the protection level (spoof values are not part of protection strength)
         val maxCustom = IsolationConfig.MAXIMUM.copy(
             customLanguage = "ja-JP",
             customTimezone = "Asia/Tokyo",
@@ -97,7 +97,7 @@ class IsolationConfigTest {
         )
         assertThat(maxCustom.level()).isEqualTo(IsolationLevel.MAXIMUM)
 
-        // 关掉一项伪装 → 自定义组合
+        // Turn off one spoof item → custom combination
         val mixed = IsolationConfig.MAXIMUM.copy(spoofScreen = false)
         assertThat(mixed.level()).isNull()
     }
@@ -118,7 +118,7 @@ class IsolationConfigTest {
         assertThat(downgraded.customTimezone).isEqualTo("Europe/Berlin")
         assertThat(downgraded.fingerprintConfig.fingerprintId).isEqualTo("keep-me")
 
-        // 升回最强时伪装重新开启，值还在
+        // Raising back to max re-enables spoofing; the values are kept
         val upgraded = downgraded.withLevel(IsolationLevel.MAXIMUM)
         assertThat(upgraded.spoofLanguage).isTrue()
         assertThat(upgraded.customLanguage).isEqualTo("de-DE")
