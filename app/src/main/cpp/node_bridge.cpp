@@ -203,7 +203,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_webtoapp_core_nodejs_NodeBridge_nativeLoadNode(
+Java_com_sherwood_wta_core_nodejs_NodeBridge_nativeLoadNode(
         JNIEnv *env,
         jclass clazz,
         jstring nodePath) {
@@ -255,7 +255,7 @@ Java_com_webtoapp_core_nodejs_NodeBridge_nativeLoadNode(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_webtoapp_core_nodejs_NodeBridge_nativeStartNode(
+Java_com_sherwood_wta_core_nodejs_NodeBridge_nativeStartNode(
         JNIEnv *env,
         jclass clazz,
         jobjectArray arguments,
@@ -342,14 +342,14 @@ Java_com_webtoapp_core_nodejs_NodeBridge_nativeStartNode(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_webtoapp_core_nodejs_NodeBridge_nativeIsStarted(
+Java_com_sherwood_wta_core_nodejs_NodeBridge_nativeIsStarted(
         JNIEnv *env,
         jclass clazz) {
     return g_node_started ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_webtoapp_core_nodejs_NodeBridge_nativeIsLoaded(
+Java_com_sherwood_wta_core_nodejs_NodeBridge_nativeIsLoaded(
         JNIEnv *env,
         jclass clazz) {
     return (g_node_handle != nullptr && g_node_start != nullptr) ? JNI_TRUE : JNI_FALSE;

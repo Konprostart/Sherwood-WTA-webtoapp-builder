@@ -18,8 +18,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TARGETS = (
-    REPO_ROOT / "app/src/main/java/com/webtoapp/ui/screens",
-    REPO_ROOT / "app/src/main/java/com/webtoapp/ui/components",
+    REPO_ROOT / "app/src/main/java/com/sherwood/wta/ui/screens",
+    REPO_ROOT / "app/src/main/java/com/sherwood/wta/ui/components",
 )
 DEFAULT_ALLOWLIST = REPO_ROOT / ".github/scripts/ui_design_allowlist.txt"
 

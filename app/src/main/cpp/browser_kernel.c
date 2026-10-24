@@ -373,7 +373,7 @@ static int sanitize_user_agent(const char *ua, char *out, int out_size) {
     return dst;
 }
 
-#define JNI_FUNC(name) Java_com_webtoapp_core_kernel_BrowserKernel_##name
+#define JNI_FUNC(name) Java_com_sherwood_wta_core_kernel_BrowserKernel_##name
 
 JNIEXPORT jstring JNICALL
 JNI_FUNC(nativeGetKernelJs)(JNIEnv *env, jobject thiz) {

@@ -194,10 +194,10 @@
         </intent>
         
         <intent>
-            <action android:name="com.webtoapp.action.PORT_QUERY" />
+            <action android:name="com.sherwood.wta.action.PORT_QUERY" />
         </intent>
         <intent>
-            <action android:name="com.webtoapp.action.PORT_RELEASE" />
+            <action android:name="com.sherwood.wta.action.PORT_RELEASE" />
         </intent>
 
         <!-- Baseline app-list visibility: every package with a launcher entry.
@@ -244,7 +244,7 @@
 
         
         <meta-data
-            android:name="com.webtoapp.WTA_APP_MARKER"
+            android:name="com.sherwood.wta.WTA_APP_MARKER"
             android:value="true" />
 
         
@@ -271,7 +271,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="com.webtoapp"
+                    android:scheme="com.sherwood.wta"
                     android:host="oauth2callback" />
             </intent-filter>
 
@@ -460,7 +460,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.webtoapp.ACTION_SCHEDULED_START" />
+                <action android:name="com.sherwood.wta.ACTION_SCHEDULED_START" />
             </intent-filter>
         </receiver>
 
@@ -474,7 +474,7 @@
             android:enabled="true"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.webtoapp.action.PORT_QUERY" />
+                <action android:name="com.sherwood.wta.action.PORT_QUERY" />
             </intent-filter>
         </receiver>
 
@@ -483,7 +483,7 @@
             android:enabled="true"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.webtoapp.action.PORT_RELEASE" />
+                <action android:name="com.sherwood.wta.action.PORT_RELEASE" />
             </intent-filter>
         </receiver>
 
@@ -497,7 +497,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.webtoapp.bridge.SCHEDULED_NOTIFICATION" />
+                <action android:name="com.sherwood.wta.bridge.SCHEDULED_NOTIFICATION" />
             </intent-filter>
         </receiver>
 

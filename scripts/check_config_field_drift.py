@@ -7,9 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-PAYLOAD_FILE = ROOT / "app/src/main/java/com/webtoapp/core/apkbuilder/ApkConfigJsonFactory.kt"
-APKCONFIG_FILE = ROOT / "app/src/main/java/com/webtoapp/core/apkbuilder/ApkConfig.kt"
-SHELLCONFIG_FILE = ROOT / "app/src/main/java/com/webtoapp/core/shell/ShellModeManager.kt"
+PAYLOAD_FILE = ROOT / "app/src/main/java/com/sherwood/wta/core/apkbuilder/ApkConfigJsonFactory.kt"
+APKCONFIG_FILE = ROOT / "app/src/main/java/com/sherwood/wta/core/apkbuilder/ApkConfig.kt"
+SHELLCONFIG_FILE = ROOT / "app/src/main/java/com/sherwood/wta/core/shell/ShellModeManager.kt"
 ALLOWLIST_FILE = ROOT / "scripts/config_field_drift_allowlist.json"
 
 OBJECT_RETURN_PAYLOAD_CLASSES = ("BackgroundRunConfig", "NotificationConfig")

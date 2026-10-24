@@ -730,7 +730,7 @@ static char *wta_build_blob(JNIEnv *env, jobjectArray jargv, jobjectArray jenvp,
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_webtoapp_core_linux_StaticExecBridge_nativeSpawn(
+Java_com_sherwood_wta_core_linux_StaticExecBridge_nativeSpawn(
         JNIEnv *env, jclass clazz,
         jstring jpath, jobjectArray jargv, jobjectArray jenvp, jstring jcwd,
         jint fd_in, jint fd_out, jint fd_err, jintArray jerr)
@@ -809,7 +809,7 @@ Java_com_webtoapp_core_linux_StaticExecBridge_nativeSpawn(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_webtoapp_core_linux_StaticExecBridge_nativeWaitpid(
+Java_com_sherwood_wta_core_linux_StaticExecBridge_nativeWaitpid(
         JNIEnv *env, jclass clazz, jlong pid, jintArray statusOut, jboolean blocking)
 {
     (void)clazz;
@@ -825,7 +825,7 @@ Java_com_webtoapp_core_linux_StaticExecBridge_nativeWaitpid(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_webtoapp_core_linux_StaticExecBridge_nativeKill(
+Java_com_sherwood_wta_core_linux_StaticExecBridge_nativeKill(
         JNIEnv *env, jclass clazz, jlong pid, jint sig)
 {
     (void)env; (void)clazz;

@@ -1,0 +1,2349 @@
+package com.sherwood.wta.ui.screens
+
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.FilterNone
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.ForkRight
+import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.NorthEast
+import androidx.compose.material.icons.outlined.PlayCircleOutline
+import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Subtitles
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.Tag
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.sherwood.wta.R
+import com.sherwood.wta.core.agent.mcp.HostMcpController
+import com.sherwood.wta.core.host.HostRuntimePrefs
+import com.sherwood.wta.core.i18n.AppLanguage
+import com.sherwood.wta.core.i18n.Strings
+import com.sherwood.wta.ui.webview.WebViewDocumentActivity
+import com.sherwood.wta.ui.design.WtaCard
+import com.sherwood.wta.ui.design.WtaCardTone
+import com.sherwood.wta.ui.design.WtaSettingRow
+import com.sherwood.wta.ui.design.WtaSwitch
+import com.sherwood.wta.ui.design.WtaRadius
+import com.sherwood.wta.ui.design.WtaScreen
+import com.sherwood.wta.ui.design.WtaSection
+import com.sherwood.wta.ui.design.WtaSectionHeaderStyle
+import com.sherwood.wta.ui.design.WtaSpacing
+import com.sherwood.wta.ui.design.rememberHapticClick
+import com.sherwood.wta.ui.design.wtaPressScale
+import com.sherwood.wta.ui.theme.LocalIsDarkTheme
+import com.sherwood.wta.ui.theme.LocalShowDescriptions
+import com.sherwood.wta.ui.theme.ifDescriptionsShown
+import com.sherwood.wta.ui.theme.ThemeManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+
+@Composable
+fun AboutScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scrollState = rememberScrollState()
+    val versionName = remember(context) { context.currentVersionName() }
+    val versionCode = remember(context) { context.currentVersionCode() }
+
+    WtaScreen(
+        title = Strings.about,
+        snackbarHostState = snackbarHostState,
+        onBack = onBack
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(
+                    horizontal = WtaSpacing.ScreenHorizontal,
+                    vertical = WtaSpacing.ScreenVertical
+                ),
+            verticalArrangement = Arrangement.spacedBy(WtaSpacing.SectionGap)
+        ) {
+            AuthorHeroCard(
+                versionName = versionName,
+                versionCode = versionCode
+            )
+
+            ContactGrid()
+
+            DescriptionsToggleCard()
+
+            SeparateTasksCard()
+            AdvancedFeaturesCard()
+
+            LocalMcpCard()
+
+            OtherProjectsSection()
+
+            LegalTabContent()
+
+            MadeWithLoveFooter()
+        }
+    }
+}
+
+@Composable
+private fun DescriptionsToggleCard() {
+    val context = LocalContext.current
+    val themeManager = remember { ThemeManager.getInstance(context) }
+    val showDescriptions by themeManager.showDescriptionsFlow.collectAsStateWithLifecycle()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Elevated,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+    ) {
+        WtaSettingRow(
+            icon = Icons.Outlined.Subtitles,
+            title = Strings.showDescriptions,
+            subtitle = Strings.showDescriptionsHint.ifDescriptionsShown(),
+            onClick = { scope.launch { themeManager.setShowDescriptions(!showDescriptions) } },
+            trailing = {
+                WtaSwitch(
+                    checked = showDescriptions,
+                    onCheckedChange = {
+                        scope.launch { themeManager.setShowDescriptions(it) }
+                    }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun AdvancedFeaturesCard() {
+    val context = LocalContext.current
+    val hostPrefs = remember { HostRuntimePrefs.getInstance(context) }
+    val enabled by hostPrefs.advancedFeaturesFlow.collectAsStateWithLifecycle()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Elevated,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+    ) {
+        WtaSettingRow(
+            icon = Icons.Outlined.Tune,
+            title = Strings.advancedFeatures,
+            subtitle = Strings.advancedFeaturesDesc.ifDescriptionsShown(),
+            onClick = { scope.launch { hostPrefs.setAdvancedFeaturesEnabled(!enabled) } },
+            trailing = {
+                WtaSwitch(
+                    checked = enabled,
+                    onCheckedChange = { scope.launch { hostPrefs.setAdvancedFeaturesEnabled(it) } }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun SeparateTasksCard() {
+    val context = LocalContext.current
+    val hostPrefs = remember { HostRuntimePrefs.getInstance(context) }
+    val separateTasks by hostPrefs.separateTasksFlow.collectAsStateWithLifecycle()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    fun apply(enabled: Boolean) {
+        scope.launch {
+            hostPrefs.setSeparateTasksEnabled(enabled)
+            if (!enabled) {
+                WebViewDocumentActivity.finishAllDocumentTasks()
+            }
+        }
+    }
+
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Elevated,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+    ) {
+        WtaSettingRow(
+            icon = Icons.Outlined.FilterNone,
+            title = Strings.webAppSeparateTasks,
+            subtitle = Strings.webAppSeparateTasksDesc.ifDescriptionsShown(),
+            onClick = { apply(!separateTasks) },
+            trailing = {
+                WtaSwitch(
+                    checked = separateTasks,
+                    onCheckedChange = { apply(it) }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun LocalMcpCard() {
+    val context = LocalContext.current
+    val hostPrefs = remember { HostRuntimePrefs.getInstance(context) }
+    val mcp by hostPrefs.mcpFlow.collectAsStateWithLifecycle()
+    val status by HostMcpController.status.collectAsStateWithLifecycle()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    fun setEnabled(enabled: Boolean) {
+        scope.launch {
+            hostPrefs.setMcpEnabled(enabled)
+            HostMcpController.apply(context.applicationContext)
+        }
+    }
+
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Elevated,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+    ) {
+        Column {
+            WtaSettingRow(
+                icon = Icons.Outlined.Hub,
+                title = Strings.localMcp,
+                subtitle = Strings.localMcpDesc.ifDescriptionsShown(),
+                onClick = { setEnabled(!mcp.enabled) },
+                trailing = {
+                    WtaSwitch(
+                        checked = mcp.enabled,
+                        onCheckedChange = { setEnabled(it) }
+                    )
+                }
+            )
+            AnimatedVisibility(
+                visible = mcp.enabled,
+                enter = com.sherwood.wta.ui.animation.CardExpandTransition,
+                exit = com.sherwood.wta.ui.animation.CardCollapseTransition
+            ) {
+                Column(
+                    modifier = Modifier.padding(
+                        horizontal = WtaSpacing.RowHorizontal,
+                        vertical = WtaSpacing.ContentGap
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(WtaSpacing.ContentGap)
+                ) {
+                    val port = (status as? HostMcpController.Status.Running)?.port ?: mcp.port
+                    CopyOnLongPressText(
+                        text = "http://127.0.0.1:$port/mcp",
+                        clipLabel = "webtoapp-mcp-url",
+                        toast = Strings.localMcpAddressCopied,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (mcp.token.isNotEmpty()) {
+                        CopyOnLongPressText(
+                            text = mcp.token,
+                            clipLabel = "webtoapp-mcp-token",
+                            toast = Strings.localMcpTokenCopied,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    val failed = status as? HostMcpController.Status.Failed
+                    if (failed != null) {
+                        Text(
+                            text = Strings.localMcpBindFailed(failed.message),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    if (LocalShowDescriptions.current) {
+                        Text(
+                            text = Strings.localMcpAdb(port),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(WtaSpacing.Small)) {
+                        TextButton(onClick = {
+                            context.copyToClipboard(
+                                "webtoapp-mcp",
+                                HostMcpController.configSnippet(port, mcp.token)
+                            )
+                            Toast.makeText(context, Strings.localMcpCopied, Toast.LENGTH_SHORT).show()
+                        }) {
+                            Text(Strings.localMcpCopyConfig)
+                        }
+                        TextButton(onClick = {
+                            scope.launch { hostPrefs.rotateMcpToken() }
+                        }) {
+                            Text(Strings.localMcpRotateToken)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CopyOnLongPressText(
+    text: String,
+    clipLabel: String,
+    toast: String,
+    style: TextStyle,
+    color: Color,
+) {
+    val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    Text(
+        text = text,
+        style = style,
+        color = color,
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    context.copyToClipboard(clipLabel, text)
+                    Toast.makeText(context, toast, Toast.LENGTH_SHORT).show()
+                }
+            )
+    )
+}
+
+@Composable
+private fun AuthorHeroCard(
+    versionName: String,
+    versionCode: Long
+) {
+    val context = LocalContext.current
+    val byLine = aboutAuthorByLine()
+    val versionCopied = versionCopiedToast()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    var updateResult by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<com.sherwood.wta.core.update.UpdateChecker.Result?>(null)
+    }
+    var isCheckingUpdate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showUpdateDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var downloadState by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<com.sherwood.wta.core.update.UpdateDownloadState>(
+            com.sherwood.wta.core.update.UpdateDownloadState.Idle
+        )
+    }
+
+    // Version history state
+    var showHistorySheet by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var historyLoading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var historyError by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var historyReleases by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<List<com.sherwood.wta.core.update.UpdateChecker.ReleaseSummary>>(emptyList())
+    }
+    // Per-release download state keyed by tag, so each version downloads independently.
+    val historyDownloadStates = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateMapOf<String, com.sherwood.wta.core.update.UpdateDownloadState>()
+    }
+
+    val apkBuilder = remember(context) { com.sherwood.wta.core.apkbuilder.ApkBuilder(context.applicationContext) }
+
+    if (showUpdateDialog) {
+        UpdateCheckDialog(
+            isChecking = isCheckingUpdate,
+            result = updateResult,
+            currentVersionName = versionName,
+            downloadState = downloadState,
+            onDownload = { info ->
+                com.sherwood.wta.core.update.ApkUpdateInstaller.download(
+                    context = context,
+                    url = info.downloadUrl,
+                    version = info.version,
+                    expectedSha256 = info.sha256,
+                    onState = { state -> downloadState = state }
+                )
+            },
+            onCancelDownload = {
+                com.sherwood.wta.core.update.ApkUpdateInstaller.cancel()
+                downloadState = com.sherwood.wta.core.update.UpdateDownloadState.Idle
+            },
+            onInstall = { file ->
+                val started = apkBuilder.installApk(file)
+                if (!started) {
+                    Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = {
+                com.sherwood.wta.core.update.ApkUpdateInstaller.cancel()
+                showUpdateDialog = false
+                downloadState = com.sherwood.wta.core.update.UpdateDownloadState.Idle
+            }
+        )
+    }
+
+    if (showHistorySheet) {
+        VersionHistorySheet(
+            releases = historyReleases,
+            loading = historyLoading,
+            error = historyError,
+            currentVersion = versionName,
+            downloadStates = historyDownloadStates,
+            onDownload = { release ->
+                val url = release.downloadUrl ?: return@VersionHistorySheet
+                com.sherwood.wta.core.update.ApkUpdateInstaller.download(
+                    context = context,
+                    url = url,
+                    version = release.version,
+                    expectedSha256 = release.sha256,
+                    onState = { state -> historyDownloadStates[release.tag] = state }
+                )
+            },
+            onCancelDownload = { tag ->
+                com.sherwood.wta.core.update.ApkUpdateInstaller.cancel()
+                historyDownloadStates.remove(tag)
+            },
+            onInstall = { file ->
+                val started = apkBuilder.installApk(file)
+                if (!started) {
+                    Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = {
+                com.sherwood.wta.core.update.ApkUpdateInstaller.cancel()
+                showHistorySheet = false
+            }
+        )
+    }
+
+
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Elevated,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            horizontal = 24.dp,
+            vertical = 28.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+
+                    painter = painterResource(id = R.drawable.about_avatar),
+                    contentDescription = Strings.authorAvatar,
+                    modifier = Modifier
+                        .size(88.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            Text(
+                text = "WebToApp",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+
+            AnimatedVisibility(visible = LocalShowDescriptions.current) {
+                Column {
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = byLine,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = Strings.aboutAppDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            VersionPill(
+                versionName = versionName,
+                versionCode = versionCode,
+                onClick = {
+                    showUpdateDialog = true
+                    if (!isCheckingUpdate) {
+                        isCheckingUpdate = true
+                        updateResult = null
+                        scope.launch {
+                            val result = com.sherwood.wta.core.update.UpdateChecker.check(versionName)
+                            updateResult = result
+                            isCheckingUpdate = false
+                        }
+                    }
+                },
+                onCopy = {
+                    val label = "WebToApp version"
+                    val text = "WebToApp v$versionName ($versionCode)"
+                    context.copyToClipboard(label, text)
+                    Toast.makeText(
+                        context,
+                        versionCopied,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                },
+                onHistory = {
+                    showHistorySheet = true
+                    if (historyReleases.isEmpty() && !historyLoading) {
+                        historyLoading = true
+                        historyError = null
+                        scope.launch {
+                            try {
+                                historyReleases = com.sherwood.wta.core.update.UpdateChecker.fetchAllReleases()
+                            } catch (e: Exception) {
+                                historyError = e.message ?: e.javaClass.simpleName
+                            } finally {
+                                historyLoading = false
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun VersionPill(
+    versionName: String,
+    versionCode: Long,
+    onClick: () -> Unit,
+    onCopy: () -> Unit,
+    onHistory: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val hapticClick = rememberHapticClick(onClick)
+    val hapticCopy = rememberHapticClick(onCopy)
+    val hapticHistory = rememberHapticClick(onHistory)
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = hapticClick
+            )
+            .wtaPressScale(interactionSource, pressedScale = 0.95f)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "v$versionName",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = "·",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.outline
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = versionCode.toString(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.Outlined.Sync,
+            contentDescription = Strings.updateCheckTitle,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(10.dp))
+        Icon(
+            Icons.Outlined.History,
+            contentDescription = Strings.versionHistoryButtonHint,
+            modifier = Modifier
+                .clip(CircleShape)
+                .clickable(onClick = hapticHistory)
+                .size(15.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(10.dp))
+        Icon(
+            Icons.Outlined.ContentCopy,
+            contentDescription = null,
+            modifier = Modifier
+                .clip(CircleShape)
+                .clickable(onClick = hapticCopy)
+                .size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ContactGrid() {
+    val context = LocalContext.current
+    val groupWord = groupWord()
+    val qqCopied = qqCopiedToast()
+    val authorLabel = authorLabel()
+    val contactTitle = contactSectionTitle()
+    val docsLabel = docsLabel()
+
+    val entries = remember(groupWord, qqCopied, authorLabel, docsLabel) {
+        listOf(
+            ContactEntry(
+                icon = Icons.Outlined.MenuBook,
+                label = docsLabel,
+                value = "shiaho777.github.io",
+                action = ContactAction.OpenUrl("https://shiaho777.github.io/web-to-app/")
+            ),
+            ContactEntry(
+                icon = Icons.Outlined.Send,
+                label = "Telegram",
+                value = "@webtoapp777",
+                action = ContactAction.OpenUrl("https://t.me/webtoapp777")
+            ),
+            ContactEntry(
+                icon = Icons.Outlined.Tag,
+                label = "X (Twitter)",
+                value = "@shiaho777",
+                action = ContactAction.OpenUrl("https://x.com/shiaho777")
+            ),
+            ContactEntry(
+                icon = Icons.Outlined.PlayCircleOutline,
+                label = "Bilibili",
+                value = "b23.tv/8mGDo2N",
+                action = ContactAction.OpenUrl("https://b23.tv/8mGDo2N")
+            ),
+            ContactEntry(
+                icon = Icons.Outlined.Groups,
+                label = "QQ $groupWord",
+                value = "1041130206",
+                action = ContactAction.CopyText(
+                    label = "QQ Group",
+                    text = "1041130206",
+                    toast = qqCopied
+                )
+            ),
+            ContactEntry(
+                icon = Icons.Outlined.Forum,
+                label = authorLabel,
+                value = "shiaho",
+                action = ContactAction.OpenUrl("https://github.com/shiaho777")
+            )
+        )
+    }
+
+    WtaSection(
+        title = contactTitle,
+        headerStyle = WtaSectionHeaderStyle.Quiet
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(WtaSpacing.CardGap)) {
+            GitHubRepoCard(onClick = { context.openUrl("https://github.com/shiaho777/web-to-app") })
+            entries.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(WtaSpacing.CardGap)) {
+                    pair.forEach { entry ->
+                        ContactTile(
+                            entry = entry,
+                            modifier = Modifier.weight(1f),
+                            onAction = { action ->
+                                when (action) {
+                                    is ContactAction.OpenUrl -> context.openUrl(action.url)
+                                    is ContactAction.CopyText -> {
+                                        context.copyToClipboard(action.label, action.text)
+                                        Toast.makeText(
+                                            context,
+                                            action.toast,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                        )
+                    }
+
+                    if (pair.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class ContactEntry(
+    val icon: ImageVector,
+    val label: String,
+    val value: String,
+    val action: ContactAction
+)
+
+private sealed interface ContactAction {
+    data class OpenUrl(val url: String) : ContactAction
+    data class CopyText(
+        val label: String,
+        val text: String,
+        val toast: String
+    ) : ContactAction
+}
+
+@Composable
+private fun GitHubRepoCard(onClick: () -> Unit) {
+    val isDark = LocalIsDarkTheme.current
+    // GitHub brand mark: keep it recognizable in both themes by inverting the badge.
+    val badgeColor = if (isDark) Color(0xFFE6EDF3) else Color(0xFF24292F)
+    val markColor = if (isDark) Color(0xFF24292F) else Color.White
+
+    WtaCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Elevated,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(badgeColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_github_mark),
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                    tint = markColor
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "shiaho777 / web-to-app",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                AnimatedVisibility(visible = LocalShowDescriptions.current) {
+                    Text(
+                        text = "github.com/shiaho777/web-to-app",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Outlined.NorthEast,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContactTile(
+    entry: ContactEntry,
+    modifier: Modifier = Modifier,
+    onAction: (ContactAction) -> Unit
+) {
+    WtaCard(
+        onClick = { onAction(entry.action) },
+        modifier = modifier,
+        tone = WtaCardTone.Surface,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    entry.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                Text(
+                    text = entry.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = entry.value,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                Icons.Outlined.Link,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}
+
+@Composable
+private fun LegalTabContent() {
+    WtaSection(
+        title = Strings.legalDisclaimer,
+        headerStyle = WtaSectionHeaderStyle.Quiet,
+        collapsible = true,
+        initiallyExpanded = false
+    ) {
+        WtaCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                LegalSection(Strings.legalDisclaimerTitle1, Strings.legalDisclaimerContent1)
+                LegalSection(Strings.legalDisclaimerTitle2, Strings.legalDisclaimerContent2)
+                LegalSection(Strings.legalDisclaimerTitle3, Strings.legalDisclaimerContent3)
+                LegalSection(Strings.legalDisclaimerTitle4, Strings.legalDisclaimerContent4)
+                LegalSection(Strings.legalDisclaimerTitle5, Strings.legalDisclaimerContent5)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegalSection(title: String, content: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = content,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun UpdateCheckDialog(
+    isChecking: Boolean,
+    result: com.sherwood.wta.core.update.UpdateChecker.Result?,
+    currentVersionName: String,
+    downloadState: com.sherwood.wta.core.update.UpdateDownloadState,
+    onDownload: (com.sherwood.wta.core.update.UpdateChecker.ReleaseInfo) -> Unit,
+    onCancelDownload: () -> Unit,
+    onInstall: (java.io.File) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val available = result as? com.sherwood.wta.core.update.UpdateChecker.Result.UpdateAvailable
+    val downloading = downloadState is com.sherwood.wta.core.update.UpdateDownloadState.Downloading ||
+        downloadState is com.sherwood.wta.core.update.UpdateDownloadState.Verifying
+    // True when the confirmButton shows a real action (Download/Install/Retry/Cancel). When false
+    // (UpToDate / Failed), confirmButton itself is "Close" — the dismissButton must stay empty in
+    // that case or the dialog shows two identical Close buttons.
+    val hasActionButton = available != null ||
+        downloadState is com.sherwood.wta.core.update.UpdateDownloadState.Done
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = {
+            // Block dismiss via outside touch while a download is in flight.
+            if (!downloading) onDismiss()
+        },
+        icon = {
+            Icon(Icons.Outlined.Sync, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        },
+        title = { Text(Strings.updateCheckTitle) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                when {
+                    isChecking || result == null -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(Strings.updateChecking, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    available != null -> {
+                        UpdateAvailableContent(
+                            info = available.info,
+                            currentVersion = available.currentVersion,
+                            downloadState = downloadState
+                        )
+                    }
+                    result is com.sherwood.wta.core.update.UpdateChecker.Result.UpToDate -> {
+                        Text(Strings.updateUpToDate, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "v${result.version}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    result is com.sherwood.wta.core.update.UpdateChecker.Result.Failed -> {
+                        com.sherwood.wta.ui.components.WtaErrorDetailsSection(
+                            report = com.sherwood.wta.ui.components.buildErrorReport(
+                                scope = "Update check",
+                                message = result.message,
+                                throwable = result.throwable,
+                                contextLines = listOf("currentVersion=$currentVersionName")
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when {
+                // Download finished: show Install.
+                downloadState is com.sherwood.wta.core.update.UpdateDownloadState.Done -> {
+                    androidx.compose.material3.TextButton(onClick = {
+                        onInstall(downloadState.file)
+                    }) {
+                        Text(Strings.install)
+                    }
+                }
+                // Download failed: Retry.
+                downloadState is com.sherwood.wta.core.update.UpdateDownloadState.Failed && available != null -> {
+                    androidx.compose.material3.TextButton(onClick = { onDownload(available.info) }) {
+                        Text(Strings.updateRetry)
+                    }
+                }
+                // Downloading / verifying: Cancel.
+                downloading -> {
+                    androidx.compose.material3.TextButton(onClick = onCancelDownload) {
+                        Text(Strings.updateCancelDownload)
+                    }
+                }
+                // Update available, idle: Download.
+                available != null -> {
+                    androidx.compose.material3.TextButton(onClick = { onDownload(available.info) }) {
+                        Text(Strings.updateDownloadButton)
+                    }
+                }
+                else -> {
+                    androidx.compose.material3.TextButton(onClick = onDismiss) {
+                        Text(Strings.close)
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            if (hasActionButton) {
+                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                    Text(Strings.close)
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun UpdateAvailableContent(
+    info: com.sherwood.wta.core.update.UpdateChecker.ReleaseInfo,
+    currentVersion: String,
+    downloadState: com.sherwood.wta.core.update.UpdateDownloadState
+) {
+    Text(
+        Strings.updateAvailableTitle,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "${Strings.updateNewVersionLabel}: v${info.version}",
+        style = MaterialTheme.typography.bodyMedium
+    )
+    Text(
+        "${Strings.updateCurrentVersionLabel}: v$currentVersion",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    if (info.sizeBytes > 0) {
+        Text(
+            "${Strings.updateSizeLabel}: ${formatBytes(info.sizeBytes)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    Spacer(Modifier.height(12.dp))
+
+    when (downloadState) {
+        is com.sherwood.wta.core.update.UpdateDownloadState.Downloading -> {
+            DownloadProgressRow(
+                downloaded = downloadState.downloadedBytes,
+                total = downloadState.totalBytes,
+                speed = downloadState.speedBytesPerSec
+            )
+        }
+        com.sherwood.wta.core.update.UpdateDownloadState.Verifying -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(Strings.updateVerifying, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        is com.sherwood.wta.core.update.UpdateDownloadState.Done -> {
+            Text(
+                Strings.updateInstallReady,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                Strings.updateReadyHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        is com.sherwood.wta.core.update.UpdateDownloadState.Failed -> {
+            Text(
+                Strings.updateDownloadFailed,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                downloadState.message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        com.sherwood.wta.core.update.UpdateDownloadState.Idle -> {
+            if (info.releaseNotes.isNotBlank()) {
+                Text(
+                    Strings.updateReleaseNotesLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+                ReleaseNotesMarkdown(text = info.releaseNotes)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VersionHistorySheet(
+    releases: List<com.sherwood.wta.core.update.UpdateChecker.ReleaseSummary>,
+    loading: Boolean,
+    error: String?,
+    currentVersion: String,
+    downloadStates: androidx.compose.runtime.snapshots.SnapshotStateMap<String, com.sherwood.wta.core.update.UpdateDownloadState>,
+    onDownload: (com.sherwood.wta.core.update.UpdateChecker.ReleaseSummary) -> Unit,
+    onCancelDownload: (String) -> Unit,
+    onInstall: (java.io.File) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Outlined.History,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    Strings.versionHistoryTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            when {
+                loading && releases.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                Strings.versionHistoryLoading,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                error != null && releases.isEmpty() -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            Strings.versionHistoryLoadFailed,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                releases.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            Strings.versionHistoryEmpty,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                else -> {
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(releases, key = { it.tag }) { release ->
+                            VersionHistoryItem(
+                                release = release,
+                                isCurrent = release.version == currentVersion,
+                                downloadState = downloadStates[release.tag]
+                                    ?: com.sherwood.wta.core.update.UpdateDownloadState.Idle,
+                                onDownload = { onDownload(release) },
+                                onCancelDownload = { onCancelDownload(release.tag) },
+                                onInstall = onInstall
+                            )
+                        }
+                        item { Spacer(Modifier.height(8.dp)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VersionHistoryItem(
+    release: com.sherwood.wta.core.update.UpdateChecker.ReleaseSummary,
+    isCurrent: Boolean,
+    downloadState: com.sherwood.wta.core.update.UpdateDownloadState,
+    onDownload: () -> Unit,
+    onCancelDownload: () -> Unit,
+    onInstall: (java.io.File) -> Unit
+) {
+    var expanded by remember(release.tag) { androidx.compose.runtime.mutableStateOf(false) }
+    val date = remember(release.publishedAt) { release.publishedAt.substringBefore('T').ifBlank { release.publishedAt } }
+    val hasNotes = release.body.isNotBlank()
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = hasNotes) { expanded = !expanded }
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "v${release.version}",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (isCurrent) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                    if (isCurrent) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                Strings.versionHistoryCurrentVersion,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (date.isNotBlank()) {
+                        Text(
+                            date,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (date.isNotBlank() && release.sizeBytes > 0) {
+                        Text(
+                            " · ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    if (release.sizeBytes > 0) {
+                        Text(
+                            formatBytes(release.sizeBytes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            if (hasNotes) {
+                Icon(
+                    if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+                if (hasNotes) {
+                    // Thin divider line above notes.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        Strings.updateReleaseNotesLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    ReleaseNotesMarkdown(text = release.body)
+                }
+                Spacer(Modifier.height(10.dp))
+                VersionHistoryDownloadRow(
+                    release = release,
+                    isCurrent = isCurrent,
+                    downloadState = downloadState,
+                    onDownload = onDownload,
+                    onCancelDownload = onCancelDownload,
+                    onInstall = onInstall
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+        // Divider between items.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        )
+    }
+}
+
+@Composable
+private fun VersionHistoryDownloadRow(
+    release: com.sherwood.wta.core.update.UpdateChecker.ReleaseSummary,
+    isCurrent: Boolean,
+    downloadState: com.sherwood.wta.core.update.UpdateDownloadState,
+    onDownload: () -> Unit,
+    onCancelDownload: () -> Unit,
+    onInstall: (java.io.File) -> Unit
+) {
+    when (downloadState) {
+        is com.sherwood.wta.core.update.UpdateDownloadState.Downloading -> {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        Strings.updateDownloading,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onCancelDownload) {
+                        Text(Strings.updateCancelDownload)
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                DownloadProgressRow(
+                    downloaded = downloadState.downloadedBytes,
+                    total = downloadState.totalBytes,
+                    speed = downloadState.speedBytesPerSec
+                )
+            }
+        }
+        com.sherwood.wta.core.update.UpdateDownloadState.Verifying -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(Strings.updateVerifying, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        is com.sherwood.wta.core.update.UpdateDownloadState.Done -> {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    Strings.updateInstallReady,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(4.dp))
+                Row {
+                    TextButton(onClick = { onInstall(downloadState.file) }) {
+                        Text(Strings.versionHistoryInstall)
+                    }
+                }
+            }
+        }
+        is com.sherwood.wta.core.update.UpdateDownloadState.Failed -> {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    Strings.updateDownloadFailed,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    downloadState.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+                if (release.downloadUrl != null) {
+                    TextButton(onClick = onDownload) {
+                        Text(Strings.updateRetry)
+                    }
+                }
+            }
+        }
+        com.sherwood.wta.core.update.UpdateDownloadState.Idle -> {
+            if (release.downloadUrl == null) {
+                Text(
+                    Strings.versionHistoryNoApk,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (isCurrent) {
+                // Already installed — no download button.
+            } else {
+                TextButton(onClick = onDownload) {
+                    Icon(
+                        Icons.Outlined.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(Strings.versionHistoryDownload)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Lightweight Markdown renderer for GitHub release notes, tuned for the
+ * "## Added / ## Improved / ## Fixed" + "- item" changelog format.
+ *
+ * It only handles what release notes actually contain — second-level headings
+ * (`##`), unordered list items (`-`/`*`), and plain paragraphs — so it stays
+ * dependency-free. Anything else is shown as plain text.
+ */
+@Composable
+private fun ReleaseNotesMarkdown(text: String) {
+    val titleColor = MaterialTheme.colorScheme.primary
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    val lines = remember(text) { text.lines() }
+    var inList = false
+    Column {
+        lines.forEachIndexed { index, rawLine ->
+            val line = rawLine.trimEnd()
+            when {
+                // Second-level heading: the Added / Improved / Fixed sections.
+                line.startsWith("## ") -> {
+                    if (inList) Spacer(Modifier.height(4.dp))
+                    inList = false
+                    if (index > 0) Spacer(Modifier.height(6.dp))
+                    Text(
+                        line.removePrefix("## ").trim(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = titleColor
+                    )
+                }
+                // Unordered list item.
+                line.startsWith("- ") || line.startsWith("* ") -> {
+                    if (!inList && index > 0) Spacer(Modifier.height(2.dp))
+                    inList = true
+                    Row(modifier = Modifier.padding(start = 4.dp, top = 1.dp)) {
+                        Text(
+                            "•",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = mutedColor,
+                            modifier = Modifier.width(12.dp)
+                        )
+                        Text(
+                            line.removePrefix("- ").removePrefix("* ").trim(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor
+                        )
+                    }
+                }
+                // Blank line: just spacing, closes any open list.
+                line.isBlank() -> {
+                    inList = false
+                }
+                // Fallback: plain paragraph text.
+                else -> {
+                    if (inList) Spacer(Modifier.height(4.dp))
+                    inList = false
+                    Text(
+                        line,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadProgressRow(downloaded: Long, total: Long, speed: Long) {
+    val percent = if (total > 0) {
+        (downloaded.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    } else {
+        // indeterminate when Content-Length unknown
+        -1f
+    }
+    Text(Strings.updateDownloading, style = MaterialTheme.typography.labelMedium)
+    Spacer(Modifier.height(6.dp))
+    if (percent >= 0f) {
+        androidx.compose.material3.LinearProgressIndicator(
+            progress = { percent },
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    } else {
+        androidx.compose.material3.LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+    Spacer(Modifier.height(6.dp))
+    val percentText = if (percent >= 0f) "${(percent * 100).toInt()}% · " else ""
+    val totalText = if (total > 0) "${formatBytes(downloaded)} / ${formatBytes(total)}" else formatBytes(downloaded)
+    Text(
+        "$percentText$totalText · ${formatBytes(speed)}${Strings.updatePerSec}",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+private fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val units = arrayOf("B", "KB", "MB", "GB")
+    var value = bytes.toDouble()
+    var unit = 0
+    while (value >= 1024 && unit < units.size - 1) {
+        value /= 1024
+        unit++
+    }
+    return if (unit == 0) "${bytes} B" else "%.1f %s".format(value, units[unit])
+}
+
+@Composable
+private fun MadeWithLoveFooter() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.FavoriteBorder,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.outline
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = Strings.madeWithLove,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+    }
+}
+
+private fun Context.currentVersionName(): String {
+    return try {
+        val packageInfo = packageManager.getPackageInfo(packageName, 0)
+        packageInfo.versionName ?: ""
+    } catch (_: PackageManager.NameNotFoundException) {
+        ""
+    }
+}
+
+private fun Context.currentVersionCode(): Long {
+    return try {
+        val packageInfo = packageManager.getPackageInfo(packageName, 0)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.versionCode.toLong()
+        }
+    } catch (_: PackageManager.NameNotFoundException) {
+        0L
+    }
+}
+
+private fun Context.copyToClipboard(label: String, text: String) {
+    val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    cm.setPrimaryClip(ClipData.newPlainText(label, text))
+}
+
+private fun Context.openUrl(url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(this, Strings.cannotOpenLink, Toast.LENGTH_SHORT).show()
+    } catch (_: Exception) {
+        Toast.makeText(this, Strings.cannotOpenLink, Toast.LENGTH_SHORT).show()
+    }
+}
+
+@Composable
+private fun aboutAuthorByLine(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "开发者 Shiaho"
+    AppLanguage.ENGLISH -> "by Shiaho"
+    AppLanguage.ARABIC -> "بواسطة Shiaho"
+    AppLanguage.PORTUGUESE -> "by Shiaho"
+    AppLanguage.SPANISH -> "by Shiaho"
+    AppLanguage.FRENCH -> "by Shiaho"
+    AppLanguage.GERMAN -> "by Shiaho"
+    AppLanguage.RUSSIAN -> "by Shiaho"
+    AppLanguage.JAPANESE -> "by Shiaho"
+    AppLanguage.KOREAN -> "by Shiaho"
+}
+
+@Composable
+private fun contactSectionTitle(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "联系作者"
+    AppLanguage.ENGLISH -> "Get in touch"
+    AppLanguage.ARABIC -> "تواصل مع المؤلف"
+    AppLanguage.PORTUGUESE -> "Get in touch"
+    AppLanguage.SPANISH -> "Get in touch"
+    AppLanguage.FRENCH -> "Get in touch"
+    AppLanguage.GERMAN -> "Get in touch"
+    AppLanguage.RUSSIAN -> "Get in touch"
+    AppLanguage.JAPANESE -> "Get in touch"
+    AppLanguage.KOREAN -> "Get in touch"
+}
+
+@Composable
+private fun docsLabel(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "官方文档"
+    AppLanguage.ENGLISH -> "Docs"
+    AppLanguage.ARABIC -> "الوثائق"
+    AppLanguage.PORTUGUESE -> "Docs"
+    AppLanguage.SPANISH -> "Docs"
+    AppLanguage.FRENCH -> "Docs"
+    AppLanguage.GERMAN -> "Doku"
+    AppLanguage.RUSSIAN -> "Документация"
+    AppLanguage.JAPANESE -> "ドキュメント"
+    AppLanguage.KOREAN -> "문서"
+}
+
+@Composable
+private fun authorLabel(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "其他项目"
+    AppLanguage.ENGLISH -> "More projects"
+    AppLanguage.ARABIC -> "مشاريع أخرى"
+    AppLanguage.PORTUGUESE -> "More projects"
+    AppLanguage.SPANISH -> "More projects"
+    AppLanguage.FRENCH -> "More projects"
+    AppLanguage.GERMAN -> "More projects"
+    AppLanguage.RUSSIAN -> "More projects"
+    AppLanguage.JAPANESE -> "More projects"
+    AppLanguage.KOREAN -> "More projects"
+}
+
+@Composable
+private fun groupWord(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "群"
+    AppLanguage.ENGLISH -> "Group"
+    AppLanguage.ARABIC -> "مجموعة"
+    AppLanguage.PORTUGUESE -> "Group"
+    AppLanguage.SPANISH -> "Group"
+    AppLanguage.FRENCH -> "Group"
+    AppLanguage.GERMAN -> "Group"
+    AppLanguage.RUSSIAN -> "Group"
+    AppLanguage.JAPANESE -> "Group"
+    AppLanguage.KOREAN -> "Group"
+}
+
+@Composable
+private fun qqCopiedToast(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "QQ 群号已复制"
+    AppLanguage.ENGLISH -> "QQ group number copied"
+    AppLanguage.ARABIC -> "تم نسخ رقم مجموعة QQ"
+    AppLanguage.PORTUGUESE -> "QQ group number copied"
+    AppLanguage.SPANISH -> "QQ group number copied"
+    AppLanguage.FRENCH -> "QQ group number copied"
+    AppLanguage.GERMAN -> "QQ group number copied"
+    AppLanguage.RUSSIAN -> "QQ group number copied"
+    AppLanguage.JAPANESE -> "QQ group number copied"
+    AppLanguage.KOREAN -> "QQ group number copied"
+}
+
+@Composable
+private fun versionCopiedToast(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "版本号已复制"
+    AppLanguage.ENGLISH -> "Version copied"
+    AppLanguage.ARABIC -> "تم نسخ الإصدار"
+    AppLanguage.PORTUGUESE -> "Version copied"
+    AppLanguage.SPANISH -> "Version copied"
+    AppLanguage.FRENCH -> "Version copied"
+    AppLanguage.GERMAN -> "Version copied"
+    AppLanguage.RUSSIAN -> "Version copied"
+    AppLanguage.JAPANESE -> "Version copied"
+    AppLanguage.KOREAN -> "Version copied"
+}
+
+
+private enum class RepoSortMode { STARS, RECENT }
+
+private const val COLLAPSED_REPO_COUNT = 5
+
+/**
+ * "More projects" section: lists the author's public GitHub repos (forks and
+ * this app filtered out). Cached JSON renders instantly on revisit while a
+ * silent refresh swaps in fresh data. Default order is by stars; a header
+ * segmented toggle switches to most-recently-pushed, client-side.
+ */
+@Composable
+private fun OtherProjectsSection() {
+    val context = LocalContext.current
+    val appContext = context.applicationContext
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    var repos by remember { mutableStateOf<List<com.sherwood.wta.core.update.UpdateChecker.RepoSummary>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var refreshing by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var sortMode by remember { mutableStateOf(RepoSortMode.STARS) }
+    var showAllRepos by remember { mutableStateOf(false) }
+
+    fun load() {
+        scope.launch {
+            refreshing = true
+            error = null
+            try {
+                repos = com.sherwood.wta.core.update.UpdateChecker.fetchAuthorRepos(appContext)
+            } catch (e: Exception) {
+                error = e.message ?: e.javaClass.simpleName
+            } finally {
+                loading = false
+                refreshing = false
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        com.sherwood.wta.core.update.AuthorReposCache.read(appContext)?.let { cached ->
+            repos = cached
+            loading = false
+        }
+        load()
+    }
+
+    val sorted = remember(repos, sortMode) {
+        when (sortMode) {
+            RepoSortMode.STARS -> repos.sortedByDescending { it.stars }
+            RepoSortMode.RECENT -> repos.sortedByDescending { it.pushedAt }
+        }
+    }
+
+    WtaSection(
+        title = otherProjectsTitle(),
+        headerStyle = WtaSectionHeaderStyle.Quiet,
+        trailing = {
+            RepoSortToggle(
+                sortMode = sortMode,
+                onSortMode = { sortMode = it }
+            )
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .clickable(enabled = !refreshing) { load() },
+                contentAlignment = Alignment.Center
+            ) {
+                if (refreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Icon(
+                        Icons.Outlined.RestartAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(WtaSpacing.CardGap)) {
+            when {
+                loading && repos.isEmpty() -> {
+                    repeat(3) { RepoCardSkeleton() }
+                }
+                error != null && repos.isEmpty() -> {
+                    RepoLoadErrorCard(message = error, onRetry = { load() })
+                }
+                sorted.isEmpty() -> {
+                    WtaCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                otherProjectsEmpty(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    val visibleRepos = if (showAllRepos) sorted else sorted.take(COLLAPSED_REPO_COUNT)
+                    visibleRepos.forEach { repo ->
+                        RepoCard(repo = repo, onClick = { context.openUrl(repo.url) })
+                    }
+                    if (sorted.size > COLLAPSED_REPO_COUNT) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(WtaRadius.Control))
+                                .clickable { showAllRepos = !showAllRepos }
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (showAllRepos) {
+                                    showLessProjectsLabel()
+                                } else {
+                                    showMoreProjectsLabel(sorted.size - COLLAPSED_REPO_COUNT)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                if (showAllRepos) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                contentDescription = null,
+                                modifier = Modifier.size(13.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(WtaRadius.Control))
+                            .clickable { context.openUrl("https://github.com/shiaho777?tab=repositories") }
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            viewAllOnGitHub(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Outlined.NorthEast,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Compact two-option segmented pill for the section header — smaller and
+ * cleaner than two FilterChips next to the title.
+ */
+@Composable
+private fun RepoSortToggle(
+    sortMode: RepoSortMode,
+    onSortMode: (RepoSortMode) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RepoSortMode.entries.forEach { mode ->
+            val selected = sortMode == mode
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.surface
+                        else Color.Transparent
+                    )
+                    .clickable { onSortMode(mode) }
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    text = if (mode == RepoSortMode.STARS) sortByStarsLabel() else sortByUpdatedLabel(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RepoCard(
+    repo: com.sherwood.wta.core.update.UpdateChecker.RepoSummary,
+    onClick: () -> Unit
+) {
+    val pushedDate = remember(repo.pushedAt) {
+        repo.pushedAt.substringBefore('T').ifBlank { repo.pushedAt }
+    }
+
+    WtaCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Surface,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.Book,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = repo.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    Icons.Outlined.NorthEast,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.outline
+                )
+            }
+
+            AnimatedVisibility(visible = LocalShowDescriptions.current) {
+                Text(
+                    text = repo.description.ifBlank { repoNoDescription() },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (repo.description.isBlank()) MaterialTheme.colorScheme.outline
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 44.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier.padding(start = 44.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                repo.language?.let { lang ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(9.dp)
+                                .clip(CircleShape)
+                                .background(languageColor(lang))
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            lang,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp),
+                        tint = Color(0xFFE8A33D)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        repo.stars.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (repo.forks > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.ForkRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            repo.forks.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (pushedDate.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.Schedule,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            pushedDate,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RepoCardSkeleton() {
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Surface,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+    ) {
+        com.sherwood.wta.ui.components.ShimmerBrush { brush ->
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(brush)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .height(15.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(brush)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(start = 44.dp)
+                        .fillMaxWidth(0.85f)
+                        .height(11.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(brush)
+                )
+                Row(
+                    modifier = Modifier.padding(start = 44.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(Modifier.width(48.dp).height(9.dp).clip(RoundedCornerShape(4.dp)).background(brush))
+                    Box(Modifier.width(30.dp).height(9.dp).clip(RoundedCornerShape(4.dp)).background(brush))
+                    Box(Modifier.width(64.dp).height(9.dp).clip(RoundedCornerShape(4.dp)).background(brush))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RepoLoadErrorCard(message: String?, onRetry: () -> Unit) {
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                otherProjectsFailed(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.error
+            )
+            if (!message.isNullOrBlank()) {
+                Text(
+                    message,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            androidx.compose.material3.FilledTonalButton(
+                onClick = onRetry,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 14.dp, vertical = 6.dp
+                )
+            ) {
+                Icon(Icons.Outlined.RestartAlt, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(Strings.updateRetry, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+/**
+ * Approximate GitHub linguist colors for the language dot — the same visual
+ * cue GitHub repo lists use.
+ */
+private fun languageColor(name: String): Color = when (name) {
+    "Kotlin" -> Color(0xFFA97BFF)
+    "Java" -> Color(0xFFB07219)
+    "Python" -> Color(0xFF3572A5)
+    "JavaScript" -> Color(0xFFF1E05A)
+    "TypeScript" -> Color(0xFF3178C6)
+    "Go" -> Color(0xFF00ADD8)
+    "C++" -> Color(0xFFF34B7D)
+    "C" -> Color(0xFF555555)
+    "C#" -> Color(0xFF178600)
+    "HTML" -> Color(0xFFE34C26)
+    "CSS" -> Color(0xFF563D7C)
+    "Shell" -> Color(0xFF89E051)
+    "Swift" -> Color(0xFFF05138)
+    "Rust" -> Color(0xFFDEA584)
+    "Dart" -> Color(0xFF00B4AB)
+    "Ruby" -> Color(0xFF701516)
+    "PHP" -> Color(0xFF4F5D95)
+    "Vue" -> Color(0xFF41B883)
+    "Objective-C" -> Color(0xFF438EFF)
+    "Scala" -> Color(0xFFC22D40)
+    "Lua" -> Color(0xFF000080)
+    "R" -> Color(0xFF198CE7)
+    "Dockerfile" -> Color(0xFF384D54)
+    "Makefile" -> Color(0xFF427819)
+    "Jupyter Notebook" -> Color(0xFFDA5B0B)
+    else -> Color(0xFF8B949E)
+}
+
+@Composable
+private fun otherProjectsTitle(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "作者的其他项目"
+    AppLanguage.ENGLISH -> "More projects"
+    AppLanguage.ARABIC -> "مشاريع أخرى"
+    AppLanguage.PORTUGUESE -> "Mais projetos"
+    AppLanguage.SPANISH -> "Más proyectos"
+    AppLanguage.FRENCH -> "Plus de projets"
+    AppLanguage.GERMAN -> "Weitere Projekte"
+    AppLanguage.RUSSIAN -> "Другие проекты"
+    AppLanguage.JAPANESE -> "その他のプロジェクト"
+    AppLanguage.KOREAN -> "다른 프로젝트"
+}
+
+@Composable
+private fun sortByStarsLabel(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "按星标"
+    AppLanguage.ENGLISH -> "Stars"
+    AppLanguage.ARABIC -> "بالنجوم"
+    AppLanguage.PORTUGUESE -> "Estrelas"
+    AppLanguage.SPANISH -> "Estrellas"
+    AppLanguage.FRENCH -> "Étoiles"
+    AppLanguage.GERMAN -> "Sterne"
+    AppLanguage.RUSSIAN -> "По звёздам"
+    AppLanguage.JAPANESE -> "スター順"
+    AppLanguage.KOREAN -> "별점순"
+}
+
+@Composable
+private fun sortByUpdatedLabel(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "按更新"
+    AppLanguage.ENGLISH -> "Latest"
+    AppLanguage.ARABIC -> "الأحدث"
+    AppLanguage.PORTUGUESE -> "Recentes"
+    AppLanguage.SPANISH -> "Recientes"
+    AppLanguage.FRENCH -> "Récents"
+    AppLanguage.GERMAN -> "Neueste"
+    AppLanguage.RUSSIAN -> "Сначала новые"
+    AppLanguage.JAPANESE -> "更新順"
+    AppLanguage.KOREAN -> "최신순"
+}
+
+@Composable
+private fun otherProjectsLoading(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "正在加载项目…"
+    AppLanguage.ENGLISH -> "Loading projects…"
+    AppLanguage.ARABIC -> "جارٍ تحميل المشاريع…"
+    AppLanguage.PORTUGUESE -> "Carregando projetos…"
+    AppLanguage.SPANISH -> "Cargando proyectos…"
+    AppLanguage.FRENCH -> "Chargement des projets…"
+    AppLanguage.GERMAN -> "Projekte werden geladen…"
+    AppLanguage.RUSSIAN -> "Загрузка проектов…"
+    AppLanguage.JAPANESE -> "プロジェクトを読み込み中…"
+    AppLanguage.KOREAN -> "프로젝트 불러오는 중…"
+}
+
+@Composable
+private fun otherProjectsFailed(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "项目加载失败"
+    AppLanguage.ENGLISH -> "Failed to load projects"
+    AppLanguage.ARABIC -> "فشل تحميل المشاريع"
+    AppLanguage.PORTUGUESE -> "Falha ao carregar projetos"
+    AppLanguage.SPANISH -> "Error al cargar proyectos"
+    AppLanguage.FRENCH -> "Échec du chargement des projets"
+    AppLanguage.GERMAN -> "Projekte konnten nicht geladen werden"
+    AppLanguage.RUSSIAN -> "Не удалось загрузить проекты"
+    AppLanguage.JAPANESE -> "プロジェクトの読み込みに失敗しました"
+    AppLanguage.KOREAN -> "프로젝트를 불러오지 못했습니다"
+}
+
+@Composable
+private fun otherProjectsEmpty(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "暂无其他公开项目"
+    AppLanguage.ENGLISH -> "No other public projects"
+    AppLanguage.ARABIC -> "لا توجد مشاريع عامة أخرى"
+    AppLanguage.PORTUGUESE -> "Nenhum outro projeto público"
+    AppLanguage.SPANISH -> "No hay otros proyectos públicos"
+    AppLanguage.FRENCH -> "Aucun autre projet public"
+    AppLanguage.GERMAN -> "Keine weiteren öffentlichen Projekte"
+    AppLanguage.RUSSIAN -> "Других публичных проектов нет"
+    AppLanguage.JAPANESE -> "他の公開プロジェクトはありません"
+    AppLanguage.KOREAN -> "다른 공개 프로젝트가 없습니다"
+}
+
+@Composable
+private fun repoNoDescription(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "暂无简介"
+    AppLanguage.ENGLISH -> "No description"
+    AppLanguage.ARABIC -> "بدون وصف"
+    AppLanguage.PORTUGUESE -> "Sem descrição"
+    AppLanguage.SPANISH -> "Sin descripción"
+    AppLanguage.FRENCH -> "Pas de description"
+    AppLanguage.GERMAN -> "Keine Beschreibung"
+    AppLanguage.RUSSIAN -> "Без описания"
+    AppLanguage.JAPANESE -> "説明なし"
+    AppLanguage.KOREAN -> "설명 없음"
+}
+
+@Composable
+private fun viewAllOnGitHub(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "在 GitHub 查看全部"
+    AppLanguage.ENGLISH -> "View all on GitHub"
+    AppLanguage.ARABIC -> "عرض الكل على GitHub"
+    AppLanguage.PORTUGUESE -> "Ver tudo no GitHub"
+    AppLanguage.SPANISH -> "Ver todo en GitHub"
+    AppLanguage.FRENCH -> "Tout voir sur GitHub"
+    AppLanguage.GERMAN -> "Alle auf GitHub ansehen"
+    AppLanguage.RUSSIAN -> "Смотреть все на GitHub"
+    AppLanguage.JAPANESE -> "GitHub ですべて見る"
+    AppLanguage.KOREAN -> "GitHub에서 모두 보기"
+}
+
+@Composable
+private fun showMoreProjectsLabel(count: Int): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "展开其余 $count 个项目"
+    AppLanguage.ENGLISH -> "Show $count more"
+    AppLanguage.ARABIC -> "عرض $count إضافية"
+    AppLanguage.PORTUGUESE -> "Mostrar mais $count"
+    AppLanguage.SPANISH -> "Mostrar $count más"
+    AppLanguage.FRENCH -> "Afficher $count de plus"
+    AppLanguage.GERMAN -> "$count weitere anzeigen"
+    AppLanguage.RUSSIAN -> "Показать ещё $count"
+    AppLanguage.JAPANESE -> "あと $count 件を表示"
+    AppLanguage.KOREAN -> "${count}개 더 보기"
+}
+
+@Composable
+private fun showLessProjectsLabel(): String = when (Strings.currentLanguage.value) {
+    AppLanguage.CHINESE -> "收起"
+    AppLanguage.ENGLISH -> "Show less"
+    AppLanguage.ARABIC -> "عرض أقل"
+    AppLanguage.PORTUGUESE -> "Mostrar menos"
+    AppLanguage.SPANISH -> "Mostrar menos"
+    AppLanguage.FRENCH -> "Afficher moins"
+    AppLanguage.GERMAN -> "Weniger anzeigen"
+    AppLanguage.RUSSIAN -> "Свернуть"
+    AppLanguage.JAPANESE -> "折りたたむ"
+    AppLanguage.KOREAN -> "접기"
+}

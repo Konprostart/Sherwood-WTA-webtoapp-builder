@@ -113,15 +113,15 @@ template you touched:
 
 | Area | Path |
 | --- | --- |
-| App types & central config (`AppType`, `WebApp`) | `app/src/main/java/com/webtoapp/data/model/` |
-| On-device APK builder / signer | `app/src/main/java/com/webtoapp/core/apkbuilder/` |
-| Server runtimes (Node / PHP / Python / Go / WordPress) | `app/src/main/java/com/webtoapp/core/{nodejs,php,python,golang,wordpress}/` |
-| WebView engine, native bridge, fingerprint disguise | `app/src/main/java/com/webtoapp/core/{webview,engine,appearance}/` |
-| Shell config + generated-APK entry points | `app/src/main/java/com/webtoapp/core/shell/` |
-| Preview players (`ui/gallery/`, `ui/media/`) vs packaged players (`ui/shell/`) | `app/src/main/java/com/webtoapp/ui/` |
-| Extension modules, Module Market, Agent | `app/src/main/java/com/webtoapp/core/{extension,market,agent}/` |
-| Compose UI screens & design system | `app/src/main/java/com/webtoapp/ui/` |
-| DI graph (source of truth) | `app/src/main/java/com/webtoapp/di/AppModule.kt` |
+| App types & central config (`AppType`, `WebApp`) | `app/src/main/java/com/sherwood/wta/data/model/` |
+| On-device APK builder / signer | `app/src/main/java/com/sherwood/wta/core/apkbuilder/` |
+| Server runtimes (Node / PHP / Python / Go / WordPress) | `app/src/main/java/com/sherwood/wta/core/{nodejs,php,python,golang,wordpress}/` |
+| WebView engine, native bridge, fingerprint disguise | `app/src/main/java/com/sherwood/wta/core/{webview,engine,appearance}/` |
+| Shell config + generated-APK entry points | `app/src/main/java/com/sherwood/wta/core/shell/` |
+| Preview players (`ui/gallery/`, `ui/media/`) vs packaged players (`ui/shell/`) | `app/src/main/java/com/sherwood/wta/ui/` |
+| Extension modules, Module Market, Agent | `app/src/main/java/com/sherwood/wta/core/{extension,market,agent}/` |
+| Compose UI screens & design system | `app/src/main/java/com/sherwood/wta/ui/` |
+| DI graph (source of truth) | `app/src/main/java/com/sherwood/wta/di/AppModule.kt` |
 
 ### Preview ≠ export: the rule behind most rejections
 
@@ -155,7 +155,7 @@ codebase. A few rules worth calling out:
   contracts, and issue references (`#781`) get a short comment; clear names
   and small functions carry the rest. Don't narrate readable code.
 - **Build new UI on the Wta design system.** Everything renders through
-  `com.webtoapp.ui.design`. The older `Premium*` / `Enhanced*` / `Settings*`
+  `com.sherwood.wta.ui.design`. The older `Premium*` / `Enhanced*` / `Settings*`
   components are retained as permanent alias layers over the Wta internals —
   don't add new ones, and you don't need to rip them out. A build-time audit
   (`.github/scripts/audit_ui_design_system.py`, wired into `build.gradle.kts`) tracks
@@ -351,15 +351,15 @@ cd web-to-app
 
 | 区域 | 路径 |
 | --- | --- |
-| 应用类型与核心配置（`AppType`、`WebApp`） | `app/src/main/java/com/webtoapp/data/model/` |
-| 设备端 APK 打包 / 签名 | `app/src/main/java/com/webtoapp/core/apkbuilder/` |
-| 服务端运行时（Node / PHP / Python / Go / WordPress） | `app/src/main/java/com/webtoapp/core/{nodejs,php,python,golang,wordpress}/` |
-| WebView 引擎、原生桥、指纹伪装 | `app/src/main/java/com/webtoapp/core/{webview,engine,appearance}/` |
-| Shell 配置与生成 APK 入口 | `app/src/main/java/com/webtoapp/core/shell/` |
-| 预览播放器（`ui/gallery/`、`ui/media/`）vs 打包播放器（`ui/shell/`） | `app/src/main/java/com/webtoapp/ui/` |
-| 扩展模块、模块市场、Agent | `app/src/main/java/com/webtoapp/core/{extension,market,agent}/` |
-| Compose UI 与设计系统 | `app/src/main/java/com/webtoapp/ui/` |
-| DI 依赖图（单一事实来源） | `app/src/main/java/com/webtoapp/di/AppModule.kt` |
+| 应用类型与核心配置（`AppType`、`WebApp`） | `app/src/main/java/com/sherwood/wta/data/model/` |
+| 设备端 APK 打包 / 签名 | `app/src/main/java/com/sherwood/wta/core/apkbuilder/` |
+| 服务端运行时（Node / PHP / Python / Go / WordPress） | `app/src/main/java/com/sherwood/wta/core/{nodejs,php,python,golang,wordpress}/` |
+| WebView 引擎、原生桥、指纹伪装 | `app/src/main/java/com/sherwood/wta/core/{webview,engine,appearance}/` |
+| Shell 配置与生成 APK 入口 | `app/src/main/java/com/sherwood/wta/core/shell/` |
+| 预览播放器（`ui/gallery/`、`ui/media/`）vs 打包播放器（`ui/shell/`） | `app/src/main/java/com/sherwood/wta/ui/` |
+| 扩展模块、模块市场、Agent | `app/src/main/java/com/sherwood/wta/core/{extension,market,agent}/` |
+| Compose UI 与设计系统 | `app/src/main/java/com/sherwood/wta/ui/` |
+| DI 依赖图（单一事实来源） | `app/src/main/java/com/sherwood/wta/di/AppModule.kt` |
 
 **预览 ≠ 导出：大多数打回的原因**
 
@@ -387,7 +387,7 @@ cd web-to-app
 - **注释解释 *为什么*，不复述 *干了什么*。** 反直觉的决策、跨文件约定、
   issue 引用（`#781`）值得一句短注释；命名清晰的小函数不需要解说。不要给
   易读的代码写旁白。
-- **新 UI 一律构建在 Wta 设计系统之上**——所有界面通过 `com.webtoapp.ui.design`
+- **新 UI 一律构建在 Wta 设计系统之上**——所有界面通过 `com.sherwood.wta.ui.design`
   渲染。旧的 `Premium*` / `Enhanced*` / `Settings*` 组件作为 Wta 内部实现的
   永久别名层保留——不要再新增，也无需强行替换。构建期有一个审计脚本
   （`.github/scripts/audit_ui_design_system.py`，接进 `build.gradle.kts`）按

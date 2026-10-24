@@ -1,6 +1,6 @@
 # Export Pipeline
 
-The export pipeline turns a `WebApp` model into a signed APK. It lives in `app/src/main/java/com/webtoapp/core/apkbuilder/` (~24 files).
+The export pipeline turns a `WebApp` model into a signed APK. It lives in `app/src/main/java/com/sherwood/wta/core/apkbuilder/` (~24 files).
 
 ## Key classes
 

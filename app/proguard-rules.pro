@@ -123,18 +123,18 @@
 # ============================================================
 # 项目自身代码 — 全部保留（开源 + 重反射）
 # ============================================================
--keep class com.webtoapp.** { *; }
--keepclassmembers class com.webtoapp.** { *; }
--keep enum com.webtoapp.** { *; }
--keep interface com.webtoapp.** { *; }
+-keep class com.sherwood.wta.** { *; }
+-keepclassmembers class com.sherwood.wta.** { *; }
+-keep enum com.sherwood.wta.** { *; }
+-keep interface com.sherwood.wta.** { *; }
 
 # data class 的合成构造器（含默认参数）— Gson 反序列化必须
--keepclassmembers class com.webtoapp.data.model.** {
+-keepclassmembers class com.sherwood.wta.data.model.** {
     <init>(...);
 }
 
 # ============================================================
-# Room — KSP 生成的 _Impl 类已经在 com.webtoapp.** 范围内
+# Room — KSP 生成的 _Impl 类已经在 com.sherwood.wta.** 范围内
 # ============================================================
 -keep class * extends androidx.room.RoomDatabase { *; }
 -keep @androidx.room.Entity class *
@@ -288,8 +288,8 @@
 -dontwarn dev.chrisbanes.haze.**
 
 # Node.js JNI output bridge (R8 may rename onOutput otherwise)
--keep class com.webtoapp.core.nodejs.NodeBridge { *; }
--keep class com.webtoapp.core.nodejs.NodeJniOutputBridge {
+-keep class com.sherwood.wta.core.nodejs.NodeBridge { *; }
+-keep class com.sherwood.wta.core.nodejs.NodeJniOutputBridge {
     <init>(...);
     public void onOutput(java.lang.String, boolean);
 }

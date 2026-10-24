@@ -1,6 +1,6 @@
 # 导出管线
 
-导出管线把 `WebApp` 模型变成已签名的 APK。它位于 `app/src/main/java/com/webtoapp/core/apkbuilder/`(约 24 个文件)。
+导出管线把 `WebApp` 模型变成已签名的 APK。它位于 `app/src/main/java/com/sherwood/wta/core/apkbuilder/`(约 24 个文件)。
 
 ## 关键类
 

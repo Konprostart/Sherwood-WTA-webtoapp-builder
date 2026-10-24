@@ -21,11 +21,11 @@ Runtime Kotlin is authored under `app/` and synced into `shell/` by `syncShellRu
 
 ## The three Gradle modules
 
-- **`:app`** — the builder. `applicationId = com.webtoapp`, `compileSdk = 36`, `minSdk = 23`, `targetSdk = 36`, `buildConfigField SHELL_RUNTIME_ONLY = false`.
+- **`:app`** — the builder. `applicationId = com.sherwood.wta`, `compileSdk = 36`, `minSdk = 23`, `targetSdk = 36`, `buildConfigField SHELL_RUNTIME_ONLY = false`.
 - **`:shell`** — the runtime template embedded into generated APKs. Same `compileSdk`/`minSdk`/version as `:app`, but `targetSdk = 35` (export can pin a different target via `ApkExportConfig.targetSdk`, and raise `minSdk` via `ApkExportConfig.minSdk`) and `SHELL_RUNTIME_ONLY = true`. Its sources are synced from `app/`.
-- **`:clone-host`** — a minimal `com.android.library` (namespace `com.webtoapp.clone`) with no dependencies, compiled to a DEX asset for `AppCloner`.
+- **`:clone-host`** — a minimal `com.android.library` (namespace `com.sherwood.wta.clone`) with no dependencies, compiled to a DEX asset for `AppCloner`.
 
-## Package structure (`app/src/main/java/com/webtoapp`)
+## Package structure (`app/src/main/java/com/sherwood/wta`)
 
 - **`core/*`** — ~53 sub-packages of business/runtime logic: `apkbuilder`, `shell`, `webview`, `engine`, `extension`, `crypto`, `nodejs`, `php`, `python`, `golang`, `wordpress`, `linux`, `port`, `dns`, `network`, `adblock`, `agent`, and more.
 - **`data/*`** — persistence: Room DAOs, database, type converters, and the `WebApp` model + nested `*Config` classes.

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.webtoapp.clone"
+    namespace = "com.sherwood.wta.clone"
     compileSdk = 36
 
     defaultConfig {

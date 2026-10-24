@@ -25,7 +25,7 @@ plugins {
 }
 
 android {
-    namespace = "com.webtoapp.stack.admob"
+    namespace = "com.sherwood.wta.stack.admob"
     compileSdk = 36
 
     defaultConfig {
@@ -39,7 +39,7 @@ android {
     // at runtime via normal class-path shadowing.
     sourceSets {
         getByName("main") {
-            java.srcDir("../../app/src/main/java/com/webtoapp/core/ads/api")
+            java.srcDir("../../app/src/main/java/com/sherwood/wta/core/ads/api")
         }
     }
 
@@ -178,7 +178,7 @@ abstract class BundleFeatureStackTask : DefaultTask() {
         }
 
         val stubManifest = work.resolve("StubManifest.xml").apply {
-            writeText("<manifest package=\"com.webtoapp.stack.${stackId.get()}\"/>")
+            writeText("<manifest package=\"com.sherwood.wta.stack.${stackId.get()}\"/>")
         }
         val resApk = work.resolve("stack-res.apk")
         val genSrc = work.resolve("genSrc").apply { mkdirs() }

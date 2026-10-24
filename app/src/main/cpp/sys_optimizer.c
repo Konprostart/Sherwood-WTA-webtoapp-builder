@@ -302,7 +302,7 @@ static void build_system_profile(system_profile_t *prof) {
     }
 }
 
-#define JNI_FUNC(name) Java_com_webtoapp_core_perf_NativeSysOptimizer_##name
+#define JNI_FUNC(name) Java_com_sherwood_wta_core_perf_NativeSysOptimizer_##name
 
 JNIEXPORT jint JNICALL
 JNI_FUNC(nativeOptimizeSystem)(JNIEnv *env, jobject thiz) {

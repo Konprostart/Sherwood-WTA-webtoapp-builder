@@ -37,7 +37,7 @@ The `check` job compiles this flavor in a **second** Gradle invocation so the fl
 
 Fastlane files live at `fastlane/metadata/android/<locale>/`. F-Droid reads those from this repository.
 
-The fdroiddata recipe to copy into a [fdroiddata](https://gitlab.com/fdroid/fdroiddata) merge request is `metadata/com.webtoapp.yml` at the repo root of **this** project (path `metadata/com.webtoapp.yml`). MR title: `New app: WebToApp`.
+The fdroiddata recipe to copy into a [fdroiddata](https://gitlab.com/fdroid/fdroiddata) merge request is `metadata/com.sherwood.wta.yml` at the repo root of **this** project (path `metadata/com.sherwood.wta.yml`). MR title: `New app: WebToApp`.
 
 ```yaml
 Categories:

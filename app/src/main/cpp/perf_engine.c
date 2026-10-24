@@ -275,7 +275,7 @@ static const char PERF_CSS[] =
 "html{scroll-behavior:auto!important;-webkit-overflow-scrolling:touch;}"
 "</style>";
 
-#define JNI_FUNC(name) Java_com_webtoapp_core_perf_NativePerfEngine_##name
+#define JNI_FUNC(name) Java_com_sherwood_wta_core_perf_NativePerfEngine_##name
 
 JNIEXPORT jboolean JNICALL
 JNI_FUNC(nativeInit)(JNIEnv *env, jobject thiz) {

@@ -37,7 +37,7 @@ GitHub、Play 和 F-Droid 共用同一份源码。F-Droid 构建是 Gradle 属�
 
 Fastlane 文件在 `fastlane/metadata/android/<locale>/`。F-Droid 从本仓库读取。
 
-提交到 [fdroiddata](https://gitlab.com/fdroid/fdroiddata) 时，复制本仓库的 `metadata/com.webtoapp.yml`。MR 标题：`New app: WebToApp`。
+提交到 [fdroiddata](https://gitlab.com/fdroid/fdroiddata) 时，复制本仓库的 `metadata/com.sherwood.wta.yml`。MR 标题：`New app: WebToApp`。
 
 ```yaml
 Categories:

@@ -125,7 +125,7 @@ jobs:
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
             -Dkotlin.compiler.execution.strategy=in-process \
-            :app:testStandardDebugUnitTest --tests "com.webtoapp.core.apkbuilder.DemoApkExportTest"
+            :app:testStandardDebugUnitTest --tests "com.sherwood.wta.core.apkbuilder.DemoApkExportTest"
 
       - name: Upload generated demo APK
         uses: actions/upload-artifact@v4
@@ -148,7 +148,7 @@ jobs:
       - name: Upload gplay APKs
         uses: actions/upload-artifact@v4
         with:
-          name: gplay-apks-shiaho.webtoapp-DEBUG-SIGNED-do-not-distribute-${{ github.run_number }}
+          name: gplay-apks-com.sherwood.wta.play-DEBUG-SIGNED-do-not-distribute-${{ github.run_number }}
           path: app/build/outputs/apk/gplay/**/*.apk
           if-no-files-found: error
           retention-days: 14

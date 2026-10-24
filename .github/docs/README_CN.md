@@ -385,8 +385,8 @@ cd web-to-app
 
 | Flavor | `applicationId` | 用途 |
 | --- | --- | --- |
-| `standard` | `com.webtoapp` | GitHub / 侧载发布 |
-| `gplay` | `shiaho.webtoapp` | Google Play(`com.webtoapp` 已被他方注册) |
+| `standard` | `com.sherwood.wta` | GitHub / 侧载发布 |
+| `gplay` | `com.sherwood.wta.play` | Google Play(`com.sherwood.wta` 已被他方注册) |
 
 ```bash
 ./gradlew assembleStandardRelease   # 签名 release APK

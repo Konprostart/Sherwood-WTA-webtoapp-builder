@@ -32,11 +32,11 @@ if (isFdroidBuild) {
 }
 
 android {
-    namespace = "com.webtoapp"
+    namespace = "com.sherwood.wta"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.webtoapp"
+        applicationId = "com.sherwood.wta"
         minSdk = 23
 
         targetSdk = 35
@@ -267,8 +267,8 @@ val syncShellRuntimeSources by tasks.registering(Sync::class) {
         "**/core/kernel/**",
         "**/core/share/**",
 
-        "com/webtoapp/data/model/**",
-        "com/webtoapp/data/converter/**",
+        "com/sherwood/wta/data/model/**",
+        "com/sherwood/wta/data/converter/**",
 
         "**/ui/components/announcement/AnnouncementTemplates.kt",
         "**/ui/components/PremiumComponents.kt",
@@ -419,7 +419,7 @@ val generateShellStrings by tasks.registering(GenerateShellStringsTask::class) {
     dependsOn(syncShellRuntimeSources)
 
     script.set(rootProject.layout.projectDirectory.file("scripts/generate_shell_strings.py"))
-    i18nDir.set(rootProject.layout.projectDirectory.dir("app/src/main/java/com/webtoapp/core/i18n"))
+    i18nDir.set(rootProject.layout.projectDirectory.dir("app/src/main/java/com/sherwood/wta/core/i18n"))
     syncedSrcDir.set(layout.buildDirectory.dir("generated/shellRuntimeSrc"))
     overridesDir.set(layout.projectDirectory.dir("src/main/java-overrides"))
     outDir.set(layout.buildDirectory.dir("generated/shellStrings"))

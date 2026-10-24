@@ -385,8 +385,8 @@ Two distribution flavors exist, sharing all code and build rules:
 
 | Flavor | `applicationId` | Use |
 | --- | --- | --- |
-| `standard` | `com.webtoapp` | GitHub / sideloaded releases |
-| `gplay` | `shiaho.webtoapp` | Google Play (`com.webtoapp` is already registered there by another party) |
+| `standard` | `com.sherwood.wta` | GitHub / sideloaded releases |
+| `gplay` | `com.sherwood.wta.play` | Google Play (`com.sherwood.wta` is already registered there by another party) |
 
 ```bash
 ./gradlew assembleStandardRelease   # signed release APK

@@ -68,11 +68,11 @@ android {
             }
         }
     }
-    namespace = "com.webtoapp"
+    namespace = "com.sherwood.wta"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.webtoapp"
+        applicationId = "com.sherwood.wta"
         // Play automatic protection rejects a bundle below 24. Both flavors share this floor.
         minSdk = 24
 
@@ -105,12 +105,12 @@ android {
     flavorDimensions += "distribution"
     productFlavors {
         create("standard") {
-            // Sideloaded variant (GitHub releases, keeps `com.webtoapp` for the existing
+            // Sideloaded variant (GitHub releases, keeps `com.sherwood.wta` for the existing
             // update path). Same minSdk, targetSdk, and code as gplay.
         }
         create("gplay") {
-            // Google Play variant. `com.webtoapp` is registered on Play by another party.
-            applicationId = "shiaho.webtoapp"
+            // Google Play variant. `com.sherwood.wta` is registered on Play by another party.
+            applicationId = "com.sherwood.wta.play"
         }
     }
 
@@ -746,9 +746,9 @@ tasks.register("checkConfigFieldDrift") {
     group = "verification"
     description = "Detect field-name drift between ApkConfig payload keys and ShellConfig @SerializedName (static guard for preview/export config consistency)"
     val script = rootProject.file("scripts/check_config_field_drift.py")
-    val payloadFile = file("src/main/java/com/webtoapp/core/apkbuilder/ApkConfigJsonFactory.kt")
-    val apkConfigFile = file("src/main/java/com/webtoapp/core/apkbuilder/ApkConfig.kt")
-    val shellConfigFile = file("src/main/java/com/webtoapp/core/shell/ShellModeManager.kt")
+    val payloadFile = file("src/main/java/com/sherwood/wta/core/apkbuilder/ApkConfigJsonFactory.kt")
+    val apkConfigFile = file("src/main/java/com/sherwood/wta/core/apkbuilder/ApkConfig.kt")
+    val shellConfigFile = file("src/main/java/com/sherwood/wta/core/shell/ShellModeManager.kt")
     val allowlist = rootProject.file("scripts/config_field_drift_allowlist.json")
     // Configuration-cache safe: capture values at configuration time; the doLast action
     // must not reach through Project or the build-script object. Python resolution is
