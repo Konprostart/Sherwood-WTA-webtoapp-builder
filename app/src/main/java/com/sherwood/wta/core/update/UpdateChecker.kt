@@ -155,8 +155,7 @@ object UpdateChecker {
                 // no longer sink the download.
                 downloadUrl = rawUrl,
                 sizeBytes = asset.optLong("size", 0L),
-                sha256 = asset.optString("digest").takeIf { it.isNotBlank() }
-                    ?.substringAfter("sha256:", "")?.takeIf { it.isNotBlank() },
+                sha256 = sha256FromDigest(asset.optString("digest")),
                 releaseNotes = localizeReleaseBody(release.optString("body"))
             )
             Result.UpdateAvailable(info, current.toString())
@@ -197,8 +196,7 @@ object UpdateChecker {
                         body = localizeReleaseBody(release.optString("body")),
                         downloadUrl = rawUrl,
                         sizeBytes = asset?.optLong("size", 0L) ?: 0L,
-                        sha256 = asset?.optString("digest").takeIf { !it.isNullOrBlank() }
-                            ?.substringAfter("sha256:", "")?.takeIf { it.isNotBlank() }
+                        sha256 = sha256FromDigest(asset?.optString("digest"))
                     )
                 )
             }
@@ -210,7 +208,19 @@ object UpdateChecker {
         }
     }
 
-    private fun pickBestApkAsset(release: JSONObject): JSONObject? {
+    /**
+     * Extracts the hex digest from a GitHub asset `digest` field ("sha256:<hex>").
+     * Returns null for missing, blank, or non-sha256 values.
+     */
+    internal fun sha256FromDigest(digest: String?): String? =
+        digest?.trim()?.takeIf { it.startsWith("sha256:") }
+            ?.substringAfter("sha256:")?.trim()?.takeIf { it.isNotBlank() }
+
+    /**
+     * Picks the APK asset with the highest version embedded in its file name
+     * (for example "Sherwood-WTA-2.8.2.apk"). Non-APK assets are ignored.
+     */
+    internal fun pickBestApkAsset(release: JSONObject): JSONObject? {
         val assets = release.optJSONArray("assets") ?: return null
         var best: JSONObject? = null
         var bestVersion: Version? = null
