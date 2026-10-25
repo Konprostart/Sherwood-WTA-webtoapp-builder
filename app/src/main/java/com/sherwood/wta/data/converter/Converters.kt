@@ -306,10 +306,10 @@ class Converters {
     fun toRemoteActivationConfig(value: String): com.sherwood.wta.data.model.RemoteActivationConfig? = fromJson(value)
 
     @TypeConverter
-    fun fromAppUpdateConfig(value: com.sherwood.wta.core.update.AppUpdateConfig?): String = toJson(value)
+    fun fromAppUpdateConfig(value: com.sherwood.wta.data.model.AppUpdateConfig?): String = toJson(value)
 
     @TypeConverter
-    fun toAppUpdateConfig(value: String): com.sherwood.wta.core.update.AppUpdateConfig? = fromJson(value)
+    fun toAppUpdateConfig(value: String): com.sherwood.wta.data.model.AppUpdateConfig? = fromJson(value)
 
     @TypeConverter
     fun fromAutoStartConfig(value: AutoStartConfig?): String = toJson(value)

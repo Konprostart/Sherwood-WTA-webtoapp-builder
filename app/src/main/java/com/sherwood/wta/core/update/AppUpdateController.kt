@@ -1,6 +1,7 @@
 package com.sherwood.wta.core.update
 
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.data.model.AppUpdateConfig
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL

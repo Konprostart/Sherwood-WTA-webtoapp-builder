@@ -91,7 +91,7 @@ data class WebApp(
     val isActivated: Boolean = false,
 
     // Auto-update of the generated app (signed HTTPS manifest). Null = never configured.
-    val autoUpdateConfig: com.sherwood.wta.core.update.AppUpdateConfig? = null,
+    val autoUpdateConfig: AppUpdateConfig? = null,
 
     val adsEnabled: Boolean = false,
     val adConfig: AdConfig? = null,
@@ -1717,6 +1717,22 @@ data class RemoteActivationConfig(
     // there is no shared state between devices.
     val deviceBound: Boolean = false
 )
+
+/**
+ * Auto-update settings of a generated app. Disabled by default; the app never contacts a
+ * manifest URL unless [enabled] is true. Lives in data.model (not core.update) because the
+ * shell template syncs data.model but not core.update.
+ */
+data class AppUpdateConfig(
+    val enabled: Boolean = false,
+    val manifestUrl: String = "",
+    val publicKeyBase64: String = "",
+    val checkIntervalHours: Int = 24
+) {
+    /** True when the config has everything needed to run a check. */
+    val isUsable: Boolean
+        get() = enabled && manifestUrl.isNotBlank() && publicKeyBase64.isNotBlank()
+}
 
 data class AutoStartConfig(
     val bootStartEnabled: Boolean = false,

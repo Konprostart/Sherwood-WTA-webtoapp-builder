@@ -2,6 +2,7 @@ package com.sherwood.wta.core.update
 
 import android.util.Base64
 import com.google.common.truth.Truth.assertThat
+import com.sherwood.wta.data.model.AppUpdateConfig
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.Signature
