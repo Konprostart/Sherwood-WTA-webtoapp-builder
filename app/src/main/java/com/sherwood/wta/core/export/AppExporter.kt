@@ -19,6 +19,7 @@ import com.sherwood.wta.core.host.AdvancedAppTypes
 import com.sherwood.wta.core.host.HostRuntimePrefs
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.data.model.WebApp
+import com.sherwood.wta.ui.webview.DocumentUris
 import com.sherwood.wta.ui.webview.WebViewActivity
 import com.sherwood.wta.util.threadLocalCompat
 import java.io.File
@@ -62,7 +63,7 @@ class AppExporter(private val context: Context) {
             val launchIntent = WebViewActivity.buildLaunchIntent(
                 context = context,
                 separateTasks = separateTasks,
-                documentUri = Uri.parse("webtoapp://webapp/${webApp.id}")
+                documentUri = DocumentUris.forApp(webApp.id)
             ) {
                 putExtra("app_id", webApp.id)
             }.apply {

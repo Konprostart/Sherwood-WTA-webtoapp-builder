@@ -129,7 +129,7 @@ open class WebViewActivity : AppCompatActivity() {
         fun start(context: Context, appId: Long) {
             HostPreviewMotion.launch(
                 context,
-                buildLaunchIntent(context, documentUri = Uri.parse("webtoapp://webapp/$appId")) {
+                buildLaunchIntent(context, documentUri = DocumentUris.forApp(appId)) {
                     putExtra(EXTRA_APP_ID, appId)
                 }
             )
@@ -138,7 +138,7 @@ open class WebViewActivity : AppCompatActivity() {
         fun startWithUrl(context: Context, url: String) {
             HostPreviewMotion.launch(
                 context,
-                buildLaunchIntent(context, documentUri = Uri.parse("webtoapp://url/${url.hashCode()}")) {
+                buildLaunchIntent(context, documentUri = DocumentUris.forUrl(url)) {
                     putExtra(EXTRA_URL, url)
                 }
             )
@@ -149,7 +149,7 @@ open class WebViewActivity : AppCompatActivity() {
                 context,
                 buildLaunchIntent(
                     context,
-                    documentUri = Uri.parse("webtoapp://preview/${webAppJson.hashCode()}")
+                    documentUri = DocumentUris.forPreviewJson(webAppJson)
                 ) {
                     putExtra(EXTRA_PREVIEW_APP_JSON, webAppJson)
                 }
@@ -159,7 +159,7 @@ open class WebViewActivity : AppCompatActivity() {
         fun startForTest(context: Context, testUrl: String, moduleIds: List<String>) {
             HostPreviewMotion.launch(
                 context,
-                buildLaunchIntent(context, documentUri = Uri.parse("webtoapp://test/${testUrl.hashCode()}")) {
+                buildLaunchIntent(context, documentUri = DocumentUris.forTest(testUrl)) {
                     putExtra(EXTRA_TEST_URL, testUrl)
                     putStringArrayListExtra(EXTRA_TEST_MODULE_IDS, ArrayList(moduleIds))
                 }

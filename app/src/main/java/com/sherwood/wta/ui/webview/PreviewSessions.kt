@@ -35,10 +35,9 @@ object PreviewSessions {
     private val live = ConcurrentHashMap<String, WebViewDocumentActivity>()
     private val waiting = ConcurrentHashMap<String, CompletableDeferred<WebViewDocumentActivity>>()
 
-    fun documentUriForApp(appId: Long): Uri = Uri.parse("webtoapp://preview/app/$appId")
+    fun documentUriForApp(appId: Long): Uri = DocumentUris.forAppPreview(appId)
 
-    fun documentUriForUrl(url: String): Uri =
-        Uri.parse("webtoapp://preview/url").buildUpon().appendQueryParameter("u", url).build()
+    fun documentUriForUrl(url: String): Uri = DocumentUris.forUrlPreview(url)
 
     fun onActivityReady(activity: WebViewDocumentActivity) {
         val key = sessionKey(activity.intent) ?: return

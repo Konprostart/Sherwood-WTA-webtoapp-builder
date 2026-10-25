@@ -42,6 +42,28 @@ class WebViewDocumentLaunchTest {
         assertThat(document).doesNotContain("android:documentLaunchMode=\"always\"")
     }
 
+    /**
+     * Dual-accept contract (Option 5a): legacy `webtoapp://` document URIs
+     * (older pinned shortcuts) and new `sherwood-wta://` URIs both flow
+     * through buildLaunchIntent untouched — no scheme is parsed.
+     */
+    @Test
+    fun `legacy and new document schemes both pass through the launch intent`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+
+        for (scheme in listOf("webtoapp", "sherwood-wta")) {
+            val uri = Uri.parse("$scheme://webapp/7")
+            val intent = WebViewActivity.buildLaunchIntent(
+                context,
+                separateTasks = true,
+                documentUri = uri
+            ) {}
+
+            assertThat(intent.data).isEqualTo(uri)
+            assertThat(intent.flags and Intent.FLAG_ACTIVITY_NEW_DOCUMENT).isNotEqualTo(0)
+        }
+    }
+
     private fun repoFile(relativePath: String): File {
         val roots = listOf(File("."), File(".."))
         return roots.asSequence()

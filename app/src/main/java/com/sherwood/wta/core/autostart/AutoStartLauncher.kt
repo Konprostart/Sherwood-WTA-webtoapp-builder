@@ -7,6 +7,7 @@ import android.os.Looper
 import com.sherwood.wta.WebToAppApplication
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.ui.shell.ShellActivity
+import com.sherwood.wta.ui.webview.DocumentUris
 import com.sherwood.wta.ui.webview.WebViewActivity
 
 object AutoStartLauncher {
@@ -59,7 +60,7 @@ object AutoStartLauncher {
         try {
             val intent = WebViewActivity.buildLaunchIntent(
                 context = context,
-                documentUri = android.net.Uri.parse("webtoapp://webapp/$appId")
+                documentUri = DocumentUris.forApp(appId)
             ) {
                 putExtra("app_id", appId)
             }
