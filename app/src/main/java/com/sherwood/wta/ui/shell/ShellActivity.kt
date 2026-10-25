@@ -1293,6 +1293,7 @@ class ShellActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         backgroundMedia.onHostResume()
+        com.sherwood.wta.core.shell.ShellAutoUpdate.checkIfDue(this, lifecycleScope)
 
         if (pendingFloatingWindowLaunch) {
             val config = WebToAppApplication.shellMode.getConfig()

@@ -105,7 +105,7 @@ object AppUpdateManifest {
         return nowMillis - lastCheckedAtMillis >= intervalMillis
     }
 
-    private fun isHttps(url: String): Boolean = try {
+    internal fun isHttps(url: String): Boolean = try {
         val uri = URI(url)
         uri.scheme.equals("https", ignoreCase = true) && !uri.host.isNullOrBlank()
     } catch (e: Exception) {
