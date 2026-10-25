@@ -15,13 +15,12 @@ exports it, without a desktop computer or a build server.
 
 </div>
 
-## About this fork
+## About this project
 
-Sherwood WTA is an independent fork of
-[shiaho777/web-to-app](https://github.com/shiaho777/web-to-app), originally created by
-shiaho and released into the public domain under [The Unlicense](LICENSE). This fork
-removes runtime dependencies on the original author's repositories, accounts, and
-community channels, and uses its own package name (`com.sherwood.wta`).
+Sherwood WTA is an independent project released into the public domain under
+[The Unlicense](LICENSE). It has no runtime dependencies on third-party
+repositories, accounts, or community channels, and uses its own package name
+(`com.sherwood.wta`).
 
 ## Features
 
