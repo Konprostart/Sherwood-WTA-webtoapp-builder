@@ -527,7 +527,7 @@ def _resolve_contributors(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     parser.add_argument("--owner", default=os.environ.get("REPO_OWNER", "Konprostart"))
-    parser.add_argument("--repo", default=os.environ.get("REPO_NAME", "web-to-app"))
+    parser.add_argument("--repo", default=os.environ.get("REPO_NAME", "Sherwood-WTA-webtoapp-builder"))
     parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
     parser.add_argument(
         "--maintainers",
