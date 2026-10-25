@@ -19,7 +19,7 @@ import com.sherwood.wta.core.stats.AppUsageStatsDao
 
 @Database(
     entities = [WebApp::class, AppCategory::class, AppUsageStats::class, AppHealthRecord::class],
-    version = 46,
+    version = 47,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -1076,6 +1076,9 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_46_47 =
+            createAddColumnMigration(46, 47, "autoUpdateConfig")
+
         private val MIGRATION_43_44 =
             createAddColumnMigration(43, 44, "appLockConfig")
 
@@ -1310,7 +1313,8 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_42_43,
                     MIGRATION_43_44,
                     MIGRATION_44_45,
-                    MIGRATION_45_46
+                    MIGRATION_45_46,
+                    MIGRATION_46_47
                 )
                 .fallbackToDestructiveMigrationOnDowngrade()
                 .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7)

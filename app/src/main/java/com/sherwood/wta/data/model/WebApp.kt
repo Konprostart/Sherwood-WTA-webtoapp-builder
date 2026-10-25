@@ -90,6 +90,9 @@ data class WebApp(
     val activationRemoteConfig: RemoteActivationConfig? = null,
     val isActivated: Boolean = false,
 
+    // Auto-update of the generated app (signed HTTPS manifest). Null = never configured.
+    val autoUpdateConfig: com.sherwood.wta.core.update.AppUpdateConfig? = null,
+
     val adsEnabled: Boolean = false,
     val adConfig: AdConfig? = null,
 
