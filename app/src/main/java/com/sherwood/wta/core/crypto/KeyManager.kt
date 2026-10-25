@@ -40,7 +40,7 @@ class KeyManager(private val context: Context) {
             val packageName = context.packageName
             val signature = getAppSignature()
 
-            AppLogger.d(TAG, "派生应用密钥: package=$packageName")
+            AppLogger.d(TAG, "Deriving app key: package=$packageName")
 
             val key = AesCryptoEngine.deriveKeyFromPackage(packageName, signature)
             cachedKey = key
@@ -58,7 +58,7 @@ class KeyManager(private val context: Context) {
             val packageName = context.packageName
             val signature = getAppSignature()
 
-            AppLogger.d(TAG, "派生应用密钥: package=$packageName, iterations=$iterations")
+            AppLogger.d(TAG, "Deriving app key: package=$packageName, iterations=$iterations")
 
             val key = AesCryptoEngine.deriveKeyFromPackage(packageName, signature, iterations)
             keysByIterations[iterations] = key
@@ -73,7 +73,7 @@ class KeyManager(private val context: Context) {
         packageName: String,
         signatureHash: ByteArray
     ): SecretKey {
-        AppLogger.d(TAG, "为包名生成密钥: $packageName")
+        AppLogger.d(TAG, "Generating key for package: $packageName")
         return AesCryptoEngine.deriveKeyFromPackage(
             packageName,
             signatureHash,
@@ -86,7 +86,7 @@ class KeyManager(private val context: Context) {
         signatureHash: ByteArray,
         customPassword: String?
     ): SecretKey {
-        AppLogger.d(TAG, "为包名生成密钥: $packageName, hasCustomPassword=${!customPassword.isNullOrBlank()}")
+        AppLogger.d(TAG, "Generating key for package: $packageName, hasCustomPassword=${!customPassword.isNullOrBlank()}")
         return AesCryptoEngine.deriveKeyFromPackage(
             packageName,
             signatureHash,
@@ -126,7 +126,7 @@ class KeyManager(private val context: Context) {
             }
 
             if (signatures.isNullOrEmpty()) {
-                AppLogger.w(TAG, "无法获取应用签名，使用默认值")
+                AppLogger.w(TAG, "Could not read app signature, using default value")
                 return getDefaultSignature()
             }
 
@@ -134,7 +134,7 @@ class KeyManager(private val context: Context) {
             MessageDigest.getInstance("SHA-256").digest(signature.toByteArray())
 
         } catch (e: Exception) {
-            AppLogger.e(TAG, "获取应用签名失败", e)
+            AppLogger.e(TAG, "Failed to read app signature", e)
             getDefaultSignature()
         }
     }
@@ -156,7 +156,7 @@ class KeyManager(private val context: Context) {
 
     private fun getDefaultSignature(): ByteArray {
 
-        AppLogger.e(TAG, "SECURITY: 无法获取真实应用签名，使用后备签名。加密强度已降低！")
+        AppLogger.e(TAG, "SECURITY: could not read the real app signature, using fallback signature. Encryption strength is reduced!")
 
         val packageHash = context.packageName.toByteArray().sha256()
 
