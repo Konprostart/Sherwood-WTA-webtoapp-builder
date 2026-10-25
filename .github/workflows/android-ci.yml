@@ -147,6 +147,7 @@ jobs:
       - name: Build generated demo APK
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
             :app:testStandardDebugUnitTest --tests "com.sherwood.wta.core.apkbuilder.DemoApkExportTest"
 
       - name: Upload generated demo APK
