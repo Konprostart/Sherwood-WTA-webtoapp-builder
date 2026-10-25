@@ -193,6 +193,18 @@ data class ShellConfig(
     @SerializedName("activationRemoteDeviceBound")
     val activationRemoteDeviceBound: Boolean = false,
 
+    @SerializedName("autoUpdateEnabled")
+    val autoUpdateEnabled: Boolean = false,
+
+    @SerializedName("autoUpdateManifestUrl")
+    val autoUpdateManifestUrl: String = "",
+
+    @SerializedName("autoUpdatePublicKey")
+    val autoUpdatePublicKey: String = "",
+
+    @SerializedName("autoUpdateCheckIntervalHours")
+    val autoUpdateCheckIntervalHours: Int = 24,
+
     @SerializedName("adBlockEnabled")
     val adBlockEnabled: Boolean = false,
 

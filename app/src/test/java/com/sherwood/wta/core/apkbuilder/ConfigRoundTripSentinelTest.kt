@@ -519,4 +519,28 @@ class ConfigRoundTripSentinelTest {
         assertThat(shell.targetUrl).isEqualTo("https://web.sentinel.example/path?q=1")
         assertThat(shell.appType).isEqualTo("WEB")
     }
+
+    @Test
+    fun `auto-update settings round-trip into the shell config`() {
+        val app = baseApp().copy(
+            autoUpdateConfig = com.sherwood.wta.data.model.AppUpdateConfig(
+                enabled = true,
+                manifestUrl = "https://updates.example.com/planer.json",
+                publicKeyBase64 = "PUBKEY",
+                checkIntervalHours = 6
+            )
+        )
+        val shell = roundTrip(app)
+        assertThat(shell.autoUpdateEnabled).isTrue()
+        assertThat(shell.autoUpdateManifestUrl).isEqualTo("https://updates.example.com/planer.json")
+        assertThat(shell.autoUpdatePublicKey).isEqualTo("PUBKEY")
+        assertThat(shell.autoUpdateCheckIntervalHours).isEqualTo(6)
+    }
+
+    @Test
+    fun `auto-update is off when never configured`() {
+        val shell = roundTrip(baseApp())
+        assertThat(shell.autoUpdateEnabled).isFalse()
+        assertThat(shell.autoUpdateManifestUrl).isEmpty()
+    }
 }

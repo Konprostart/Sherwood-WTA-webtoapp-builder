@@ -4073,6 +4073,7 @@ fun WebApp.toApkConfig(packageName: String, context: android.content.Context? = 
     return ApkConfig(
         meta = buildMetaBlock(packageName, effectiveTargetUrl, htmlUsesFileScheme, bakedDarkMode),
         activation = buildActivationBlock(),
+        autoUpdate = buildAutoUpdateBlock(),
         adBlock = buildAdBlockBlock(),
         announcement = buildAnnouncementBlock(),
         ads = buildAdsBlock(),
@@ -4191,6 +4192,16 @@ private fun WebApp.buildMetaBlock(packageName: String, effectiveTargetUrl: Strin
         loggingEnabled = apkExportConfig?.loggingEnabled ?: false,
         targetSdkOverride = sdk.targetSdkRewrite,
         minSdkOverride = sdk.minSdkRewrite
+    )
+}
+
+private fun WebApp.buildAutoUpdateBlock(): AutoUpdateBlock {
+    val cfg = autoUpdateConfig ?: return AutoUpdateBlock()
+    return AutoUpdateBlock(
+        enabled = cfg.enabled,
+        manifestUrl = cfg.manifestUrl,
+        publicKeyBase64 = cfg.publicKeyBase64,
+        checkIntervalHours = cfg.checkIntervalHours
     )
 }
 

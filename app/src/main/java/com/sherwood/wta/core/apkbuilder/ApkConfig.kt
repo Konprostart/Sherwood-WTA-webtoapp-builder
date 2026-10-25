@@ -36,7 +36,8 @@ data class ApkConfig(
     val phpApp: PhpAppBlock = PhpAppBlock(),
     val pythonApp: PythonAppBlock = PythonAppBlock(),
     val goApp: GoAppBlock = GoAppBlock(),
-    val multiWeb: MultiWebBlock = MultiWebBlock()
+    val multiWeb: MultiWebBlock = MultiWebBlock(),
+    val autoUpdate: AutoUpdateBlock = AutoUpdateBlock()
 ) {
 
     val appName: String get() = meta.appName
@@ -407,6 +408,11 @@ data class ApkConfig(
     val multiWebShowSiteIcons: Boolean get() = multiWeb.showSiteIcons
     val multiWebProjectId: String get() = multiWeb.projectId
 
+    val autoUpdateEnabled: Boolean get() = autoUpdate.enabled
+    val autoUpdateManifestUrl: String get() = autoUpdate.manifestUrl
+    val autoUpdatePublicKey: String get() = autoUpdate.publicKeyBase64
+    val autoUpdateCheckIntervalHours: Int get() = autoUpdate.checkIntervalHours
+
     companion object
 }
 
@@ -428,6 +434,13 @@ data class MetaBlock(
     val loggingEnabled: Boolean = false,
     val targetSdkOverride: Int? = null,
     val minSdkOverride: Int? = null
+)
+
+data class AutoUpdateBlock(
+    val enabled: Boolean = false,
+    val manifestUrl: String = "",
+    val publicKeyBase64: String = "",
+    val checkIntervalHours: Int = 24
 )
 
 data class ActivationBlock(
