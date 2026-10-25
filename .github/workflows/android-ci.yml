@@ -107,16 +107,39 @@ jobs:
             "cmake;3.22.1" \
             "ndk;28.2.13676358"
 
-      - name: Build APKs
+      # One Gradle JVM per variant: heap is released between variants and the
+      # Kotlin daemon (kotlin.daemon.jvmargs, 8 GB) does the compilation.
+      - name: Build APK standard debug
         run: |
-          ./gradlew --no-daemon --no-configuration-cache --no-parallel \
-            -Dkotlin.compiler.execution.strategy=in-process \
+          ./gradlew --no-daemon --no-configuration-cache \
             -PallowDebugSignedRelease=true \
-            :app:assembleStandardDebug \
-            :app:assembleStandardRelease \
-            :app:assembleGplayDebug \
-            :app:assembleGplayRelease \
-            :shell:assembleDebug \
+            :app:assembleStandardDebug
+
+      - name: Build APK standard release
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
+            :app:assembleStandardRelease
+
+      - name: Build APK gplay debug
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
+            :app:assembleGplayDebug
+
+      - name: Build APK gplay release
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
+            :app:assembleGplayRelease
+
+      - name: Build shell template debug and release
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
+            :shell:assembleDebug
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
             :shell:assembleRelease
 
       # End-to-end proof that the export pipeline produces an installable APK: a real
