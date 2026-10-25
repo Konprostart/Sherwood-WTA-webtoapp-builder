@@ -3911,7 +3911,8 @@ builtins.__import__ = _w2a_import
                     config.notificationEnabled ||
                     config.floatingWindowEnabled,
                 scheduledExactAlarm = config.scheduledStartEnabled,
-                activationBiometric = config.activationEnabled
+                activationBiometric = config.activationEnabled,
+                autoUpdate = config.autoUpdateEnabled
             ),
             downloadWithoutNotification = config.downloadEnabled
         )

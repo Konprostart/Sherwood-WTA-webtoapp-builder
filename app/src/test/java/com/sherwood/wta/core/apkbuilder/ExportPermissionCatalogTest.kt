@@ -164,6 +164,53 @@ class ExportPermissionCatalogTest {
     }
 
     @Test
+    fun `install packages is declared only when auto-update is enabled`() {
+        val install = "android.permission.REQUEST_INSTALL_PACKAGES"
+        assertThat(manifest(ApkRuntimePermissions())).doesNotContain(install)
+        assertThat(manifest(ApkRuntimePermissions(), PermissionFeatureDefaults(autoUpdate = true)))
+            .contains(install)
+    }
+
+    @Test
+    fun `explicit user grant off wins over auto-update`() {
+        val install = "android.permission.REQUEST_INSTALL_PACKAGES"
+        val off = ApkRuntimePermissions().withExportGrant(
+            "REQUEST_INSTALL_PACKAGES",
+            false,
+            PermissionFeatureDefaults(autoUpdate = true)
+        )
+        assertThat(manifest(off, PermissionFeatureDefaults(autoUpdate = true))).doesNotContain(install)
+    }
+
+    @Test
+    fun `full build path adds install permission only when auto-update is configured`() {
+        val install = "android.permission.REQUEST_INSTALL_PACKAGES"
+        val base = WebApp(
+            name = "Planer",
+            url = "https://example.com",
+            appType = AppType.WEB,
+            webViewConfig = WebViewConfig(downloadEnabled = false, enableMediaSession = false)
+        )
+        val off = ApkBuilder::class.java.getDeclaredMethod("buildRequiredPermissions", ApkConfig::class.java)
+            .apply { isAccessible = true }
+        val builder = ApkBuilder(context)
+        @Suppress("UNCHECKED_CAST")
+        val without = off.invoke(builder, base.toApkConfig("com.example.perms", context)) as List<String>
+        assertThat(without).doesNotContain(install)
+
+        val withUpdate = base.copy(
+            autoUpdateConfig = com.sherwood.wta.data.model.AppUpdateConfig(
+                enabled = true,
+                manifestUrl = "https://updates.example.com/planer.json",
+                publicKeyBase64 = "PUBKEY"
+            )
+        )
+        @Suppress("UNCHECKED_CAST")
+        val with = off.invoke(builder, withUpdate.toApkConfig("com.example.perms", context)) as List<String>
+        assertThat(with).contains(install)
+    }
+
+    @Test
     fun `query all packages is opt-in and bluetooth does not imply nearby wifi`() {
         val bluetooth = permissionsFor(ApkRuntimePermissions(bluetooth = true))
         assertThat(bluetooth).containsAtLeast(

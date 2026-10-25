@@ -89,7 +89,9 @@ data class PermissionFeatureDefaults(
     /** Background run, notification polling, or the floating window. */
     val specialUse: Boolean = false,
     val scheduledExactAlarm: Boolean = false,
-    val activationBiometric: Boolean = false
+    val activationBiometric: Boolean = false,
+    /** Auto-update is enabled: the app must be able to install the downloaded update APK. */
+    val autoUpdate: Boolean = false
 )
 
 object ExportPermissionCatalog {
@@ -277,7 +279,8 @@ object ExportPermissionCatalog {
             legacy = { it.systemAlertWindow }, reasonKeys = setOf("systemAlertWindow")),
         special("WRITE_SETTINGS", ExportPermGroup.SPECIAL, 1),
         special("REQUEST_INSTALL_PACKAGES", ExportPermGroup.SPECIAL, 23,
-            playRestricted = true, legacy = { it.installPackages }),
+            playRestricted = true, legacy = { it.installPackages },
+            feature = { _, defaults -> defaults.autoUpdate }),
         special("PACKAGE_USAGE_STATS", ExportPermGroup.SPECIAL, 23, playRestricted = true),
         special("SCHEDULE_EXACT_ALARM", ExportPermGroup.SPECIAL, 31,
             feature = { _, defaults -> defaults.scheduledExactAlarm }),

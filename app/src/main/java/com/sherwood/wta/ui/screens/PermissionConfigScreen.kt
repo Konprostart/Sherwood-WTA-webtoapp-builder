@@ -112,7 +112,8 @@ fun permissionFeatureDefaults(
     notificationEnabled: Boolean,
     floatingWindowEnabled: Boolean,
     scheduledStartEnabled: Boolean,
-    activationEnabled: Boolean
+    activationEnabled: Boolean,
+    autoUpdateEnabled: Boolean = false
 ): PermissionFeatureDefaults {
     val fileOnly = (appType == AppType.HTML || appType == AppType.FRONTEND) &&
         htmlLoadMode == HtmlLoadMode.FILE
@@ -121,7 +122,8 @@ fun permissionFeatureDefaults(
         mediaPlayback = enableMediaSession,
         specialUse = backgroundRunEnabled || notificationEnabled || floatingWindowEnabled,
         scheduledExactAlarm = scheduledStartEnabled,
-        activationBiometric = activationEnabled
+        activationBiometric = activationEnabled,
+        autoUpdate = autoUpdateEnabled
     )
 }
 
