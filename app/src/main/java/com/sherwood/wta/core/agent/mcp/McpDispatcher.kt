@@ -184,6 +184,9 @@ class McpDispatcher(
     private fun serverInfo(): JsonObject = JsonObject().apply {
         addProperty("name", "webtoapp")
         addProperty("version", "1")
+        // Dual-expose (Option 5a): discovery keeps the legacy name for existing
+        // clients and advertises the new alias for name-matching consumers.
+        addProperty("alias", "sherwood-wta")
     }
 
     private fun toolsList(modern: Boolean): JsonObject = JsonObject().apply {

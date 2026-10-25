@@ -31,6 +31,15 @@ class McpDispatcherTest {
     )
 
     @Test
+    fun initializeAdvertisesLegacyNameAndSherwoodAlias() = runBlocking {
+        val message = dispatcher().handle("""{"jsonrpc":"2.0","id":9,"method":"initialize"}""")
+        val serverInfo = (message as McpDispatcher.DispatchResult.Message).json
+            .getAsJsonObject("result").getAsJsonObject("serverInfo")
+        assertEquals("webtoapp", serverInfo.get("name").asString)
+        assertEquals("sherwood-wta", serverInfo.get("alias").asString)
+    }
+
+    @Test
     fun initializeAdvertisesToolsAndProtocol() = runBlocking {
         val message = dispatcher().handle("""{"jsonrpc":"2.0","id":1,"method":"initialize"}""")
         val json = (message as McpDispatcher.DispatchResult.Message).json

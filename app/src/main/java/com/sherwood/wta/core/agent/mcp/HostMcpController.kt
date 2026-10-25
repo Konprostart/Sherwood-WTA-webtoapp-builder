@@ -99,10 +99,16 @@ object HostMcpController {
         _status.value = Status.Stopped
     }
 
-    fun configSnippet(port: Int, token: String): String = """
+    /**
+     * Copy-paste MCP client config. The server key defaults to the legacy
+     * `webtoapp` name so already-configured clients keep working; pass
+     * `serverName = "sherwood-wta"` for the new alias (both names point to the
+     * same endpoint below and are advertised in serverInfo).
+     */
+    fun configSnippet(port: Int, token: String, serverName: String = "webtoapp"): String = """
         {
           "mcpServers": {
-            "webtoapp": {
+            "$serverName": {
               "type": "http",
               "url": "http://127.0.0.1:$port/mcp",
               "headers": {
