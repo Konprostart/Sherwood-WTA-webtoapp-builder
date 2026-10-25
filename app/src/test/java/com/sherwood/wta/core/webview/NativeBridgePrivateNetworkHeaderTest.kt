@@ -39,7 +39,7 @@ class NativeBridgePrivateNetworkHeaderTest {
     @Test
     fun `neither name is the other's case-insensitive duplicate`() {
         val request = requestWithBothBridgeHeaders()
-        val names = request.headers.names.map { it.lowercase() }.filter {
+        val names = request.headers.names().map { it.lowercase() }.filter {
             it.endsWith("private-network-bridge")
         }
 
