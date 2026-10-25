@@ -1022,6 +1022,7 @@ class WebViewManager(
 
                 if (window.__webtoapp_orientation_polyfill__) return;
                 window.__webtoapp_orientation_polyfill__ = true;
+                window.__sherwood_wta_orientation_polyfill__ = true;
 
                 var bridge = window.NativeBridge;
                 var screenObj = window.screen;
@@ -5172,6 +5173,7 @@ class WebViewManager(
                         'use strict';
                         if (window.__webtoapp_zoom_polyfill__) return;
                         window.__webtoapp_zoom_polyfill__ = true;
+                        window.__sherwood_wta_zoom_polyfill__ = true;
                         var originalWidths = new WeakMap();
 
                         function convertZoomToTransform(el) {
@@ -5311,6 +5313,7 @@ class WebViewManager(
 
                         if (window.__webtoapp_clipboard_polyfill__) return;
                         window.__webtoapp_clipboard_polyfill__ = true;
+                        window.__sherwood_wta_clipboard_polyfill__ = true;
 
                         var hasBridge = typeof NativeBridge !== 'undefined';
                         if (!hasBridge) {
@@ -5559,6 +5562,7 @@ class WebViewManager(
                     (function() {
                         'use strict';
                         window.__webtoapp_popup_blocker_enabled__ = true;
+                        window.__sherwood_wta_popup_blocker_enabled__ = true;
 
                         var blockedCount = 0;
                         var allowedDomains = [];
@@ -5665,12 +5669,15 @@ class WebViewManager(
 
                         window.__webtoapp_toggle_popup_blocker__ = function(enabled) {
                             window.__webtoapp_popup_blocker_enabled__ = enabled;
+                            window.__sherwood_wta_popup_blocker_enabled__ = enabled;
                             console.log('[WebToApp PopupBlocker] ' + (enabled ? 'Enabled' : 'Disabled'));
                         };
+                        window.__sherwood_wta_toggle_popup_blocker__ = window.__webtoapp_toggle_popup_blocker__;
 
                         window.__webtoapp_popup_blocker_stats__ = function() {
                             return { blocked: blockedCount, enabled: window.__webtoapp_popup_blocker_enabled__ };
                         };
+                        window.__sherwood_wta_popup_blocker_stats__ = window.__webtoapp_popup_blocker_stats__;
                     })();
                 """.trimIndent())
             }
@@ -6410,6 +6417,7 @@ class WebViewManager(
 
                 if (window.__webtoapp_notification_polyfill__) return;
                 window.__webtoapp_notification_polyfill__ = true;
+                window.__sherwood_wta_notification_polyfill__ = true;
 
                 if (typeof NativeBridge === 'undefined') {
                     return;
