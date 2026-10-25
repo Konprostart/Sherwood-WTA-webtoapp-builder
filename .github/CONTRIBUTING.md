@@ -79,7 +79,7 @@ You'll need:
 
 ```bash
 git clone https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder.git
-cd web-to-app
+cd Sherwood-WTA-webtoapp-builder
 ./gradlew assembleDebug
 ```
 
