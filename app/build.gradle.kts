@@ -90,6 +90,9 @@ android {
         versionName = "2.8.2"
         buildConfigField("boolean", "SHELL_RUNTIME_ONLY", "false")
         buildConfigField("boolean", "FDROID", isFdroidBuild.toString())
+        // True only in the gplay flavor (see productFlavors). Google Play policy does not allow
+        // self-installing apps, so generated apps built by this flavor never get auto-update.
+        buildConfigField("boolean", "GPLAY", "false")
 
         vectorDrawables {
             useSupportLibrary = true
@@ -119,6 +122,7 @@ android {
         create("gplay") {
             // Google Play variant with its own application id, so it can be published next to the standard flavor.
             applicationId = "com.sherwood.wta.play"
+            buildConfigField("boolean", "GPLAY", "true")
         }
     }
 

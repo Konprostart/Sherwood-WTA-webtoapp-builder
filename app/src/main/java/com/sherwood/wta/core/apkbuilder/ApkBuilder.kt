@@ -4198,6 +4198,9 @@ private fun WebApp.buildMetaBlock(packageName: String, effectiveTargetUrl: Strin
 
 private fun WebApp.buildAutoUpdateBlock(): AutoUpdateBlock {
     val cfg = autoUpdateConfig ?: return AutoUpdateBlock()
+    // Single gate for both the shell payload and REQUEST_INSTALL_PACKAGES (which reads
+    // config.autoUpdateEnabled). Google Play builds never produce self-updating apps.
+    if (com.sherwood.wta.BuildConfig.GPLAY) return AutoUpdateBlock()
     return AutoUpdateBlock(
         enabled = cfg.enabled,
         manifestUrl = cfg.manifestUrl,
