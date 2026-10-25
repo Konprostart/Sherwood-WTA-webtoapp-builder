@@ -1559,6 +1559,7 @@ await WtaDirectory.write('exports/image.png', pngBytes);
                 }
             }
             builder.header("X-WebToApp-Private-Network-Bridge", "1")
+            builder.header("X-Sherwood-WTA-Private-Network-Bridge", "1")
             builder.method(method, requestBody)
 
             val client = if (redirectGate != null || requirePublicResolution) {
