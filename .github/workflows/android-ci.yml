@@ -3,6 +3,11 @@ name: Android CI Build
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      legacy_sequential:
+        description: "Run the old sequential package-apks job instead of the parallel APK jobs"
+        type: boolean
+        default: false
   push:
     branches:
       - "**"
@@ -73,8 +78,130 @@ jobs:
             :app:processStandardReleaseManifest \
             :shell:processReleaseManifest
 
-  package-apks:
+  apk-variant:
     if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: standard-debug
+            task: ":app:assembleStandardDebug"
+            path: "app/build/outputs/apk/standard/debug/*.apk"
+          - variant: standard-release
+            task: ":app:assembleStandardRelease"
+            path: "app/build/outputs/apk/standard/release/*.apk"
+          - variant: gplay-debug
+            task: ":app:assembleGplayDebug"
+            path: "app/build/outputs/apk/gplay/debug/*.apk"
+          - variant: gplay-release
+            task: ":app:assembleGplayRelease"
+            path: "app/build/outputs/apk/gplay/release/*.apk"
+
+    steps:
+      - name: Download code
+        uses: actions/checkout@v6
+
+      - name: Prepare Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Prepare Android tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+
+      - name: Prepare Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Install needed tools
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "cmake;3.22.1" \
+            "ndk;28.2.13676358"
+
+      # One variant per job: each runner has its own heap and Kotlin daemon.
+      - name: Build APK ${{ matrix.variant }}
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
+            ${{ matrix.task }}
+
+      - name: Upload APK ${{ matrix.variant }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.variant }}-${{ github.run_number }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  apk-shell-demo:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Download code
+        uses: actions/checkout@v6
+
+      - name: Prepare Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Prepare Android tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+
+      - name: Prepare Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Install needed tools
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "cmake;3.22.1" \
+            "ndk;28.2.13676358"
+
+      - name: Build shell template
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
+            :shell:assembleDebug :shell:assembleRelease
+
+      - name: Build generated demo APK
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -PallowDebugSignedRelease=true \
+            :app:testStandardDebugUnitTest --tests "com.sherwood.wta.core.apkbuilder.DemoApkExportTest"
+
+      - name: Upload shell and demo APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-shell-demo-${{ github.run_number }}
+          path: |
+            app/build/outputs/demo/
+            shell/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  package-apks:
+    # Legacy sequential packaging. Runs only when explicitly requested.
+    if: github.event_name == 'workflow_dispatch' && inputs.legacy_sequential
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
