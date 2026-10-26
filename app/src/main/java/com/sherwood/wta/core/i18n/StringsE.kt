@@ -16791,4 +16791,227 @@ object StringsE {
         AppLanguage.KOREAN -> "카드를 길게 누른 뒤 위아래로 끌어 순서를 바꾸세요"
     }
 
+    val gitTokenPlaceholder: String get() = "ghp_… / github_pat_…"
+
+    val gitSettingsTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Git 访问"
+        AppLanguage.ENGLISH -> "Git access"
+        AppLanguage.ARABIC -> "الوصول إلى Git"
+        AppLanguage.PORTUGUESE -> "Acesso ao Git"
+        AppLanguage.SPANISH -> "Acceso a Git"
+        AppLanguage.FRENCH -> "Accès Git"
+        AppLanguage.GERMAN -> "Git-Zugriff"
+        AppLanguage.RUSSIAN -> "Доступ к Git"
+        AppLanguage.JAPANESE -> "Git アクセス"
+        AppLanguage.KOREAN -> "Git 액세스"
+    }
+
+    val gitSettingsDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "管理应用连接 GitHub 仓库的方式"
+        AppLanguage.ENGLISH -> "Manage how the app connects to GitHub repositories"
+        AppLanguage.ARABIC -> "إدارة كيفية اتصال التطبيق بمستودعات GitHub"
+        AppLanguage.PORTUGUESE -> "Gerencie como o app se conecta aos repositórios do GitHub"
+        AppLanguage.SPANISH -> "Gestiona cómo se conecta la app a los repositorios de GitHub"
+        AppLanguage.FRENCH -> "Gérez la façon dont l'application se connecte aux dépôts GitHub"
+        AppLanguage.GERMAN -> "Verwalte, wie die App eine Verbindung zu GitHub-Repositorys herstellt"
+        AppLanguage.RUSSIAN -> "Управление подключением приложения к репозиториям GitHub"
+        AppLanguage.JAPANESE -> "アプリが GitHub リポジトリに接続する方法を管理します"
+        AppLanguage.KOREAN -> "앱이 GitHub 저장소에 연결되는 방식을 관리합니다"
+    }
+
+    val gitTokenTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "GitHub 个人访问令牌"
+        AppLanguage.ENGLISH -> "GitHub personal access token"
+        AppLanguage.ARABIC -> "رمز وصول شخصي من GitHub"
+        AppLanguage.PORTUGUESE -> "Token de acesso pessoal do GitHub"
+        AppLanguage.SPANISH -> "Token de acceso personal de GitHub"
+        AppLanguage.FRENCH -> "Jeton d'accès personnel GitHub"
+        AppLanguage.GERMAN -> "Persönliches GitHub-Zugriffstoken"
+        AppLanguage.RUSSIAN -> "Личный токен доступа GitHub"
+        AppLanguage.JAPANESE -> "GitHub パーソナルアクセストークン"
+        AppLanguage.KOREAN -> "GitHub 개인 액세스 토큰"
+    }
+
+    val gitTokenConfigured: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已配置令牌"
+        AppLanguage.ENGLISH -> "Token configured"
+        AppLanguage.ARABIC -> "تم تكوين الرمز"
+        AppLanguage.PORTUGUESE -> "Token configurado"
+        AppLanguage.SPANISH -> "Token configurado"
+        AppLanguage.FRENCH -> "Jeton configuré"
+        AppLanguage.GERMAN -> "Token eingerichtet"
+        AppLanguage.RUSSIAN -> "Токен настроен"
+        AppLanguage.JAPANESE -> "トークン設定済み"
+        AppLanguage.KOREAN -> "토큰 설정됨"
+    }
+
+    val gitTokenNotConfigured: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "未配置令牌"
+        AppLanguage.ENGLISH -> "No token configured"
+        AppLanguage.ARABIC -> "لم يتم تكوين رمز"
+        AppLanguage.PORTUGUESE -> "Nenhum token configurado"
+        AppLanguage.SPANISH -> "No hay token configurado"
+        AppLanguage.FRENCH -> "Aucun jeton configuré"
+        AppLanguage.GERMAN -> "Kein Token eingerichtet"
+        AppLanguage.RUSSIAN -> "Токен не настроен"
+        AppLanguage.JAPANESE -> "トークン未設定"
+        AppLanguage.KOREAN -> "토큰이 설정되지 않음"
+    }
+
+    val gitTokenLabel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "个人访问令牌"
+        AppLanguage.ENGLISH -> "Personal access token"
+        AppLanguage.ARABIC -> "رمز الوصول الشخصي"
+        AppLanguage.PORTUGUESE -> "Token de acesso pessoal"
+        AppLanguage.SPANISH -> "Token de acceso personal"
+        AppLanguage.FRENCH -> "Jeton d'accès personnel"
+        AppLanguage.GERMAN -> "Persönliches Zugriffstoken"
+        AppLanguage.RUSSIAN -> "Личный токен доступа"
+        AppLanguage.JAPANESE -> "パーソナルアクセストークン"
+        AppLanguage.KOREAN -> "개인 액세스 토큰"
+    }
+
+    val gitTokenHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "需要 repo（经典）或 Contents（细粒度）权限"
+        AppLanguage.ENGLISH -> "Requires the repo scope (classic) or Contents access (fine-grained)"
+        AppLanguage.ARABIC -> "يتطلب نطاق repo (كلاسيكي) أو صلاحية Contents (دقيق)"
+        AppLanguage.PORTUGUESE -> "Requer o escopo repo (clássico) ou acesso Contents (granular)"
+        AppLanguage.SPANISH -> "Requiere el ámbito repo (clásico) o acceso a Contents (granular)"
+        AppLanguage.FRENCH -> "Nécessite la portée repo (classique) ou l'accès Contents (affiné)"
+        AppLanguage.GERMAN -> "Benötigt den Bereich repo (klassisch) oder Contents-Zugriff (fein abgestuft)"
+        AppLanguage.RUSSIAN -> "Нужен scope repo (классический) или доступ Contents (fine-grained)"
+        AppLanguage.JAPANESE -> "repo スコープ（クラシック）または Contents 権限（fine-grained）が必要です"
+        AppLanguage.KOREAN -> "repo 범위(클래식) 또는 Contents 권한(세분화)이 필요합니다"
+    }
+
+    val gitTokenInvalid: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "这看起来不像 GitHub 令牌"
+        AppLanguage.ENGLISH -> "That does not look like a GitHub token"
+        AppLanguage.ARABIC -> "لا يبدو هذا رمزًا من GitHub"
+        AppLanguage.PORTUGUESE -> "Isso não parece um token do GitHub"
+        AppLanguage.SPANISH -> "Esto no parece un token de GitHub"
+        AppLanguage.FRENCH -> "Cela ne ressemble pas à un jeton GitHub"
+        AppLanguage.GERMAN -> "Das sieht nicht wie ein GitHub-Token aus"
+        AppLanguage.RUSSIAN -> "Это не похоже на токен GitHub"
+        AppLanguage.JAPANESE -> "GitHub トークンの形式ではありません"
+        AppLanguage.KOREAN -> "GitHub 토큰 형식이 아닙니다"
+    }
+
+    val gitTokenSaved: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "令牌已保存"
+        AppLanguage.ENGLISH -> "Token saved"
+        AppLanguage.ARABIC -> "تم حفظ الرمز"
+        AppLanguage.PORTUGUESE -> "Token salvo"
+        AppLanguage.SPANISH -> "Token guardado"
+        AppLanguage.FRENCH -> "Jeton enregistré"
+        AppLanguage.GERMAN -> "Token gespeichert"
+        AppLanguage.RUSSIAN -> "Токен сохранён"
+        AppLanguage.JAPANESE -> "トークンを保存しました"
+        AppLanguage.KOREAN -> "토큰이 저장되었습니다"
+    }
+
+    val gitTokenRemoved: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "令牌已删除"
+        AppLanguage.ENGLISH -> "Token removed"
+        AppLanguage.ARABIC -> "تمت إزالة الرمز"
+        AppLanguage.PORTUGUESE -> "Token removido"
+        AppLanguage.SPANISH -> "Token eliminado"
+        AppLanguage.FRENCH -> "Jeton supprimé"
+        AppLanguage.GERMAN -> "Token entfernt"
+        AppLanguage.RUSSIAN -> "Токен удалён"
+        AppLanguage.JAPANESE -> "トークンを削除しました"
+        AppLanguage.KOREAN -> "토큰이 삭제되었습니다"
+    }
+
+    val gitTokenSaveFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法保存令牌"
+        AppLanguage.ENGLISH -> "Token could not be saved"
+        AppLanguage.ARABIC -> "تعذر حفظ الرمز"
+        AppLanguage.PORTUGUESE -> "Não foi possível salvar o token"
+        AppLanguage.SPANISH -> "No se pudo guardar el token"
+        AppLanguage.FRENCH -> "Impossible d'enregistrer le jeton"
+        AppLanguage.GERMAN -> "Token konnte nicht gespeichert werden"
+        AppLanguage.RUSSIAN -> "Не удалось сохранить токен"
+        AppLanguage.JAPANESE -> "トークンを保存できませんでした"
+        AppLanguage.KOREAN -> "토큰을 저장하지 못했습니다"
+    }
+
+    val gitTokenSecurityNote: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "使用本机 Keystore 加密，仅通过 HTTPS 发送到 api.github.com"
+        AppLanguage.ENGLISH -> "Encrypted with this device's Keystore and sent only to api.github.com over HTTPS"
+        AppLanguage.ARABIC -> "مشفر بمخزن مفاتيح الجهاز ويُرسل فقط إلى api.github.com عبر HTTPS"
+        AppLanguage.PORTUGUESE -> "Criptografado com o Keystore do dispositivo e enviado apenas para api.github.com via HTTPS"
+        AppLanguage.SPANISH -> "Cifrado con el Keystore del dispositivo y enviado solo a api.github.com por HTTPS"
+        AppLanguage.FRENCH -> "Chiffré avec le Keystore de l'appareil et envoyé uniquement à api.github.com en HTTPS"
+        AppLanguage.GERMAN -> "Mit dem Keystore dieses Geräts verschlüsselt und nur über HTTPS an api.github.com gesendet"
+        AppLanguage.RUSSIAN -> "Шифруется в Keystore устройства и отправляется только на api.github.com по HTTPS"
+        AppLanguage.JAPANESE -> "この端末の Keystore で暗号化され、HTTPS 経由で api.github.com にのみ送信されます"
+        AppLanguage.KOREAN -> "이 기기의 Keystore로 암호화되며 HTTPS를 통해 api.github.com으로만 전송됩니다"
+    }
+
+    val gitTokenCreate: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在 GitHub 上创建令牌"
+        AppLanguage.ENGLISH -> "Create a token on GitHub"
+        AppLanguage.ARABIC -> "إنشاء رمز على GitHub"
+        AppLanguage.PORTUGUESE -> "Criar um token no GitHub"
+        AppLanguage.SPANISH -> "Crear un token en GitHub"
+        AppLanguage.FRENCH -> "Créer un jeton sur GitHub"
+        AppLanguage.GERMAN -> "Token auf GitHub erstellen"
+        AppLanguage.RUSSIAN -> "Создать токен на GitHub"
+        AppLanguage.JAPANESE -> "GitHub でトークンを作成"
+        AppLanguage.KOREAN -> "GitHub에서 토큰 만들기"
+    }
+
+    val gitTokenRemoveConfirm: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "删除已保存的令牌？私有仓库将无法再导入。"
+        AppLanguage.ENGLISH -> "Remove the stored token? Private repositories will no longer be importable."
+        AppLanguage.ARABIC -> "إزالة الرمز المحفوظ؟ لن يكون من الممكن استيراد المستودعات الخاصة بعد الآن."
+        AppLanguage.PORTUGUESE -> "Remover o token salvo? Repositórios privados não poderão mais ser importados."
+        AppLanguage.SPANISH -> "¿Eliminar el token guardado? Ya no se podrán importar repositorios privados."
+        AppLanguage.FRENCH -> "Supprimer le jeton enregistré ? Les dépôts privés ne pourront plus être importés."
+        AppLanguage.GERMAN -> "Gespeicherten Token entfernen? Private Repositorys können dann nicht mehr importiert werden."
+        AppLanguage.RUSSIAN -> "Удалить сохранённый токен? Импорт приватных репозиториев станет недоступен."
+        AppLanguage.JAPANESE -> "保存したトークンを削除しますか？プライベートリポジトリをインポートできなくなります。"
+        AppLanguage.KOREAN -> "저장된 토큰을 삭제할까요? 더 이상 비공개 저장소를 가져올 수 없습니다."
+    }
+
+    val gitTokenShow: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "显示令牌"
+        AppLanguage.ENGLISH -> "Show token"
+        AppLanguage.ARABIC -> "إظهار الرمز"
+        AppLanguage.PORTUGUESE -> "Mostrar token"
+        AppLanguage.SPANISH -> "Mostrar token"
+        AppLanguage.FRENCH -> "Afficher le jeton"
+        AppLanguage.GERMAN -> "Token anzeigen"
+        AppLanguage.RUSSIAN -> "Показать токен"
+        AppLanguage.JAPANESE -> "トークンを表示"
+        AppLanguage.KOREAN -> "토큰 표시"
+    }
+
+    val gitTokenHide: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "隐藏令牌"
+        AppLanguage.ENGLISH -> "Hide token"
+        AppLanguage.ARABIC -> "إخفاء الرمز"
+        AppLanguage.PORTUGUESE -> "Ocultar token"
+        AppLanguage.SPANISH -> "Ocultar token"
+        AppLanguage.FRENCH -> "Masquer le jeton"
+        AppLanguage.GERMAN -> "Token verbergen"
+        AppLanguage.RUSSIAN -> "Скрыть токен"
+        AppLanguage.JAPANESE -> "トークンを隠す"
+        AppLanguage.KOREAN -> "토큰 숨기기"
+    }
+
+    val settingsGitAccessDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "用于导入私有仓库的令牌"
+        AppLanguage.ENGLISH -> "Token for importing private repositories"
+        AppLanguage.ARABIC -> "رمز لاستيراد المستودعات الخاصة"
+        AppLanguage.PORTUGUESE -> "Token para importar repositórios privados"
+        AppLanguage.SPANISH -> "Token para importar repositorios privados"
+        AppLanguage.FRENCH -> "Jeton pour importer des dépôts privés"
+        AppLanguage.GERMAN -> "Token zum Importieren privater Repositorys"
+        AppLanguage.RUSSIAN -> "Токен для импорта приватных репозиториев"
+        AppLanguage.JAPANESE -> "プライベートリポジトリをインポートするためのトークン"
+        AppLanguage.KOREAN -> "비공개 저장소를 가져오기 위한 토큰"
+    }
+
 }

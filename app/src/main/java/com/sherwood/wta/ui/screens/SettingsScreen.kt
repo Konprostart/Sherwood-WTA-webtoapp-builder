@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +39,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onOpenGitSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val themeManager = remember { ThemeManager.getInstance(context) }
@@ -229,6 +232,22 @@ fun SettingsScreen(
                             scope.launch { themeManager.setEnableHaptics(it) }
                         }
                     )
+                }
+            }
+
+            WtaSection(title = Strings.gitSettingsTitle) {
+                WtaSettingCard {
+                    WtaSettingRow(
+                        title = Strings.gitTokenTitle,
+                        subtitle = Strings.settingsGitAccessDesc,
+                        icon = Icons.Outlined.Key,
+                        onClick = onOpenGitSettings
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = null
+                        )
+                    }
                 }
             }
         }
