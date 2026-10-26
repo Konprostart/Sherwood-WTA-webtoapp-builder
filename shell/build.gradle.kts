@@ -303,6 +303,10 @@ val syncShellRuntimeSources by tasks.registering(Sync::class) {
         "**/util/OfflineManager.kt",
 
         "**/core/frontend/GitHubRepoFetcher.kt",
+        // Repo-bridge plumbing is builder-only; generated apps must not ship token handling.
+        "**/core/frontend/GitHubTokenStore.kt",
+        "**/core/frontend/GitHubUrlPolicy.kt",
+        "**/core/frontend/RepoBridgeMetadata.kt",
 
         "**/core/extension/QrCodeUtils.kt",
         "**/core/extension/CodeSnippets.kt",

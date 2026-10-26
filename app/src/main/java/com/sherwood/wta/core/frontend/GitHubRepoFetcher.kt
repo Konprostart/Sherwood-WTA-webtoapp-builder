@@ -1,6 +1,7 @@
 package com.sherwood.wta.core.frontend
 
 import android.content.Context
+import com.google.gson.JsonParser
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.network.NetworkModule
 import kotlinx.coroutines.Dispatchers
@@ -8,9 +9,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 
 data class GitHubRepoSpec(
@@ -25,7 +29,11 @@ data class GitHubFetchResult(
     val owner: String,
     val repo: String,
     val branch: String,
-    val subPath: String?
+    val subPath: String?,
+    /** Commit the working copy came from, or null when it could not be resolved. */
+    val baseSha: String? = null,
+    /** Absolute path of `repo_bridge.json`, or null when it could not be written. */
+    val metadataFile: String? = null
 )
 
 sealed class GitHubFetchState {
@@ -37,7 +45,45 @@ sealed class GitHubFetchState {
     data class Error(val message: String) : GitHubFetchState()
 }
 
-class GitHubRepoFetcher(private val context: Context) {
+/**
+ * Imports a repository as a working copy.
+ *
+ * Without a token the public archive endpoint is used exactly as before. With a PAT
+ * the authenticated tarball endpoint is preferred, which is what makes private
+ * repositories importable; if that request fails the public archive is still tried,
+ * so a token can never make a previously working import stop working.
+ *
+ * All parameters after [context] default to production behaviour, so existing call
+ * sites (`GitHubRepoFetcher(context)`) are unchanged.
+ */
+class GitHubRepoFetcher(
+    private val context: Context,
+    private val tokenProvider: GitHubTokenProvider = GitHubTokenStore(context),
+    private val httpClient: OkHttpClient = NetworkModule.downloadClient,
+    apiBaseUrl: String = DEFAULT_API_BASE_URL,
+    archiveBaseUrl: String = DEFAULT_ARCHIVE_BASE_URL,
+    private val urlGuard: (String) -> Unit = { GitHubUrlPolicy.requireHttps(it) },
+    private val metadataStore: RepoBridgeMetadataStore = RepoBridgeMetadataStore()
+) {
+
+    private val apiBase = apiBaseUrl.trimEnd('/')
+    private val archiveBase = archiveBaseUrl.trimEnd('/')
+
+    /**
+     * Refuses HTTPS -> HTTP redirect downgrades, so a token-carrying request cannot be
+     * downgraded to cleartext by a misbehaving server. HTTPS -> HTTPS host redirects
+     * (api.github.com -> codeload.github.com) still work.
+     */
+    private val secureClient: OkHttpClient by lazy {
+        httpClient.newBuilder().followSslRedirects(false).build()
+    }
+
+    /** Bounds the best-effort ref lookup so a slow API can never stall an import. */
+    private val shortClient: OkHttpClient by lazy {
+        secureClient.newBuilder()
+            .callTimeout(REF_LOOKUP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+    }
 
     private val _state = MutableStateFlow<GitHubFetchState>(GitHubFetchState.Idle)
     val state: StateFlow<GitHubFetchState> = _state.asStateFlow()
@@ -68,66 +114,120 @@ class GitHubRepoFetcher(private val context: Context) {
         val subPath = explicitSubPath?.takeIf { it.isNotBlank() }?.trim('/', ' ') ?: spec.subPath
         val branchCandidates = if (branch != null) listOf(branch) else BRANCH_FALLBACKS
 
+        val token = tokenProvider.currentToken()?.takeIf { GitHubTokenFormat.isValid(it) }
+        log(
+            if (token != null) "Authentication: token present"
+            else "Authentication: anonymous (public repositories only)"
+        )
+
         _state.value = GitHubFetchState.Resolving
         log("Owner: ${spec.owner}, Repo: ${spec.repo}, Branch hint: ${branch ?: "auto"}, SubPath: ${subPath ?: "(root)"}")
 
         var lastError: String? = null
         for (br in branchCandidates) {
-            val zipUrl = "https://github.com/${spec.owner}/${spec.repo}/archive/refs/heads/$br.zip"
-            val candidates = listOf(zipUrl)
-            log("Trying branch: $br (${candidates.size} url candidate(s))")
+            log("Trying branch: $br")
 
-            for (candidate in candidates) {
-                log("Download: $candidate")
-                val download = try {
-                    downloadToTempFile(candidate)
-                } catch (e: Exception) {
-                    log("Download error: ${e.message}")
-                    AppLogger.w(TAG, "Download failed: $candidate", e)
-                    lastError = e.message
-                    null
-                }
-                if (download == null) continue
+            val baseSha = resolveBaseSha(spec, br, token)
+            log("Base commit: ${baseSha?.take(7) ?: "unresolved"}")
 
-                _state.value = GitHubFetchState.Extracting
-                log("Extracting archive...")
-                val extracted = try {
-                    extract(download, spec.repo, subPath)
-                } catch (e: Exception) {
-                    AppLogger.e(TAG, "Extract failed", e)
-                    log("Extract error: ${e.message}")
-                    download.delete()
-                    return@withContext fail(e.message ?: "Failed to extract archive")
-                } finally {
-                    download.delete()
-                }
-
-                _state.value = GitHubFetchState.Success(extracted.absolutePath)
-                log("Done: ${extracted.absolutePath}")
-                return@withContext Result.success(
-                    GitHubFetchResult(
-                        localPath = extracted.absolutePath,
-                        owner = spec.owner,
-                        repo = spec.repo,
-                        branch = br,
-                        subPath = subPath
-                    )
-                )
+            val download = downloadForBranch(spec, br, token)
+            if (download == null) {
+                lastError = "Failed to download branch $br"
+                continue
             }
+
+            _state.value = GitHubFetchState.Extracting
+            log("Extracting archive...")
+            val extracted = try {
+                extract(download, spec.repo, subPath)
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Extract failed", e)
+                log("Extract error: ${e.message}")
+                download.delete()
+                return@withContext fail(e.message ?: "Failed to extract archive")
+            } finally {
+                download.delete()
+            }
+
+            val metadata = RepoBridgeMetadata(
+                host = HOST,
+                owner = spec.owner,
+                repo = spec.repo,
+                ref = br,
+                baseSha = baseSha,
+                subPath = subPath
+            )
+            val metadataFile = runCatching { metadataStore.write(extracted, metadata) }
+                .onFailure { log("Metadata write failed: ${it.javaClass.simpleName}") }
+                .getOrNull()
+
+            _state.value = GitHubFetchState.Success(extracted.absolutePath)
+            log("Done: ${extracted.absolutePath}")
+            return@withContext Result.success(
+                GitHubFetchResult(
+                    localPath = extracted.absolutePath,
+                    owner = spec.owner,
+                    repo = spec.repo,
+                    branch = br,
+                    subPath = subPath,
+                    baseSha = baseSha,
+                    metadataFile = metadataFile?.absolutePath
+                )
+            )
         }
 
         fail(lastError ?: "Failed to download repository (check URL and branch)")
     }
 
-    private fun downloadToTempFile(url: String): File? {
-        val req = Request.Builder().url(url).get().build()
-        NetworkModule.downloadClient.newCall(req).execute().use { resp ->
+    /**
+     * Authenticated tarball first when a token is available, then the public archive.
+     * Returning the public route as a fallback keeps public imports working even when a
+     * token is expired or lacks the scope for the repository.
+     */
+    private fun downloadForBranch(spec: GitHubRepoSpec, ref: String, token: String?): File? {
+        if (token != null) {
+            val authenticated = runCatching { downloadApiTarball(spec, ref, token) }
+                .onFailure { log("Tarball request failed: ${it.javaClass.simpleName}") }
+                .getOrNull()
+            if (authenticated != null) return authenticated
+            log("Authenticated download failed; falling back to the public archive")
+        }
+        return runCatching { downloadPublicArchive(spec, ref) }
+            .onFailure { log("Archive request failed: ${it.javaClass.simpleName}") }
+            .getOrNull()
+    }
+
+    private fun downloadApiTarball(spec: GitHubRepoSpec, ref: String, token: String): File? {
+        val url = apiUrl("repos", spec.owner, spec.repo, "tarball", ref)
+        val request = Request.Builder()
+            .url(url)
+            .get()
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+            .build()
+        // The URL is safe to log: the token only ever travels in the header.
+        log("Download (authenticated): $url")
+        return executeDownload(request, secureClient)
+    }
+
+    private fun downloadPublicArchive(spec: GitHubRepoSpec, ref: String): File? {
+        val url = archiveUrl(spec, ref)
+        log("Download: $url")
+        val request = Request.Builder().url(url).get().build()
+        return executeDownload(request)
+    }
+
+    private fun executeDownload(request: Request, client: OkHttpClient = httpClient): File? {
+        urlGuard(request.url.toString())
+        client.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) {
                 log("HTTP ${resp.code}")
                 return null
             }
             val body = resp.body ?: return null
             val total = body.contentLength()
+            val urlHint = request.url.toString()
             val tempFile = File(context.cacheDir, "gh_repo_${System.currentTimeMillis()}.zip")
             try {
                 body.byteStream().use { input ->
@@ -135,7 +235,7 @@ class GitHubRepoFetcher(private val context: Context) {
                         val buf = ByteArray(64 * 1024)
                         var totalRead = 0L
                         var read: Int
-                        _state.value = GitHubFetchState.Downloading(0f, url)
+                        _state.value = GitHubFetchState.Downloading(0f, urlHint)
                         while (input.read(buf).also { read = it } != -1) {
                             out.write(buf, 0, read)
                             totalRead += read
@@ -143,7 +243,7 @@ class GitHubRepoFetcher(private val context: Context) {
                                 throw IllegalStateException("Archive larger than ${MAX_DOWNLOAD_SIZE / 1024 / 1024} MB")
                             }
                             val progress = if (total > 0) (totalRead.toFloat() / total).coerceIn(0f, 1f) else 0f
-                            _state.value = GitHubFetchState.Downloading(progress, url)
+                            _state.value = GitHubFetchState.Downloading(progress, urlHint)
                         }
                     }
                 }
@@ -154,6 +254,68 @@ class GitHubRepoFetcher(private val context: Context) {
             }
         }
     }
+
+    /**
+     * Best-effort resolution of the commit a branch points at. Failures are logged and
+     * never fail the import: an offline or rate-limited lookup only means [baseSha] is
+     * unknown for that working copy.
+     */
+    private fun resolveBaseSha(spec: GitHubRepoSpec, ref: String, token: String?): String? {
+        val url = apiUrl("repos", spec.owner, spec.repo, "git", "refs", "heads", ref)
+        val builder = Request.Builder()
+            .url(url)
+            .get()
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+        if (token != null) builder.header("Authorization", "Bearer $token")
+
+        return try {
+            urlGuard(url)
+            shortClient.newCall(builder.build()).execute().use { resp ->
+                if (!resp.isSuccessful) {
+                    log("Ref lookup HTTP ${resp.code}")
+                    return null
+                }
+                val body = resp.body?.string() ?: return null
+                extractSha(body)
+            }
+        } catch (e: Exception) {
+            log("Ref lookup failed: ${e.javaClass.simpleName}")
+            null
+        }
+    }
+
+    private fun extractSha(json: String): String? {
+        val element = runCatching { JsonParser.parseString(json) }.getOrNull() ?: return null
+        val sha = when {
+            element.isJsonArray -> element.asJsonArray.firstOrNull()
+                ?.takeIf { it.isJsonObject }
+                ?.asJsonObject
+                ?.getAsJsonObject("object")
+                ?.get("sha")
+                ?.asString
+            element.isJsonObject -> element.asJsonObject
+                .getAsJsonObject("object")
+                ?.get("sha")
+                ?.asString
+            else -> null
+        }
+        return sha?.lowercase()?.takeIf { RepoBridgeMetadata.isSha(it) }
+    }
+
+    private fun apiUrl(first: String, vararg rest: String): String =
+        apiBase.toHttpUrl().newBuilder().addPathSegments(first).apply {
+            rest.forEach { addPathSegments(it) }
+        }.build().toString()
+
+    private fun archiveUrl(spec: GitHubRepoSpec, ref: String): String =
+        archiveBase.toHttpUrl().newBuilder()
+            .addPathSegment(spec.owner)
+            .addPathSegment(spec.repo)
+            .addPathSegments("archive/refs/heads")
+            .addPathSegments("$ref.zip")
+            .build()
+            .toString()
 
     private fun extract(zipFile: File, repoName: String, subPath: String?): File {
         val extractDir = File(
@@ -266,6 +428,12 @@ class GitHubRepoFetcher(private val context: Context) {
 
     companion object {
         private const val TAG = "GitHubRepoFetcher"
+
+        private const val HOST = RepoBridgeMetadata.HOST_GITHUB
+        private const val GITHUB_API_VERSION = "2022-11-28"
+        private const val DEFAULT_API_BASE_URL = "https://api.github.com"
+        private const val DEFAULT_ARCHIVE_BASE_URL = "https://github.com"
+        private const val REF_LOOKUP_TIMEOUT_SECONDS = 5L
 
         private const val MAX_DOWNLOAD_SIZE = 300L * 1024 * 1024
 
