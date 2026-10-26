@@ -45,6 +45,17 @@ sealed class GitHubFetchState {
     data class Error(val message: String) : GitHubFetchState()
 }
 
+/** Outcome of [GitHubRepoFetcher.probeToken]. */
+sealed class GitHubTokenProbeResult {
+    data class Success(val login: String) : GitHubTokenProbeResult()
+    object InvalidToken : GitHubTokenProbeResult()
+    object Unauthorized : GitHubTokenProbeResult()
+    object RateLimited : GitHubTokenProbeResult()
+    object NetworkError : GitHubTokenProbeResult()
+    object UnexpectedResponse : GitHubTokenProbeResult()
+    data class HttpError(val code: Int) : GitHubTokenProbeResult()
+}
+
 /**
  * Imports a repository as a working copy.
  *
@@ -178,6 +189,61 @@ class GitHubRepoFetcher(
 
         fail(lastError ?: "Failed to download repository (check URL and branch)")
     }
+
+    /**
+     * Verifies a PAT against `GET /user` and resolves the account login.
+     *
+     * The blocking call runs on [Dispatchers.IO], so callers may invoke this from the
+     * main thread. The token travels only in the Authorization header and is never
+     * logged; only the HTTP status code is.
+     */
+    suspend fun probeToken(rawToken: String): GitHubTokenProbeResult =
+        withContext(Dispatchers.IO) {
+            val token = GitHubTokenFormat.normalize(rawToken)
+            if (!GitHubTokenFormat.isValid(token)) {
+                return@withContext GitHubTokenProbeResult.InvalidToken
+            }
+            val url = apiUrl("user")
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .header("Authorization", "Bearer $token")
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+                .build()
+            try {
+                urlGuard(url)
+                shortClient.newCall(request).execute().use { resp ->
+                    log("Token probe: HTTP ${resp.code}")
+                    when {
+                        resp.isSuccessful -> {
+                            val login = resp.body?.string()?.let(::extractLogin)
+                            if (login != null) {
+                                GitHubTokenProbeResult.Success(login)
+                            } else {
+                                GitHubTokenProbeResult.UnexpectedResponse
+                            }
+                        }
+                        resp.code == 401 -> GitHubTokenProbeResult.Unauthorized
+                        resp.code == 403 || resp.code == 429 -> GitHubTokenProbeResult.RateLimited
+                        else -> GitHubTokenProbeResult.HttpError(resp.code)
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "Token probe failed: ${e.javaClass.simpleName}")
+                GitHubTokenProbeResult.NetworkError
+            }
+        }
+
+    private fun extractLogin(json: String): String? = runCatching {
+        JsonParser.parseString(json)
+            .takeIf { it.isJsonObject }
+            ?.asJsonObject
+            ?.get("login")
+            ?.takeIf { it.isJsonPrimitive }
+            ?.asString
+            ?.trim()
+    }.getOrNull()?.takeIf { it.isNotEmpty() && it.length <= MAX_LOGIN_LENGTH }
 
     /**
      * Authenticated tarball first when a token is available, then the public archive.
@@ -440,6 +506,8 @@ class GitHubRepoFetcher(
         private const val MAX_EXTRACTED_SIZE = 1024L * 1024 * 1024
 
         private const val MAX_ENTRY_COUNT = 50_000
+
+        private const val MAX_LOGIN_LENGTH = 100
 
         private val SKIP_PATTERNS = setOf(
             "__MACOSX", ".DS_Store", "Thumbs.db"
