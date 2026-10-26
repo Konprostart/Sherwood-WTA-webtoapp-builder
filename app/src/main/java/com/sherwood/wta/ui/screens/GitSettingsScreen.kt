@@ -18,8 +18,10 @@ import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
@@ -40,7 +42,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.sherwood.wta.core.frontend.GitHubRepoFetcher
 import com.sherwood.wta.core.frontend.GitHubTokenFormat
+import com.sherwood.wta.core.frontend.GitHubTokenProbeResult
 import com.sherwood.wta.core.frontend.GitHubTokenStore
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.design.WtaAlertDialog
@@ -50,6 +54,7 @@ import com.sherwood.wta.ui.design.WtaSection
 import com.sherwood.wta.ui.design.WtaSectionDivider
 import com.sherwood.wta.ui.design.WtaSettingCard
 import com.sherwood.wta.ui.design.WtaSettingRow
+import com.sherwood.wta.ui.design.WtaButtonVariant
 import com.sherwood.wta.ui.design.WtaSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -74,6 +79,10 @@ fun GitSettingsScreen(
     var invalid by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
+    var probing by remember { mutableStateOf(false) }
+    var probeStatus by remember { mutableStateOf<String?>(null) }
+    var probeFailed by remember { mutableStateOf(false) }
+    val fetcher = remember { GitHubRepoFetcher(context) }
 
     fun refreshTokenState() {
         scope.launch {
@@ -98,11 +107,39 @@ fun GitSettingsScreen(
             if (result.isSuccess) {
                 input = ""
                 invalid = false
+                probeStatus = null
                 refreshTokenState()
                 snackbarHostState.showSnackbar(Strings.gitTokenSaved)
             } else {
                 snackbarHostState.showSnackbar(Strings.gitTokenSaveFailed)
             }
+        }
+    }
+
+    fun testConnection() {
+        if (probing) return
+        val typed = GitHubTokenFormat.normalize(input)
+        if (typed.isEmpty() && !hasToken) return
+        probeStatus = null
+        probing = true
+        scope.launch {
+            val candidate = typed.ifEmpty {
+                withContext(Dispatchers.IO) { store.currentToken() }
+            }
+            val result = candidate?.let { fetcher.probeToken(it) }
+            probing = false
+            val (message, failed) = when (result) {
+                is GitHubTokenProbeResult.Success -> Strings.gitTokenProbeSuccess(result.login) to false
+                GitHubTokenProbeResult.InvalidToken -> Strings.gitTokenInvalid to true
+                GitHubTokenProbeResult.Unauthorized -> Strings.gitTokenProbeUnauthorized to true
+                GitHubTokenProbeResult.RateLimited -> Strings.gitTokenProbeRateLimited to true
+                GitHubTokenProbeResult.NetworkError -> Strings.gitTokenProbeNetwork to true
+                GitHubTokenProbeResult.UnexpectedResponse -> Strings.gitTokenProbeUnexpected to true
+                is GitHubTokenProbeResult.HttpError -> Strings.gitTokenProbeHttpError(result.code) to true
+                null -> Strings.gitTokenNotConfigured to true
+            }
+            probeFailed = failed
+            probeStatus = message
         }
     }
 
@@ -113,6 +150,7 @@ fun GitSettingsScreen(
             savedMasked = null
             input = ""
             invalid = false
+            probeStatus = null
             snackbarHostState.showSnackbar(Strings.gitTokenRemoved)
         }
     }
@@ -150,7 +188,7 @@ fun GitSettingsScreen(
                         if (hasToken) {
                             TextButton(
                                 onClick = { confirmRemove = true },
-                                enabled = !busy
+                                enabled = !busy && !probing
                             ) {
                                 Text(
                                     text = Strings.remove,
@@ -176,6 +214,7 @@ fun GitSettingsScreen(
                             onValueChange = {
                                 input = it
                                 invalid = false
+                                probeStatus = null
                             },
                             label = { Text(Strings.gitTokenLabel) },
                             placeholder = { Text(Strings.gitTokenPlaceholder) },
@@ -218,9 +257,38 @@ fun GitSettingsScreen(
                         )
 
                         WtaButton(
+                            onClick = { testConnection() },
+                            modifier = Modifier.fillMaxWidth(),
+                            variant = WtaButtonVariant.Outlined,
+                            enabled = !probing && (input.isNotBlank() || hasToken)
+                        ) {
+                            if (probing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = LocalContentColor.current
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text(Strings.gitTokenTest)
+                        }
+
+                        probeStatus?.let { status ->
+                            Text(
+                                text = status,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (probeFailed) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                }
+                            )
+                        }
+
+                        WtaButton(
                             onClick = { saveToken() },
                             text = Strings.save,
-                            enabled = input.isNotBlank() && !busy,
+                            enabled = input.isNotBlank() && !busy && !probing,
                             modifier = Modifier.fillMaxWidth()
                         )
 

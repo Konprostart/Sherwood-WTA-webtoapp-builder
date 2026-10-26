@@ -17014,4 +17014,95 @@ object StringsE {
         AppLanguage.KOREAN -> "비공개 저장소를 가져오기 위한 토큰"
     }
 
+    val gitTokenTest: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "测试连接"
+        AppLanguage.ENGLISH -> "Test connection"
+        AppLanguage.ARABIC -> "اختبار الاتصال"
+        AppLanguage.PORTUGUESE -> "Testar conexão"
+        AppLanguage.SPANISH -> "Probar conexión"
+        AppLanguage.FRENCH -> "Tester la connexion"
+        AppLanguage.GERMAN -> "Verbindung testen"
+        AppLanguage.RUSSIAN -> "Проверить подключение"
+        AppLanguage.JAPANESE -> "接続をテスト"
+        AppLanguage.KOREAN -> "연결 테스트"
+    }
+
+    val gitTokenProbeUnauthorized: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "GitHub 拒绝了该令牌（401 未授权）"
+        AppLanguage.ENGLISH -> "GitHub rejected the token (401 Unauthorized)"
+        AppLanguage.ARABIC -> "رفض GitHub الرمز (401 غير مصرح به)"
+        AppLanguage.PORTUGUESE -> "O GitHub rejeitou o token (401 não autorizado)"
+        AppLanguage.SPANISH -> "GitHub rechazó el token (401 no autorizado)"
+        AppLanguage.FRENCH -> "GitHub a refusé le jeton (401 non autorisé)"
+        AppLanguage.GERMAN -> "GitHub hat den Token abgelehnt (401 nicht autorisiert)"
+        AppLanguage.RUSSIAN -> "GitHub отклонил токен (401 не авторизован)"
+        AppLanguage.JAPANESE -> "GitHub がトークンを拒否しました（401 未認証）"
+        AppLanguage.KOREAN -> "GitHub에서 토큰을 거부했습니다(401 권한 없음)"
+    }
+
+    val gitTokenProbeRateLimited: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已达到速率限制或权限不足（403）。请稍后再试。"
+        AppLanguage.ENGLISH -> "Rate limit reached or permission denied (403). Try again later."
+        AppLanguage.ARABIC -> "تم بلوغ حد المعدل أو تم رفض الإذن (403). حاول لاحقًا."
+        AppLanguage.PORTUGUESE -> "Limite de requisições atingido ou permissão negada (403). Tente novamente mais tarde."
+        AppLanguage.SPANISH -> "Se alcanzó el límite de solicitudes o se denegó el permiso (403). Inténtalo más tarde."
+        AppLanguage.FRENCH -> "Limite de requêtes atteinte ou autorisation refusée (403). Réessayez plus tard."
+        AppLanguage.GERMAN -> "Ratenlimit erreicht oder Berechtigung verweigert (403). Versuche es später erneut."
+        AppLanguage.RUSSIAN -> "Достигнут лимит запросов или недостаточно прав (403). Повторите позже."
+        AppLanguage.JAPANESE -> "レート制限に達したか権限がありません（403）。後でもう一度お試しください。"
+        AppLanguage.KOREAN -> "요청 한도에 도달했거나 권한이 없습니다(403). 나중에 다시 시도하세요."
+    }
+
+    val gitTokenProbeNetwork: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "网络错误。请检查连接后重试。"
+        AppLanguage.ENGLISH -> "Network error. Check your connection and try again."
+        AppLanguage.ARABIC -> "خطأ في الشبكة. تحقق من اتصالك وحاول مرة أخرى."
+        AppLanguage.PORTUGUESE -> "Erro de rede. Verifique sua conexão e tente novamente."
+        AppLanguage.SPANISH -> "Error de red. Comprueba tu conexión e inténtalo de nuevo."
+        AppLanguage.FRENCH -> "Erreur réseau. Vérifiez votre connexion et réessayez."
+        AppLanguage.GERMAN -> "Netzwerkfehler. Prüfe deine Verbindung und versuche es erneut."
+        AppLanguage.RUSSIAN -> "Ошибка сети. Проверьте подключение и повторите попытку."
+        AppLanguage.JAPANESE -> "ネットワークエラーです。接続を確認してもう一度お試しください。"
+        AppLanguage.KOREAN -> "네트워크 오류입니다. 연결을 확인하고 다시 시도하세요."
+    }
+
+    val gitTokenProbeUnexpected: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "来自 GitHub 的意外响应。"
+        AppLanguage.ENGLISH -> "Unexpected response from GitHub."
+        AppLanguage.ARABIC -> "استجابة غير متوقعة من GitHub."
+        AppLanguage.PORTUGUESE -> "Resposta inesperada do GitHub."
+        AppLanguage.SPANISH -> "Respuesta inesperada de GitHub."
+        AppLanguage.FRENCH -> "Réponse inattendue de GitHub."
+        AppLanguage.GERMAN -> "Unerwartete Antwort von GitHub."
+        AppLanguage.RUSSIAN -> "Неожиданный ответ от GitHub."
+        AppLanguage.JAPANESE -> "GitHub から予期しない応答がありました。"
+        AppLanguage.KOREAN -> "GitHub에서 예상치 못한 응답이 왔습니다."
+    }
+
+    fun gitTokenProbeSuccess(login: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已连接：@$login"
+        AppLanguage.ENGLISH -> "Connected as: @$login"
+        AppLanguage.ARABIC -> "متصل باسم: @$login"
+        AppLanguage.PORTUGUESE -> "Conectado como: @$login"
+        AppLanguage.SPANISH -> "Conectado como: @$login"
+        AppLanguage.FRENCH -> "Connecté en tant que : @$login"
+        AppLanguage.GERMAN -> "Verbunden als: @$login"
+        AppLanguage.RUSSIAN -> "Подключено как: @$login"
+        AppLanguage.JAPANESE -> "接続済み: @$login"
+        AppLanguage.KOREAN -> "연결됨: @$login"
+    }
+
+    fun gitTokenProbeHttpError(code: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "GitHub 返回 HTTP $code。"
+        AppLanguage.ENGLISH -> "GitHub returned HTTP $code."
+        AppLanguage.ARABIC -> "أعاد GitHub رمز HTTP $code."
+        AppLanguage.PORTUGUESE -> "O GitHub retornou HTTP $code."
+        AppLanguage.SPANISH -> "GitHub devolvió HTTP $code."
+        AppLanguage.FRENCH -> "GitHub a renvoyé HTTP $code."
+        AppLanguage.GERMAN -> "GitHub hat HTTP $code zurückgegeben."
+        AppLanguage.RUSSIAN -> "GitHub вернул HTTP $code."
+        AppLanguage.JAPANESE -> "GitHub が HTTP $code を返しました。"
+        AppLanguage.KOREAN -> "GitHub에서 HTTP $code을(를) 반환했습니다."
+    }
+
 }

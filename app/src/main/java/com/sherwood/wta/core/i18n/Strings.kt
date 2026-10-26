@@ -5296,6 +5296,13 @@ object Strings {
     val gitTokenShow: String get() = StringsE.gitTokenShow
     val gitTokenHide: String get() = StringsE.gitTokenHide
     val settingsGitAccessDesc: String get() = StringsE.settingsGitAccessDesc
+    val gitTokenTest: String get() = StringsE.gitTokenTest
+    val gitTokenProbeUnauthorized: String get() = StringsE.gitTokenProbeUnauthorized
+    val gitTokenProbeRateLimited: String get() = StringsE.gitTokenProbeRateLimited
+    val gitTokenProbeNetwork: String get() = StringsE.gitTokenProbeNetwork
+    val gitTokenProbeUnexpected: String get() = StringsE.gitTokenProbeUnexpected
+    fun gitTokenProbeSuccess(login: String): String = StringsE.gitTokenProbeSuccess(login)
+    fun gitTokenProbeHttpError(code: Int): String = StringsE.gitTokenProbeHttpError(code)
 }
 
 
