@@ -5277,6 +5277,25 @@ object Strings {
     val pluginAdd: String get() = StringsE.pluginAdd
     val pluginSelectTitle: String get() = StringsE.pluginSelectTitle
     fun pluginSelectedCount(count: Int): String = StringsE.pluginSelectedCount(count)
+
+    val gitTokenPlaceholder: String get() = StringsE.gitTokenPlaceholder
+    val gitSettingsTitle: String get() = StringsE.gitSettingsTitle
+    val gitSettingsDesc: String get() = StringsE.gitSettingsDesc
+    val gitTokenTitle: String get() = StringsE.gitTokenTitle
+    val gitTokenConfigured: String get() = StringsE.gitTokenConfigured
+    val gitTokenNotConfigured: String get() = StringsE.gitTokenNotConfigured
+    val gitTokenLabel: String get() = StringsE.gitTokenLabel
+    val gitTokenHint: String get() = StringsE.gitTokenHint
+    val gitTokenInvalid: String get() = StringsE.gitTokenInvalid
+    val gitTokenSaved: String get() = StringsE.gitTokenSaved
+    val gitTokenRemoved: String get() = StringsE.gitTokenRemoved
+    val gitTokenSaveFailed: String get() = StringsE.gitTokenSaveFailed
+    val gitTokenSecurityNote: String get() = StringsE.gitTokenSecurityNote
+    val gitTokenCreate: String get() = StringsE.gitTokenCreate
+    val gitTokenRemoveConfirm: String get() = StringsE.gitTokenRemoveConfirm
+    val gitTokenShow: String get() = StringsE.gitTokenShow
+    val gitTokenHide: String get() = StringsE.gitTokenHide
+    val settingsGitAccessDesc: String get() = StringsE.settingsGitAccessDesc
 }
 
 
