@@ -17080,29 +17080,29 @@ object StringsE {
     }
 
     fun gitTokenProbeSuccess(login: String): String = when (Strings.lang) {
-        AppLanguage.CHINESE -> "已连接：@$login"
-        AppLanguage.ENGLISH -> "Connected as: @$login"
-        AppLanguage.ARABIC -> "متصل باسم: @$login"
-        AppLanguage.PORTUGUESE -> "Conectado como: @$login"
-        AppLanguage.SPANISH -> "Conectado como: @$login"
-        AppLanguage.FRENCH -> "Connecté en tant que : @$login"
-        AppLanguage.GERMAN -> "Verbunden als: @$login"
-        AppLanguage.RUSSIAN -> "Подключено как: @$login"
-        AppLanguage.JAPANESE -> "接続済み: @$login"
-        AppLanguage.KOREAN -> "연결됨: @$login"
+        AppLanguage.CHINESE -> "已连接：@${login}"
+        AppLanguage.ENGLISH -> "Connected as: @${login}"
+        AppLanguage.ARABIC -> "متصل باسم: @${login}"
+        AppLanguage.PORTUGUESE -> "Conectado como: @${login}"
+        AppLanguage.SPANISH -> "Conectado como: @${login}"
+        AppLanguage.FRENCH -> "Connecté en tant que : @${login}"
+        AppLanguage.GERMAN -> "Verbunden als: @${login}"
+        AppLanguage.RUSSIAN -> "Подключено как: @${login}"
+        AppLanguage.JAPANESE -> "接続済み: @${login}"
+        AppLanguage.KOREAN -> "연결됨: @${login}"
     }
 
     fun gitTokenProbeHttpError(code: Int): String = when (Strings.lang) {
-        AppLanguage.CHINESE -> "GitHub 返回 HTTP $code。"
-        AppLanguage.ENGLISH -> "GitHub returned HTTP $code."
-        AppLanguage.ARABIC -> "أعاد GitHub رمز HTTP $code."
-        AppLanguage.PORTUGUESE -> "O GitHub retornou HTTP $code."
-        AppLanguage.SPANISH -> "GitHub devolvió HTTP $code."
-        AppLanguage.FRENCH -> "GitHub a renvoyé HTTP $code."
-        AppLanguage.GERMAN -> "GitHub hat HTTP $code zurückgegeben."
-        AppLanguage.RUSSIAN -> "GitHub вернул HTTP $code."
-        AppLanguage.JAPANESE -> "GitHub が HTTP $code を返しました。"
-        AppLanguage.KOREAN -> "GitHub에서 HTTP $code을(를) 반환했습니다."
+        AppLanguage.CHINESE -> "GitHub 返回 HTTP ${code}。"
+        AppLanguage.ENGLISH -> "GitHub returned HTTP ${code}."
+        AppLanguage.ARABIC -> "أعاد GitHub رمز HTTP ${code}."
+        AppLanguage.PORTUGUESE -> "O GitHub retornou HTTP ${code}."
+        AppLanguage.SPANISH -> "GitHub devolvió HTTP ${code}."
+        AppLanguage.FRENCH -> "GitHub a renvoyé HTTP ${code}."
+        AppLanguage.GERMAN -> "GitHub hat HTTP ${code} zurückgegeben."
+        AppLanguage.RUSSIAN -> "GitHub вернул HTTP ${code}."
+        AppLanguage.JAPANESE -> "GitHub が HTTP ${code} を返しました。"
+        AppLanguage.KOREAN -> "GitHub에서 HTTP ${code}을(를) 반환했습니다."
     }
 
 }
