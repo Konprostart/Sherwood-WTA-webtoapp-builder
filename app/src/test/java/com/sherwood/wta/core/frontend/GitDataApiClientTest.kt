@@ -200,6 +200,32 @@ class GitDataApiClientTest {
     }
 
     @Test
+    fun `getTree lists every blob and reports truncation`() = runBlocking {
+        server.enqueue(
+            ok(
+                """{"sha":"$BASE_TREE","tree":[""" +
+                    """{"path":"a.txt","mode":"100644","type":"blob","sha":"$BLOB_SHA"},""" +
+                    """{"path":"dir","mode":"040000","type":"tree","sha":"$NEW_TREE"}""" +
+                    """],"truncated":true}"""
+            )
+        )
+
+        val result = client().getTree(OWNER, REPO, BASE_TREE)
+
+        val snapshot = when (result) {
+            is GitDataResult.Success -> result.value
+            is GitDataResult.Failure -> error("unexpected failure: ${result.kind}")
+        }
+        assertThat(snapshot.truncated).isTrue()
+        assertThat(snapshot.entries).containsExactly(
+            GitTreeEntry("a.txt", BLOB_SHA, "100644", "blob"),
+            GitTreeEntry("dir", NEW_TREE, "040000", "tree")
+        )
+        assertThat(server.takeRequest().path)
+            .isEqualTo("/repos/$OWNER/$REPO/git/trees/$BASE_TREE?recursive=1")
+    }
+
+    @Test
     fun `unreachable server maps to NETWORK`() = runBlocking {
         server.shutdown()
 

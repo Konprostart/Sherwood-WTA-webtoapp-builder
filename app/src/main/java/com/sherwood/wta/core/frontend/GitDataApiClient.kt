@@ -48,8 +48,19 @@ data class GitRef(val ref: String, val sha: String)
 /** The commit sha and the tree it points at. */
 data class GitCommitInfo(val sha: String, val treeSha: String)
 
-/** One path in a tree. [mode] is the git file mode, default a regular file. */
-data class GitTreeEntry(val path: String, val sha: String, val mode: String = "100644")
+/**
+ * One path in a tree. [mode] is the git file mode and [type] the object type.
+ * A null [sha] removes the path when the entry is sent in a tree update.
+ */
+data class GitTreeEntry(
+    val path: String,
+    val sha: String?,
+    val mode: String = "100644",
+    val type: String = "blob"
+)
+
+/** A resolved tree, plus GitHub's flag for repos too large to list completely. */
+data class GitTreeSnapshot(val entries: List<GitTreeEntry>, val truncated: Boolean = false)
 
 /**
  * Minimal client for the GitHub Git Data API.
@@ -107,6 +118,40 @@ class GitDataApiClient(
             val commitSha = json.stringSha("sha") ?: return@request null
             val treeSha = json.objectSha("tree") ?: return@request null
             GitCommitInfo(commitSha, treeSha)
+        }
+    }
+
+    /**
+     * Lists every path under [treeSha]. Used to diff the working copy against the
+     * commit it came from without keeping a local manifest.
+     */
+    suspend fun getTree(
+        owner: String,
+        repo: String,
+        treeSha: String,
+        recursive: Boolean = true
+    ): GitDataResult<GitTreeSnapshot> = withContext(Dispatchers.IO) {
+        val url = apiUrl("repos", owner, repo, "git", "trees", treeSha) +
+            if (recursive) "?recursive=1" else ""
+        request("GET", url, null) { body ->
+            val json = parseObject(body) ?: return@request null
+            val array = json.getAsJsonArray("tree") ?: return@request null
+            val entries = array.mapNotNull { element ->
+                val obj = element.takeIf { it.isJsonObject }?.asJsonObject ?: return@mapNotNull null
+                val path = obj.string("path") ?: return@mapNotNull null
+                val sha = obj.stringSha("sha") ?: return@mapNotNull null
+                GitTreeEntry(
+                    path = path,
+                    sha = sha,
+                    mode = obj.string("mode") ?: "100644",
+                    type = obj.string("type") ?: "blob"
+                )
+            }
+            val truncated = json.get("truncated")
+                ?.takeIf { it.isJsonPrimitive }
+                ?.asBoolean
+                ?: false
+            GitTreeSnapshot(entries, truncated)
         }
     }
 
@@ -337,7 +382,7 @@ class GitDataApiClient(
         val path: String,
         val mode: String,
         val type: String,
-        val sha: String
+        val sha: String?
     )
 
     private data class CommitRequest(
