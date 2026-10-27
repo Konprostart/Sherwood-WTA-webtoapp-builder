@@ -268,7 +268,7 @@ class RepoBridgeCommitUseCase(
             AppLogger.w(TAG, "Commit pushed but metadata was not saved: ${it.javaClass.simpleName}")
         }.isSuccess
 
-        RepoBridgeCommitResult.Success(
+        return RepoBridgeCommitResult.Success(
             commitSha = commitSha,
             changedFiles = changes.total,
             metadataSaved = metadataSaved
