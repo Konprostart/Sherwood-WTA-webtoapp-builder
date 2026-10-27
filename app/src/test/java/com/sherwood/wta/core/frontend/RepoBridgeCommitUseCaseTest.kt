@@ -170,11 +170,13 @@ class RepoBridgeCommitUseCaseTest {
         assertThat(treeJson.get("base_tree").asString).isEqualTo(BASE_TREE)
         val entries = treeJson.getAsJsonArray("tree")
             .map { it.asJsonObject }
-            .associateBy { it.get("path").asString }
-        assertThat(entries.keys).containsExactly("new.txt", "edit.txt", "old.txt")
-        assertThat(entries.getValue("new.txt").get("sha").asString).isEqualTo(BLOB_NEW)
-        assertThat(entries.getValue("edit.txt").get("sha").asString).isEqualTo(BLOB_EDIT)
-        assertThat(entries.getValue("old.txt").has("sha")).isFalse()
+            .map { entry ->
+                entry.get("path").asString to entry
+            }
+        assertThat(entries.map { it.first }).containsExactly("new.txt", "edit.txt", "old.txt")
+        assertThat(entries.first { it.first == "new.txt" }.second.get("sha").asString).isEqualTo(BLOB_NEW)
+        assertThat(entries.first { it.first == "edit.txt" }.second.get("sha").asString).isEqualTo(BLOB_EDIT)
+        assertThat(entries.first { it.first == "old.txt" }.second.has("sha")).isFalse()
 
         val commitRequest = server.takeRequest()
         assertThat(commitRequest.path).isEqualTo("/repos/$OWNER/$REPO/git/commits")
