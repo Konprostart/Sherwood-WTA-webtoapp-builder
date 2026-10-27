@@ -1170,6 +1170,8 @@ private fun GitHubImportCard(
     var branch by remember { mutableStateOf("") }
     var subPath by remember { mutableStateOf("") }
     var showLogs by remember { mutableStateOf(false) }
+    var imported by remember { mutableStateOf<GitHubFetchResult?>(null) }
+    var showCommitDialog by remember { mutableStateOf(false) }
 
     val isFetching = fetchState is GitHubFetchState.Resolving ||
         fetchState is GitHubFetchState.Downloading ||
@@ -1278,7 +1280,10 @@ private fun GitHubImportCard(
                                 explicitBranch = branch.trim().takeIf { it.isNotBlank() },
                                 explicitSubPath = subPath.trim().takeIf { it.isNotBlank() }
                             )
-                            result.onSuccess(onFetched)
+                            result.onSuccess { fetched ->
+                                imported = fetched
+                                onFetched(fetched)
+                            }
                         }
                     },
                     enabled = canFetch,
@@ -1298,7 +1303,27 @@ private fun GitHubImportCard(
                     }
                 }
             }
+
+            if (imported?.metadataFile != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                PremiumOutlinedButton(
+                    onClick = { showCommitDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.CloudUpload, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(Strings.repoBridgeCommitTitle)
+                }
+            }
         }
+    }
+
+    val importedProject = imported
+    if (showCommitDialog && importedProject?.metadataFile != null) {
+        RepoBridgeCommitDialog(
+            projectDir = File(importedProject.localPath),
+            onDismiss = { showCommitDialog = false }
+        )
     }
 
     if (showLogs) {

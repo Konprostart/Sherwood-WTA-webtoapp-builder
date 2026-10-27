@@ -5303,6 +5303,24 @@ object Strings {
     val gitTokenProbeUnexpected: String get() = StringsE.gitTokenProbeUnexpected
     fun gitTokenProbeSuccess(login: String): String = StringsE.gitTokenProbeSuccess(login)
     fun gitTokenProbeHttpError(code: Int): String = StringsE.gitTokenProbeHttpError(code)
+
+    val repoBridgeCommitTitle: String get() = StringsE.repoBridgeCommitTitle
+    val repoBridgeCommitChecking: String get() = StringsE.repoBridgeCommitChecking
+    val repoBridgeCommitNoChanges: String get() = StringsE.repoBridgeCommitNoChanges
+    val repoBridgeCommitMessageLabel: String get() = StringsE.repoBridgeCommitMessageLabel
+    val repoBridgeCommitMessagePlaceholder: String get() = StringsE.repoBridgeCommitMessagePlaceholder
+    val repoBridgeCommitWorking: String get() = StringsE.repoBridgeCommitWorking
+    val repoBridgeCommitMetadataWarning: String get() = StringsE.repoBridgeCommitMetadataWarning
+    val repoBridgeCommitErrorLocal: String get() = StringsE.repoBridgeCommitErrorLocal
+    val repoBridgeCommitErrorNoBase: String get() = StringsE.repoBridgeCommitErrorNoBase
+    val repoBridgeCommitErrorAuth: String get() = StringsE.repoBridgeCommitErrorAuth
+    val repoBridgeCommitErrorRateLimit: String get() = StringsE.repoBridgeCommitErrorRateLimit
+    val repoBridgeCommitErrorConflict: String get() = StringsE.repoBridgeCommitErrorConflict
+    val repoBridgeCommitErrorNetwork: String get() = StringsE.repoBridgeCommitErrorNetwork
+    val repoBridgeCommitErrorRemote: String get() = StringsE.repoBridgeCommitErrorRemote
+    fun repoBridgeCommitSummary(added: Int, modified: Int, deleted: Int): String =
+        StringsE.repoBridgeCommitSummary(added, modified, deleted)
+    fun repoBridgeCommitSuccess(sha: String): String = StringsE.repoBridgeCommitSuccess(sha)
 }
 
 

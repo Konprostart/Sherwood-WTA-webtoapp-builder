@@ -17105,4 +17105,213 @@ object StringsE {
         AppLanguage.KOREAN -> "GitHub에서 HTTP ${code}을(를) 반환했습니다."
     }
 
+    val repoBridgeCommitTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "提交并推送"
+        AppLanguage.ENGLISH -> "Commit & push"
+        AppLanguage.ARABIC -> "التزام ودفع"
+        AppLanguage.PORTUGUESE -> "Commit e push"
+        AppLanguage.SPANISH -> "Commit y push"
+        AppLanguage.FRENCH -> "Commit et push"
+        AppLanguage.GERMAN -> "Commit & Push"
+        AppLanguage.RUSSIAN -> "Коммит и пуш"
+        AppLanguage.JAPANESE -> "コミットしてプッシュ"
+        AppLanguage.KOREAN -> "커밋 및 푸시"
+    }
+
+    val repoBridgeCommitChecking: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在检查变更…"
+        AppLanguage.ENGLISH -> "Checking for changes…"
+        AppLanguage.ARABIC -> "جارٍ التحقق من التغييرات…"
+        AppLanguage.PORTUGUESE -> "Verificando alterações…"
+        AppLanguage.SPANISH -> "Comprobando cambios…"
+        AppLanguage.FRENCH -> "Vérification des modifications…"
+        AppLanguage.GERMAN -> "Änderungen werden geprüft…"
+        AppLanguage.RUSSIAN -> "Проверка изменений…"
+        AppLanguage.JAPANESE -> "変更を確認中…"
+        AppLanguage.KOREAN -> "변경 사항 확인 중…"
+    }
+
+    val repoBridgeCommitNoChanges: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "没有需要推送的变更"
+        AppLanguage.ENGLISH -> "No changes to push"
+        AppLanguage.ARABIC -> "لا توجد تغييرات للدفع"
+        AppLanguage.PORTUGUESE -> "Nenhuma alteração para enviar"
+        AppLanguage.SPANISH -> "No hay cambios para subir"
+        AppLanguage.FRENCH -> "Aucune modification à pousser"
+        AppLanguage.GERMAN -> "Keine Änderungen zum Pushen"
+        AppLanguage.RUSSIAN -> "Нет изменений для отправки"
+        AppLanguage.JAPANESE -> "プッシュする変更はありません"
+        AppLanguage.KOREAN -> "푸시할 변경 사항이 없습니다"
+    }
+
+    fun repoBridgeCommitSummary(added: Int, modified: Int, deleted: Int): String =
+        when (Strings.lang) {
+            AppLanguage.CHINESE -> "新增 ${added}，修改 ${modified}，删除 ${deleted}"
+            AppLanguage.ENGLISH -> "${added} added, ${modified} modified, ${deleted} deleted"
+            AppLanguage.ARABIC -> "${added} مضاف، ${modified} معدّل، ${deleted} محذوف"
+            AppLanguage.PORTUGUESE -> "${added} adicionados, ${modified} modificados, ${deleted} excluídos"
+            AppLanguage.SPANISH -> "${added} añadidos, ${modified} modificados, ${deleted} eliminados"
+            AppLanguage.FRENCH -> "${added} ajoutés, ${modified} modifiés, ${deleted} supprimés"
+            AppLanguage.GERMAN -> "${added} hinzugefügt, ${modified} geändert, ${deleted} gelöscht"
+            AppLanguage.RUSSIAN -> "Добавлено: ${added}, изменено: ${modified}, удалено: ${deleted}"
+            AppLanguage.JAPANESE -> "追加 ${added}、変更 ${modified}、削除 ${deleted}"
+            AppLanguage.KOREAN -> "추가 ${added}, 수정 ${modified}, 삭제 ${deleted}"
+        }
+
+    val repoBridgeCommitMessageLabel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "提交信息"
+        AppLanguage.ENGLISH -> "Commit message"
+        AppLanguage.ARABIC -> "رسالة الالتزام"
+        AppLanguage.PORTUGUESE -> "Mensagem do commit"
+        AppLanguage.SPANISH -> "Mensaje del commit"
+        AppLanguage.FRENCH -> "Message de commit"
+        AppLanguage.GERMAN -> "Commit-Nachricht"
+        AppLanguage.RUSSIAN -> "Сообщение коммита"
+        AppLanguage.JAPANESE -> "コミットメッセージ"
+        AppLanguage.KOREAN -> "커밋 메시지"
+    }
+
+    val repoBridgeCommitMessagePlaceholder: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "描述你的更改"
+        AppLanguage.ENGLISH -> "Describe your changes"
+        AppLanguage.ARABIC -> "صف تغييراتك"
+        AppLanguage.PORTUGUESE -> "Descreva suas alterações"
+        AppLanguage.SPANISH -> "Describe tus cambios"
+        AppLanguage.FRENCH -> "Décrivez vos modifications"
+        AppLanguage.GERMAN -> "Beschreibe deine Änderungen"
+        AppLanguage.RUSSIAN -> "Опишите изменения"
+        AppLanguage.JAPANESE -> "変更内容を入力"
+        AppLanguage.KOREAN -> "변경 내용을 입력하세요"
+    }
+
+    val repoBridgeCommitWorking: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在推送…"
+        AppLanguage.ENGLISH -> "Pushing…"
+        AppLanguage.ARABIC -> "جارٍ الدفع…"
+        AppLanguage.PORTUGUESE -> "Enviando…"
+        AppLanguage.SPANISH -> "Subiendo…"
+        AppLanguage.FRENCH -> "Envoi…"
+        AppLanguage.GERMAN -> "Wird gepusht…"
+        AppLanguage.RUSSIAN -> "Отправка…"
+        AppLanguage.JAPANESE -> "プッシュ中…"
+        AppLanguage.KOREAN -> "푸시 중…"
+    }
+
+    fun repoBridgeCommitSuccess(sha: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已推送 ${sha}"
+        AppLanguage.ENGLISH -> "Pushed ${sha}"
+        AppLanguage.ARABIC -> "تم الدفع ${sha}"
+        AppLanguage.PORTUGUESE -> "Enviado ${sha}"
+        AppLanguage.SPANISH -> "Subido ${sha}"
+        AppLanguage.FRENCH -> "Poussé ${sha}"
+        AppLanguage.GERMAN -> "Gepusht: ${sha}"
+        AppLanguage.RUSSIAN -> "Отправлено: ${sha}"
+        AppLanguage.JAPANESE -> "プッシュしました: ${sha}"
+        AppLanguage.KOREAN -> "푸시됨: ${sha}"
+    }
+
+    val repoBridgeCommitMetadataWarning: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已推送，但无法保存本地基准提交。"
+        AppLanguage.ENGLISH -> "Pushed, but the local base commit could not be saved."
+        AppLanguage.ARABIC -> "تم الدفع، ولكن تعذّر حفظ الالتزام الأساسي محليًا."
+        AppLanguage.PORTUGUESE -> "Enviado, mas o commit base local não pôde ser salvo."
+        AppLanguage.SPANISH -> "Subido, pero no se pudo guardar el commit base local."
+        AppLanguage.FRENCH -> "Poussé, mais le commit de base local n'a pas pu être enregistré."
+        AppLanguage.GERMAN -> "Gepusht, aber der lokale Basis-Commit konnte nicht gespeichert werden."
+        AppLanguage.RUSSIAN -> "Отправлено, но локальный базовый коммит не удалось сохранить."
+        AppLanguage.JAPANESE -> "プッシュしましたが、ローカルの基準コミットを保存できませんでした。"
+        AppLanguage.KOREAN -> "푸시했지만 로컬 기준 커밋을 저장하지 못했습니다."
+    }
+
+    val repoBridgeCommitErrorLocal: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法推送此项目文件夹。请确认它是导入的仓库，且没有文件超过 100 MB。"
+        AppLanguage.ENGLISH -> "The project folder cannot be pushed. Check that it is an imported repository and no file exceeds 100 MB."
+        AppLanguage.ARABIC -> "لا يمكن دفع مجلد المشروع. تأكد من أنه مستودع مستورد وأنه لا يوجد ملف يتجاوز 100 ميغابايت."
+        AppLanguage.PORTUGUESE -> "A pasta do projeto não pode ser enviada. Verifique se é um repositório importado e se nenhum arquivo excede 100 MB."
+        AppLanguage.SPANISH -> "No se puede subir la carpeta del proyecto. Comprueba que sea un repositorio importado y que ningún archivo supere los 100 MB."
+        AppLanguage.FRENCH -> "Le dossier du projet ne peut pas être poussé. Vérifiez qu'il s'agit d'un dépôt importé et qu'aucun fichier ne dépasse 100 Mo."
+        AppLanguage.GERMAN -> "Der Projektordner kann nicht gepusht werden. Prüfe, ob es ein importiertes Repository ist und keine Datei 100 MB überschreitet."
+        AppLanguage.RUSSIAN -> "Папку проекта нельзя отправить. Убедитесь, что это импортированный репозиторий и ни один файл не превышает 100 МБ."
+        AppLanguage.JAPANESE -> "プロジェクトフォルダーをプッシュできません。インポートしたリポジトリであること、100 MB を超えるファイルがないことを確認してください。"
+        AppLanguage.KOREAN -> "프로젝트 폴더를 푸시할 수 없습니다. 가져온 저장소인지, 100MB를 초과하는 파일이 없는지 확인하세요."
+    }
+
+    val repoBridgeCommitErrorNoBase: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "基准提交未知。请登录后重新导入该仓库。"
+        AppLanguage.ENGLISH -> "The base commit is unknown. Re-import the repository while signed in."
+        AppLanguage.ARABIC -> "الالتزام الأساسي غير معروف. أعد استيراد المستودع بعد تسجيل الدخول."
+        AppLanguage.PORTUGUESE -> "O commit base é desconhecido. Reimporte o repositório conectado."
+        AppLanguage.SPANISH -> "El commit base es desconocido. Vuelve a importar el repositorio con la sesión iniciada."
+        AppLanguage.FRENCH -> "Le commit de base est inconnu. Réimportez le dépôt en étant connecté."
+        AppLanguage.GERMAN -> "Der Basis-Commit ist unbekannt. Importiere das Repository erneut, während du angemeldet bist."
+        AppLanguage.RUSSIAN -> "Базовый коммит неизвестен. Повторно импортируйте репозиторий после входа."
+        AppLanguage.JAPANESE -> "基準コミットが不明です。サインインした状態でリポジトリを再インポートしてください。"
+        AppLanguage.KOREAN -> "기준 커밋을 알 수 없습니다. 로그인한 상태에서 저장소를 다시 가져오세요."
+    }
+
+    val repoBridgeCommitErrorAuth: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "GitHub 拒绝了令牌。请在 Git 访问设置中检查 PAT。"
+        AppLanguage.ENGLISH -> "GitHub rejected the token. Check your PAT in Git access settings."
+        AppLanguage.ARABIC -> "رفض GitHub الرمز. تحقق من PAT في إعدادات وصول Git."
+        AppLanguage.PORTUGUESE -> "O GitHub rejeitou o token. Verifique seu PAT nas configurações de acesso Git."
+        AppLanguage.SPANISH -> "GitHub rechazó el token. Revisa tu PAT en los ajustes de acceso Git."
+        AppLanguage.FRENCH -> "GitHub a rejeté le jeton. Vérifiez votre PAT dans les paramètres d'accès Git."
+        AppLanguage.GERMAN -> "GitHub hat das Token abgelehnt. Prüfe dein PAT in den Git-Zugriffseinstellungen."
+        AppLanguage.RUSSIAN -> "GitHub отклонил токен. Проверьте PAT в настройках доступа Git."
+        AppLanguage.JAPANESE -> "GitHub がトークンを拒否しました。Git アクセス設定で PAT を確認してください。"
+        AppLanguage.KOREAN -> "GitHub에서 토큰을 거부했습니다. Git 액세스 설정에서 PAT를 확인하세요."
+    }
+
+    val repoBridgeCommitErrorRateLimit: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已达到 GitHub 速率限制。请稍后再试。"
+        AppLanguage.ENGLISH -> "GitHub rate limit reached. Try again later."
+        AppLanguage.ARABIC -> "تم بلوغ حد معدل GitHub. حاول لاحقًا."
+        AppLanguage.PORTUGUESE -> "Limite de requisições do GitHub atingido. Tente mais tarde."
+        AppLanguage.SPANISH -> "Se alcanzó el límite de solicitudes de GitHub. Inténtalo más tarde."
+        AppLanguage.FRENCH -> "Limite de requêtes GitHub atteinte. Réessayez plus tard."
+        AppLanguage.GERMAN -> "GitHub-Ratenlimit erreicht. Versuche es später erneut."
+        AppLanguage.RUSSIAN -> "Достигнут лимит запросов GitHub. Повторите позже."
+        AppLanguage.JAPANESE -> "GitHub のレート制限に達しました。後でもう一度お試しください。"
+        AppLanguage.KOREAN -> "GitHub 요청 한도에 도달했습니다. 나중에 다시 시도하세요."
+    }
+
+    val repoBridgeCommitErrorConflict: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "分支在 GitHub 上已变更。请重新导入或拉取最新更改后再推送。"
+        AppLanguage.ENGLISH -> "The branch changed on GitHub. Re-import or pull the latest changes before pushing again."
+        AppLanguage.ARABIC -> "تغيّر الفرع على GitHub. أعد الاستيراد أو اسحب أحدث التغييرات قبل الدفع مجددًا."
+        AppLanguage.PORTUGUESE -> "O branch mudou no GitHub. Reimporte ou atualize as alterações antes de enviar novamente."
+        AppLanguage.SPANISH -> "La rama cambió en GitHub. Vuelve a importar o actualiza los cambios antes de subir de nuevo."
+        AppLanguage.FRENCH -> "La branche a changé sur GitHub. Réimportez ou récupérez les dernières modifications avant de pousser à nouveau."
+        AppLanguage.GERMAN -> "Der Branch hat sich auf GitHub geändert. Importiere erneut oder hole die neuesten Änderungen, bevor du wieder pushst."
+        AppLanguage.RUSSIAN -> "Ветка изменилась на GitHub. Повторно импортируйте или получите последние изменения перед отправкой."
+        AppLanguage.JAPANESE -> "GitHub 上でブランチが変更されました。再インポートするか最新の変更を取得してから再度プッシュしてください。"
+        AppLanguage.KOREAN -> "GitHub에서 브랜치가 변경되었습니다. 다시 가져오거나 최신 변경 사항을 받은 후 다시 푸시하세요."
+    }
+
+    val repoBridgeCommitErrorNetwork: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "网络错误。请检查连接后重试。"
+        AppLanguage.ENGLISH -> "Network error. Check your connection and try again."
+        AppLanguage.ARABIC -> "خطأ في الشبكة. تحقق من اتصالك وحاول مجددًا."
+        AppLanguage.PORTUGUESE -> "Erro de rede. Verifique sua conexão e tente novamente."
+        AppLanguage.SPANISH -> "Error de red. Comprueba tu conexión e inténtalo de nuevo."
+        AppLanguage.FRENCH -> "Erreur réseau. Vérifiez votre connexion et réessayez."
+        AppLanguage.GERMAN -> "Netzwerkfehler. Prüfe deine Verbindung und versuche es erneut."
+        AppLanguage.RUSSIAN -> "Ошибка сети. Проверьте подключение и повторите."
+        AppLanguage.JAPANESE -> "ネットワークエラーです。接続を確認して再試行してください。"
+        AppLanguage.KOREAN -> "네트워크 오류입니다. 연결을 확인하고 다시 시도하세요."
+    }
+
+    val repoBridgeCommitErrorRemote: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "GitHub 拒绝了该提交。"
+        AppLanguage.ENGLISH -> "GitHub rejected the commit."
+        AppLanguage.ARABIC -> "رفض GitHub الالتزام."
+        AppLanguage.PORTUGUESE -> "O GitHub rejeitou o commit."
+        AppLanguage.SPANISH -> "GitHub rechazó el commit."
+        AppLanguage.FRENCH -> "GitHub a rejeté le commit."
+        AppLanguage.GERMAN -> "GitHub hat den Commit abgelehnt."
+        AppLanguage.RUSSIAN -> "GitHub отклонил коммит."
+        AppLanguage.JAPANESE -> "GitHub がコミットを拒否しました。"
+        AppLanguage.KOREAN -> "GitHub에서 커밋을 거부했습니다."
+    }
+
 }
