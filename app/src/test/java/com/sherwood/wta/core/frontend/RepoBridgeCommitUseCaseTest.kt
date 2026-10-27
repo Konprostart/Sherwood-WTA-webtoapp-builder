@@ -104,7 +104,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `prepare compares the working copy with the remote tree`() = runBlocking {
+    fun `prepare compares the working copy with the remote tree`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("edit.txt", "new")
@@ -128,7 +128,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `commit uploads blobs then creates tree commit and advances the ref`() = runBlocking {
+    fun `commit uploads blobs then creates tree commit and advances the ref`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("edit.txt", "new")
@@ -191,7 +191,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `identical working copy reports no changes and writes nothing`() = runBlocking {
+    fun `identical working copy reports no changes and writes nothing`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         enqueueBase(blobEntry("keep.txt", "same"))
@@ -206,7 +206,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `blank commit message fails before any request`() = runBlocking {
+    fun `blank commit message fails before any request`() = runBlocking<Unit> {
         writeMetadata()
 
         val result = useCase().commit("   ") as RepoBridgeCommitResult.Failure
@@ -216,7 +216,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `missing metadata fails locally`() = runBlocking {
+    fun `missing metadata fails locally`() = runBlocking<Unit> {
         writeFile("index.html", "<h1>hi</h1>")
 
         val result = useCase().prepare() as RepoBridgePrepareResult.Failure
@@ -226,7 +226,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `unknown base commit fails before contacting GitHub`() = runBlocking {
+    fun `unknown base commit fails before contacting GitHub`() = runBlocking<Unit> {
         writeMetadata(baseSha = null)
 
         val result = useCase().prepare() as RepoBridgePrepareResult.Failure
@@ -236,7 +236,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `missing token fails during prepare without a request`() = runBlocking {
+    fun `missing token fails during prepare without a request`() = runBlocking<Unit> {
         writeMetadata()
 
         val result = useCase(token = null).prepare() as RepoBridgePrepareResult.Failure
@@ -246,7 +246,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `moved branch fails the push and leaves metadata untouched`() = runBlocking {
+    fun `moved branch fails the push and leaves metadata untouched`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("edit.txt", "new")
         enqueueBase(blobEntry("edit.txt", "old"))
@@ -265,7 +265,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `sub path only diffs and pushes files below that directory`() = runBlocking {
+    fun `sub path only diffs and pushes files below that directory`() = runBlocking<Unit> {
         writeMetadata(subPath = "app")
         writeFile("index.html", "new")
         writeFile("keep.txt", "same")
@@ -294,7 +294,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `truncated remote tree is rejected instead of pushing a partial diff`() = runBlocking {
+    fun `truncated remote tree is rejected instead of pushing a partial diff`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("index.html", "hi")
         enqueueBase(blobEntry("index.html", "old"), truncated = true)
@@ -305,7 +305,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `deleting a file sends an explicit null sha and nothing else`() = runBlocking {
+    fun `deleting a file sends an explicit null sha and nothing else`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         enqueueBase(
@@ -335,7 +335,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `unchanged oversized file does not block the commit`() = runBlocking {
+    fun `unchanged oversized file does not block the commit`() = runBlocking<Unit> {
         writeMetadata()
         val oversized = "x".repeat((RepoBridgeCommitUseCase.MAX_FILE_BYTES + 1L).toInt())
         writeFile("huge.bin", oversized)
@@ -357,7 +357,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `changed oversized file fails before uploading anything`() = runBlocking {
+    fun `changed oversized file fails before uploading anything`() = runBlocking<Unit> {
         writeMetadata()
         val oversized = "x".repeat((RepoBridgeCommitUseCase.MAX_FILE_BYTES + 1L).toInt())
         writeFile("huge.bin", oversized)
@@ -371,7 +371,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `unexpected failure during prepare is reported instead of crashing`() = runBlocking {
+    fun `unexpected failure during prepare is reported instead of crashing`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("index.html", "hi")
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -406,7 +406,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `prepare reports how many remote files the branch holds`() = runBlocking {
+    fun `prepare reports how many remote files the branch holds`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         enqueueBase(
@@ -422,7 +422,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `mass deletion is refused without confirmation and nothing is uploaded`() = runBlocking {
+    fun `mass deletion is refused without confirmation and nothing is uploaded`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         enqueueBase(
@@ -440,7 +440,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `an empty working copy against a non-empty remote is a mass deletion`() = runBlocking {
+    fun `an empty working copy against a non-empty remote is a mass deletion`() = runBlocking<Unit> {
         writeMetadata()
         enqueueBase(blobEntry("index.html", "x"), blobEntry("app.js", "y"))
 
@@ -452,7 +452,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `mass deletion goes through when the user confirmed the same count`() = runBlocking {
+    fun `mass deletion goes through when the user confirmed the same count`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         enqueueBase(
@@ -468,7 +468,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `confirmation smaller than the real deletion count is refused`() = runBlocking {
+    fun `confirmation smaller than the real deletion count is refused`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         enqueueBase(
@@ -485,7 +485,7 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
-    fun `deleting exactly half of the files is not a mass deletion`() = runBlocking {
+    fun `deleting exactly half of the files is not a mass deletion`() = runBlocking<Unit> {
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("a.txt", "a")

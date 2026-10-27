@@ -57,7 +57,7 @@ class GitHubRepoFetcherAuthTest {
         .setBody(Buffer().write(body))
 
     @Test
-    fun `authenticated import sends the bearer token and records the base commit`() = runBlocking {
+    fun `authenticated import sends the bearer token and records the base commit`() = runBlocking<Unit> {
         server.enqueue(refResponse(SHA))
         server.enqueue(archiveResponse())
 
@@ -117,7 +117,7 @@ class GitHubRepoFetcherAuthTest {
         }
 
     @Test
-    fun `failed authenticated download falls back to the public archive`() = runBlocking {
+    fun `failed authenticated download falls back to the public archive`() = runBlocking<Unit> {
         server.enqueue(refResponse(SHA))
         server.enqueue(MockResponse().setResponseCode(401))
         server.enqueue(archiveResponse())
@@ -135,7 +135,7 @@ class GitHubRepoFetcherAuthTest {
     }
 
     @Test
-    fun `gzipped tar body is never imported as an empty folder`() = runBlocking {
+    fun `gzipped tar body is never imported as an empty folder`() = runBlocking<Unit> {
         // The old route returned tar.gz data; that must fail loudly, not "succeed" empty.
         server.enqueue(refResponse(SHA))
         server.enqueue(MockResponse().setBody(Buffer().write(tarGzBytes())))
@@ -148,7 +148,7 @@ class GitHubRepoFetcherAuthTest {
     }
 
     @Test
-    fun `archive without any regular file is rejected`() = runBlocking {
+    fun `archive without any regular file is rejected`() = runBlocking<Unit> {
         server.enqueue(refResponse(SHA))
         server.enqueue(archiveResponse(directoriesOnlyZipBytes()))
 
@@ -158,7 +158,7 @@ class GitHubRepoFetcherAuthTest {
     }
 
     @Test
-    fun `production url policy refuses plain http before any socket is opened`() = runBlocking {
+    fun `production url policy refuses plain http before any socket is opened`() = runBlocking<Unit> {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val fetcher = GitHubRepoFetcher(
             context = context,
