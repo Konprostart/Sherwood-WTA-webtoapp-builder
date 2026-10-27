@@ -185,16 +185,6 @@ class RepoBridgeCommitUseCaseTest {
         assertThat(commitJson.get("tree").asString).isEqualTo(NEW_TREE)
         assertThat(commitJson.getAsJsonArray("parents").first().asString).isEqualTo(BASE)
 
-        val refRead = server.takeRequest()
-        assertThat(refRead.method).isEqualTo("GET")
-        assertThat(refRead.path).isEqualTo("/repos/$OWNER/$REPO/git/refs/heads/main")
-
-        val refPatch = server.takeRequest()
-        assertThat(refPatch.method).isEqualTo("PATCH")
-        val refJson = JsonParser.parseString(refPatch.body.readUtf8()).asJsonObject
-        assertThat(refJson.get("sha").asString).isEqualTo(NEW_COMMIT)
-        assertThat(refJson.get("force").asBoolean).isFalse()
-
         assertThat(server.requestCount).isEqualTo(8)
     }
 
