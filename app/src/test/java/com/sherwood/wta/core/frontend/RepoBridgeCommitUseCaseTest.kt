@@ -298,6 +298,7 @@ class RepoBridgeCommitUseCaseTest {
         val treeJson = JsonParser.parseString(server.takeRequest().body.readUtf8()).asJsonObject
         val paths = treeJson.getAsJsonArray("tree").map { it.asJsonObject.get("path").asString }
         assertThat(paths).containsExactly("app/index.html")
+        assertThat(server.requestCount).isEqualTo(7)
     }
 
     @Test
