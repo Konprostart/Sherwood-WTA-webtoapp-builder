@@ -295,6 +295,8 @@ class RepoBridgeCommitUseCaseTest {
         assertThat(useCase.commit("Edit index")).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
 
         server.takeRequest()
+        server.takeRequest()
+        server.takeRequest()
         val treeJson = JsonParser.parseString(server.takeRequest().body.readUtf8()).asJsonObject
         val paths = treeJson.getAsJsonArray("tree").map { it.asJsonObject.get("path").asString }
         assertThat(paths).containsExactly("app/index.html")
