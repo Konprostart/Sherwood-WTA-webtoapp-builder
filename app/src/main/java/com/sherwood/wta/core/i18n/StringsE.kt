@@ -17301,6 +17301,46 @@ object StringsE {
         AppLanguage.KOREAN -> "네트워크 오류입니다. 연결을 확인하고 다시 시도하세요."
     }
 
+    fun repoBridgeMassDeletionWarning(deleted: Int, total: Int): String =
+        when (Strings.lang) {
+            AppLanguage.CHINESE -> "此次推送将从 GitHub 分支中删除 ${deleted}/${total} 个文件。"
+            AppLanguage.ENGLISH -> "This push deletes ${deleted} of ${total} files from the branch on GitHub."
+            AppLanguage.ARABIC -> "سيحذف هذا الدفع ${deleted} من أصل ${total} ملفًا من الفرع على GitHub."
+            AppLanguage.PORTUGUESE -> "Este envio exclui ${deleted} de ${total} arquivos da branch no GitHub."
+            AppLanguage.SPANISH -> "Este envío elimina ${deleted} de ${total} archivos de la rama en GitHub."
+            AppLanguage.FRENCH -> "Cet envoi supprime ${deleted} fichier(s) sur ${total} de la branche sur GitHub."
+            AppLanguage.GERMAN -> "Dieser Push löscht ${deleted} von ${total} Dateien im Branch auf GitHub."
+            AppLanguage.RUSSIAN -> "Эта отправка удалит ${deleted} из ${total} файлов в ветке на GitHub."
+            AppLanguage.JAPANESE -> "このプッシュでは、GitHub のブランチから ${total} 件中 ${deleted} 件のファイルを削除します。"
+            AppLanguage.KOREAN -> "이 푸시는 GitHub 브랜치에서 ${total}개 파일 중 ${deleted}개를 삭제합니다."
+        }
+
+    val repoBridgeMassDeletionConfirm: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "我了解这些文件将从 GitHub 中删除"
+        AppLanguage.ENGLISH -> "I understand these files will be removed from GitHub"
+        AppLanguage.ARABIC -> "أفهم أن هذه الملفات ستُحذف من GitHub"
+        AppLanguage.PORTUGUESE -> "Entendo que estes arquivos serão removidos do GitHub"
+        AppLanguage.SPANISH -> "Entiendo que estos archivos se eliminarán de GitHub"
+        AppLanguage.FRENCH -> "Je comprends que ces fichiers seront supprimés de GitHub"
+        AppLanguage.GERMAN -> "Mir ist klar, dass diese Dateien von GitHub entfernt werden"
+        AppLanguage.RUSSIAN -> "Я понимаю, что эти файлы будут удалены из GitHub"
+        AppLanguage.JAPANESE -> "これらのファイルが GitHub から削除されることを理解しました"
+        AppLanguage.KOREAN -> "이 파일들이 GitHub에서 삭제된다는 것을 이해합니다"
+    }
+
+    val repoBridgeCommitErrorMassDeletion: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此次推送将删除仓库的大部分内容。请确认删除后继续。"
+        AppLanguage.ENGLISH -> "The push would remove most of the repository. Confirm the deletion to continue."
+        AppLanguage.ARABIC -> "سيؤدي هذا الدفع إلى حذف معظم المستودع. أكد الحذف للمتابعة."
+        AppLanguage.PORTUGUESE -> "O envio removeria a maior parte do repositório. Confirme a exclusão para continuar."
+        AppLanguage.SPANISH -> "El envío eliminaría la mayor parte del repositorio. Confirma la eliminación para continuar."
+        AppLanguage.FRENCH -> "L'envoi supprimerait la majeure partie du dépôt. Confirmez la suppression pour continuer."
+        AppLanguage.GERMAN -> "Der Push würde den größten Teil des Repositorys entfernen. Bestätige das Löschen, um fortzufahren."
+        AppLanguage.RUSSIAN -> "Отправка удалит большую часть репозитория. Подтвердите удаление, чтобы продолжить."
+        AppLanguage.JAPANESE -> "このプッシュではリポジトリの大部分が削除されます。続行するには削除を確認してください。"
+        AppLanguage.KOREAN -> "이 푸시는 저장소의 대부분을 삭제합니다. 계속하려면 삭제를 확인하세요."
+    }
+
     val repoBridgeCommitErrorRemote: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "GitHub 拒绝了该提交。"
         AppLanguage.ENGLISH -> "GitHub rejected the commit."

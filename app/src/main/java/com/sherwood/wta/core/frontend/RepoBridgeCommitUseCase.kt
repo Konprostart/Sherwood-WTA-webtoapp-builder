@@ -17,6 +17,7 @@ enum class RepoBridgeCommitFailureKind {
     NO_CHANGES,
     TOO_MANY_FILES,
     FILE_TOO_LARGE,
+    MASS_DELETION_UNCONFIRMED,
     IO_ERROR,
     UNAUTHORIZED,
     FORBIDDEN,
@@ -37,12 +38,20 @@ data class RepoBridgeChangeSet(
     val isEmpty: Boolean get() = total == 0
 }
 
+/**
+ * A push that removes more than half of the remote files (or all of them) is a
+ * mass deletion. An empty working copy against a non-empty remote is one as well.
+ */
+fun RepoBridgeChangeSet.isMassDeletion(remoteFileCount: Int): Boolean =
+    deleted.isNotEmpty() && deleted.size * 2 > remoteFileCount
+
 sealed class RepoBridgePrepareResult {
     data class Ready(
         val owner: String,
         val repo: String,
         val branch: String,
         val baseSha: String,
+        val remoteFileCount: Int,
         val changes: RepoBridgeChangeSet
     ) : RepoBridgePrepareResult()
 
@@ -128,14 +137,24 @@ class RepoBridgeCommitUseCase(
             repo = plan.metadata.repo,
             branch = plan.metadata.ref,
             baseSha = plan.baseSha,
+            remoteFileCount = plan.remoteBlobs.size,
             changes = changes
         )
     }
 
-    /** Uploads the working copy on top of the imported commit and advances the branch. */
-    suspend fun commit(message: String): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
+    /**
+     * Uploads the working copy on top of the imported commit and advances the branch.
+     *
+     * [confirmedDeletions] is the number of deletions the user saw and accepted. A mass
+     * deletion is refused unless the push removes no more files than that, so a folder
+     * that changed between preview and send cannot wipe the branch silently.
+     */
+    suspend fun commit(
+        message: String,
+        confirmedDeletions: Int = 0
+    ): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
         try {
-            commitInternal(message)
+            commitInternal(message, confirmedDeletions)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -145,7 +164,7 @@ class RepoBridgeCommitUseCase(
         }
     }
 
-    private suspend fun commitInternal(message: String): RepoBridgeCommitResult {
+    private suspend fun commitInternal(message: String, confirmedDeletions: Int): RepoBridgeCommitResult {
         val trimmed = message.trim()
         if (trimmed.isEmpty()) {
             return RepoBridgeCommitResult.Failure(
@@ -183,6 +202,14 @@ class RepoBridgeCommitUseCase(
             return RepoBridgeCommitResult.Failure(
                 RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
                 detail
+            )
+        }
+        if (changes.isMassDeletion(plan.remoteBlobs.size) &&
+            changes.deleted.size > confirmedDeletions
+        ) {
+            return RepoBridgeCommitResult.Failure(
+                RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED,
+                "${changes.deleted.size} of ${plan.remoteBlobs.size}"
             )
         }
 

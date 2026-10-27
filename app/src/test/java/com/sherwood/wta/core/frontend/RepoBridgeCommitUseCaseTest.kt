@@ -405,6 +405,103 @@ class RepoBridgeCommitUseCaseTest {
         return digest.digest().joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
     }
 
+    @Test
+    fun `prepare reports how many remote files the branch holds`() = runBlocking {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        enqueueBase(
+            blobEntry("keep.txt", "same"),
+            blobEntry("a.txt", "a"),
+            blobEntry("b.txt", "b")
+        )
+
+        val prepared = useCase().prepare() as RepoBridgePrepareResult.Ready
+
+        assertThat(prepared.remoteFileCount).isEqualTo(3)
+        assertThat(prepared.changes.deleted).containsExactly("a.txt", "b.txt")
+    }
+
+    @Test
+    fun `mass deletion is refused without confirmation and nothing is uploaded`() = runBlocking {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        enqueueBase(
+            blobEntry("keep.txt", "same"),
+            blobEntry("a.txt", "a"),
+            blobEntry("b.txt", "b")
+        )
+
+        val result = useCase().commit("remove most files")
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Failure::class.java)
+        assertThat((result as RepoBridgeCommitResult.Failure).reason)
+            .isEqualTo(RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED)
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `an empty working copy against a non-empty remote is a mass deletion`() = runBlocking {
+        writeMetadata()
+        enqueueBase(blobEntry("index.html", "x"), blobEntry("app.js", "y"))
+
+        val result = useCase().commit("oops")
+
+        assertThat((result as RepoBridgeCommitResult.Failure).reason)
+            .isEqualTo(RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED)
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `mass deletion goes through when the user confirmed the same count`() = runBlocking {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        enqueueBase(
+            blobEntry("keep.txt", "same"),
+            blobEntry("a.txt", "a"),
+            blobEntry("b.txt", "b")
+        )
+        enqueueWrites(emptyList())
+
+        val result = useCase().commit("remove most files", confirmedDeletions = 2)
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+    }
+
+    @Test
+    fun `confirmation smaller than the real deletion count is refused`() = runBlocking {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        enqueueBase(
+            blobEntry("keep.txt", "same"),
+            blobEntry("a.txt", "a"),
+            blobEntry("b.txt", "b")
+        )
+
+        val result = useCase().commit("remove most files", confirmedDeletions = 1)
+
+        assertThat((result as RepoBridgeCommitResult.Failure).reason)
+            .isEqualTo(RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED)
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `deleting exactly half of the files is not a mass deletion`() = runBlocking {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("a.txt", "a")
+        enqueueBase(
+            blobEntry("keep.txt", "same"),
+            blobEntry("a.txt", "a"),
+            blobEntry("b.txt", "b"),
+            blobEntry("c.txt", "c")
+        )
+        enqueueWrites(emptyList())
+
+        val result = useCase().commit("drop two of four")
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+    }
+
     private fun ok(body: String): MockResponse = MockResponse()
         .setHeader("Content-Type", "application/json")
         .setBody(body)

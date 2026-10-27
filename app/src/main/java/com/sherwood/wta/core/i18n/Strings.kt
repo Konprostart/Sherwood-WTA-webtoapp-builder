@@ -5318,6 +5318,10 @@ object Strings {
     val repoBridgeCommitErrorConflict: String get() = StringsE.repoBridgeCommitErrorConflict
     val repoBridgeCommitErrorNetwork: String get() = StringsE.repoBridgeCommitErrorNetwork
     val repoBridgeCommitErrorRemote: String get() = StringsE.repoBridgeCommitErrorRemote
+    val repoBridgeCommitErrorMassDeletion: String get() = StringsE.repoBridgeCommitErrorMassDeletion
+    val repoBridgeMassDeletionConfirm: String get() = StringsE.repoBridgeMassDeletionConfirm
+    fun repoBridgeMassDeletionWarning(deleted: Int, total: Int): String =
+        StringsE.repoBridgeMassDeletionWarning(deleted, total)
     fun repoBridgeCommitSummary(added: Int, modified: Int, deleted: Int): String =
         StringsE.repoBridgeCommitSummary(added, modified, deleted)
     fun repoBridgeCommitSuccess(sha: String): String = StringsE.repoBridgeCommitSuccess(sha)

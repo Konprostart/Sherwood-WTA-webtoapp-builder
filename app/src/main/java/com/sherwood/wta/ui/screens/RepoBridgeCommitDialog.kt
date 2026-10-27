@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.sherwood.wta.core.frontend.RepoBridgeCommitFailureKind
 import com.sherwood.wta.core.frontend.RepoBridgeCommitResult
 import com.sherwood.wta.core.frontend.RepoBridgeCommitUseCase
+import com.sherwood.wta.core.frontend.isMassDeletion
 import com.sherwood.wta.core.frontend.RepoBridgePrepareResult
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.design.WtaAlertDialog
@@ -68,9 +70,11 @@ fun RepoBridgeCommitDialog(
     var message by rememberSaveable { mutableStateOf("") }
     var committing by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<RepoBridgeCommitResult?>(null) }
+    var confirmDeletion by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(useCase, attempt) {
         preparing = true
+        confirmDeletion = false
         preparation = useCase.prepare()
         preparing = false
     }
@@ -78,18 +82,22 @@ fun RepoBridgeCommitDialog(
     val ready = preparation as? RepoBridgePrepareResult.Ready
     val success = result as? RepoBridgeCommitResult.Success
     val failure = result as? RepoBridgeCommitResult.Failure
+    val massDeletion = ready?.let { it.changes.isMassDeletion(it.remoteFileCount) } == true
     val canSend = ready != null &&
         !ready.changes.isEmpty &&
         message.isNotBlank() &&
         !committing &&
-        success == null
+        success == null &&
+        (!massDeletion || confirmDeletion)
 
     fun send() {
-        if (!canSend) return
+        if (!canSend || ready == null) return
         committing = true
         result = null
+        // The use case refuses a mass deletion larger than what the user confirmed here.
+        val confirmed = if (confirmDeletion) ready.changes.deleted.size else 0
         scope.launch {
-            result = useCase.commit(message)
+            result = useCase.commit(message, confirmedDeletions = confirmed)
             committing = false
         }
     }
@@ -177,6 +185,27 @@ fun RepoBridgeCommitDialog(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            if (massDeletion) {
+                                Text(
+                                    Strings.repoBridgeMassDeletionWarning(
+                                        prep.changes.deleted.size,
+                                        prep.remoteFileCount
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = confirmDeletion,
+                                        onCheckedChange = { confirmDeletion = it },
+                                        enabled = !committing
+                                    )
+                                    Text(
+                                        Strings.repoBridgeMassDeletionConfirm,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
                             if (!prep.changes.isEmpty) {
                                 OutlinedTextField(
                                     value = message,
@@ -250,6 +279,8 @@ private fun ErrorBlock(
 }
 
 private fun RepoBridgeCommitFailureKind.description(): String = when (this) {
+    RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED ->
+        Strings.repoBridgeCommitErrorMassDeletion
     RepoBridgeCommitFailureKind.NO_METADATA,
     RepoBridgeCommitFailureKind.TOO_MANY_FILES,
     RepoBridgeCommitFailureKind.FILE_TOO_LARGE,

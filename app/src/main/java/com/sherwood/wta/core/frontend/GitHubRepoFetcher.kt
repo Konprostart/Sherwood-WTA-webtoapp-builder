@@ -60,7 +60,7 @@ sealed class GitHubTokenProbeResult {
  * Imports a repository as a working copy.
  *
  * Without a token the public archive endpoint is used exactly as before. With a PAT
- * the authenticated tarball endpoint is preferred, which is what makes private
+ * the authenticated zipball endpoint is preferred, which is what makes private
  * repositories importable; if that request fails the public archive is still tried,
  * so a token can never make a previously working import stop working.
  *
@@ -246,14 +246,14 @@ class GitHubRepoFetcher(
     }.getOrNull()?.takeIf { it.isNotEmpty() && it.length <= MAX_LOGIN_LENGTH }
 
     /**
-     * Authenticated tarball first when a token is available, then the public archive.
+     * Authenticated zipball first when a token is available, then the public archive.
      * Returning the public route as a fallback keeps public imports working even when a
      * token is expired or lacks the scope for the repository.
      */
     private fun downloadForBranch(spec: GitHubRepoSpec, ref: String, token: String?): File? {
         if (token != null) {
-            val authenticated = runCatching { downloadApiTarball(spec, ref, token) }
-                .onFailure { log("Tarball request failed: ${it.javaClass.simpleName}") }
+            val authenticated = runCatching { downloadApiZipball(spec, ref, token) }
+                .onFailure { log("Authenticated archive request failed: ${it.javaClass.simpleName}") }
                 .getOrNull()
             if (authenticated != null) return authenticated
             log("Authenticated download failed; falling back to the public archive")
@@ -263,8 +263,12 @@ class GitHubRepoFetcher(
             .getOrNull()
     }
 
-    private fun downloadApiTarball(spec: GitHubRepoSpec, ref: String, token: String): File? {
-        val url = apiUrl("repos", spec.owner, spec.repo, "tarball", ref)
+    /**
+     * The API route must be `zipball`: `tarball` returns gzipped tar data, which
+     * ZipInputStream reads as zero entries without any error.
+     */
+    private fun downloadApiZipball(spec: GitHubRepoSpec, ref: String, token: String): File? {
+        val url = apiUrl("repos", spec.owner, spec.repo, "zipball", ref)
         val request = Request.Builder()
             .url(url)
             .get()
@@ -393,6 +397,7 @@ class GitHubRepoFetcher(
         }
 
         var entryCount = 0
+        var fileCount = 0
         var totalBytes = 0L
 
         try {
@@ -423,6 +428,7 @@ class GitHubRepoFetcher(
                     if (entry.isDirectory) {
                         target.mkdirs()
                     } else {
+                        fileCount++
                         target.parentFile?.mkdirs()
                         FileOutputStream(target).use { out ->
                             val buf = ByteArray(64 * 1024)
@@ -442,6 +448,10 @@ class GitHubRepoFetcher(
                     zis.closeEntry()
                     entry = zis.nextEntry
                 }
+            }
+            // A body that is not a zip yields zero entries; never report that as success.
+            if (fileCount == 0) {
+                throw IllegalStateException("Downloaded archive contains no files")
             }
         } catch (e: Exception) {
             extractDir.deleteRecursively()
