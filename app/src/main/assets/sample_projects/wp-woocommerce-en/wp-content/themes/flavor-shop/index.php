@@ -9,7 +9,7 @@
 <body>
     <header class="shop-header">
         <h1>🛒 My Store</h1>
-        <p>WooCommerce E-Commerce Sample · Created by WebToApp</p>
+        <p>WooCommerce E-Commerce Sample · Created by Sherwood WTA</p>
     </header>
     <main class="products-grid">
         <div class="product-card">

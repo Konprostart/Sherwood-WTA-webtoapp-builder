@@ -122,7 +122,7 @@ body::before{content:'';position:fixed;top:-40%;left:-40%;width:180%;height:180%
 <div class="filter-row"><div class="filter active" onclick="setFilter('all',this)">全部</div><div class="filter" onclick="setFilter('active',this)">待办</div><div class="filter" onclick="setFilter('done',this)">已完成</div></div>
 <div class="todo-list" id="list"></div>
 <div style="text-align:center"><button class="clr" id="clrBtn" onclick="clearDone()" disabled>清除已完成</button></div>
-<div class="ft"><div class="ft-b">📝 Express · Node.js · WebToApp</div></div>
+<div class="ft"><div class="ft-b">📝 Express · Node.js · Sherwood WTA</div></div>
 </div>
 <script>
 var todos=[],filter='all';

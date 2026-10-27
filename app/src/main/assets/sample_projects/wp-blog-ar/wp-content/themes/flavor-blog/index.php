@@ -9,7 +9,7 @@
 <body>
     <header class="site-header">
         <h1>📝 مدونتي</h1>
-        <p>نموذج مدونة WordPress · تم إنشاؤه بواسطة WebToApp</p>
+        <p>نموذج مدونة WordPress · تم إنشاؤه بواسطة Sherwood WTA</p>
     </header>
     <main class="posts-container">
         <article class="post-card">

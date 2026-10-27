@@ -332,7 +332,7 @@ class ModuleMarketRepository private constructor(
         return try {
             val req = Request.Builder()
                 .url(url)
-                .header("User-Agent", "WebToApp/${BuildConfig.VERSION_NAME}")
+                .header("User-Agent", "Sherwood-WTA/${BuildConfig.VERSION_NAME}")
                 .get()
                 .build()
             httpClient.newCall(req).execute().use { resp ->

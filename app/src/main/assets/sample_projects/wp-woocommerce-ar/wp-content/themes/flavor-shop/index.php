@@ -9,7 +9,7 @@
 <body>
     <header class="shop-header">
         <h1>🛒 متجري</h1>
-        <p>نموذج WooCommerce للتجارة الإلكترونية · تم إنشاؤه بواسطة WebToApp</p>
+        <p>نموذج WooCommerce للتجارة الإلكترونية · تم إنشاؤه بواسطة Sherwood WTA</p>
     </header>
     <main class="products-grid">
         <div class="product-card">

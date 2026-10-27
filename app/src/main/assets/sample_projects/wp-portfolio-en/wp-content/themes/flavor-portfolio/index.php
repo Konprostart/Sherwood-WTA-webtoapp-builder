@@ -9,7 +9,7 @@
 <body>
     <section class="hero">
         <h1>🎨 My Portfolio</h1>
-        <p>WordPress Portfolio / Business Site Sample · Created by WebToApp</p>
+        <p>WordPress Portfolio / Business Site Sample · Created by Sherwood WTA</p>
     </section>
     <main class="portfolio-grid">
         <div class="portfolio-item">

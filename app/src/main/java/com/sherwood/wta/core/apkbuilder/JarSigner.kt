@@ -335,7 +335,7 @@ class JarSigner(private val context: Context) {
                 .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA1)
                 .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
                 .setKeySize(KEY_SIZE)
-                .setCertificateSubject(X500Principal("CN=WebToApp, O=WebToApp, C=CN"))
+                .setCertificateSubject(X500Principal("CN=Sherwood WTA, O=Sherwood WTA, C=CN"))
                 .setCertificateSerialNumber(BigInteger.valueOf(System.currentTimeMillis()))
                 .setCertificateNotBefore(notBefore)
                 .setCertificateNotAfter(notAfter)
@@ -637,7 +637,7 @@ class JarSigner(private val context: Context) {
                 .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA1)
                 .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
                 .setKeySize(KEY_SIZE)
-                .setCertificateSubject(X500Principal("CN=WebToApp, O=WebToApp, C=CN"))
+                .setCertificateSubject(X500Principal("CN=Sherwood WTA, O=Sherwood WTA, C=CN"))
                 .setCertificateSerialNumber(BigInteger.valueOf(System.currentTimeMillis()))
                 .setCertificateNotBefore(notBefore)
                 .setCertificateNotAfter(notAfter)
@@ -904,7 +904,7 @@ class JarSigner(private val context: Context) {
             spec.state.trim().takeIf { it.isNotEmpty() }?.let { add("ST=${esc(it)}") }
             spec.country.trim().takeIf { it.isNotEmpty() }?.let { add("C=${esc(it)}") }
         }
-        val dn = if (parts.isEmpty()) "CN=WebToApp" else parts.joinToString(", ")
+        val dn = if (parts.isEmpty()) "CN=Sherwood WTA" else parts.joinToString(", ")
         return X500Principal(dn)
     }
 
@@ -971,7 +971,7 @@ class JarSigner(private val context: Context) {
         val notBefore = Date(now)
         val notAfter = Date(now + VALIDITY_YEARS * 365L * 24L * 60L * 60L * 1000L)
 
-        val subject = X500Principal("CN=WebToApp, O=WebToApp, C=CN")
+        val subject = X500Principal("CN=Sherwood WTA, O=Sherwood WTA, C=CN")
         val serialNumber = BigInteger.valueOf(now)
 
         return createX509Certificate(

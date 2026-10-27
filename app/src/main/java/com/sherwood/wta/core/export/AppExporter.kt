@@ -291,9 +291,9 @@ class AppExporter(private val context: Context) {
 
     private fun getExportDirectory(): File {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "WebToApp")
+            File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Sherwood WTA")
         } else {
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "WebToApp")
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Sherwood WTA")
         }
     }
 

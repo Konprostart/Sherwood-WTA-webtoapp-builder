@@ -9,7 +9,7 @@
 <body>
     <header class="site-header">
         <h1>📝 我的博客</h1>
-        <p>WordPress 博客示例 · 由 WebToApp 创建</p>
+        <p>WordPress 博客示例 · 由 Sherwood WTA 创建</p>
     </header>
     <main class="posts-container">
         <article class="post-card">

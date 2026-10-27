@@ -79,7 +79,7 @@ NativeBridge.downloadWithHeaders(
 NativeBridge.saveToFile('note body', 'note.txt', 'text/plain');
 ```
 
-System-download media goes into `Pictures/<gallery folder>` (and the matching movie or music folder). The folder name is **Gallery folder** on the download card. Blank stays `WebToApp`.
+System-download media goes into `Pictures/<gallery folder>` (and the matching movie or music folder). The folder name is **Gallery folder** on the download card. Blank stays `Sherwood WTA`.
 
 ## Screen, orientation, find
 

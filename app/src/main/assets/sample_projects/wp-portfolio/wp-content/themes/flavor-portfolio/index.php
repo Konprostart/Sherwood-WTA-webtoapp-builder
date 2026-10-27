@@ -9,7 +9,7 @@
 <body>
     <section class="hero">
         <h1>🎨 我的作品集</h1>
-        <p>WordPress 作品集/企业站点示例 · 由 WebToApp 创建</p>
+        <p>WordPress 作品集/企业站点示例 · 由 Sherwood WTA 创建</p>
     </section>
     <main class="portfolio-grid">
         <div class="portfolio-item">

@@ -9,7 +9,7 @@
 <body>
     <header class="site-header">
         <h1>📝 My Blog</h1>
-        <p>WordPress Blog Sample · Created by WebToApp</p>
+        <p>WordPress Blog Sample · Created by Sherwood WTA</p>
     </header>
     <main class="posts-container">
         <article class="post-card">

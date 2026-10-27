@@ -9,7 +9,7 @@
 <body>
     <header class="shop-header">
         <h1>🛒 我的商店</h1>
-        <p>WooCommerce 电商示例 · 由 WebToApp 创建</p>
+        <p>WooCommerce 电商示例 · 由 Sherwood WTA 创建</p>
     </header>
     <main class="products-grid">
         <div class="product-card">

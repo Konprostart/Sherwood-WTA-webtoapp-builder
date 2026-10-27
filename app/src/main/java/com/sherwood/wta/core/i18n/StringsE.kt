@@ -3599,7 +3599,7 @@ object StringsE {
     }
     val mediaAlbumNameHint: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "系统下载进相册时用的子目录名。留空则是 Sherwood WTA。自定义文件夹里的图片、视频和音频会单独登记进相册。"
-        AppLanguage.ENGLISH -> "Subfolder used when a system download is saved to the gallery. Blank stays WebToApp. Pictures, video, and audio saved to a custom folder are registered with the gallery too."
+        AppLanguage.ENGLISH -> "Subfolder used when a system download is saved to the gallery. Blank stays Sherwood WTA. Pictures, video, and audio saved to a custom folder are registered with the gallery too."
         AppLanguage.ARABIC -> "المجلد الفرعي المستخدم عند حفظ تنزيل النظام في المعرض. الفراغ يبقى Sherwood WTA. الصور والفيديو والصوت في مجلد مخصص تُسجَّل أيضًا في المعرض."
         AppLanguage.PORTUGUESE -> "Subpasta usada quando um download do sistema vai para a galeria. Em branco continua Sherwood WTA. Imagens, vídeo e áudio numa pasta personalizada também entram na galeria."
         AppLanguage.SPANISH -> "Subcarpeta usada cuando una descarga del sistema va a la galería. En blanco sigue siendo Sherwood WTA. Las imágenes, el vídeo y el audio de una carpeta personalizada también se registran en la galería."

@@ -446,7 +446,7 @@ class LongPressHandler(
             val contentValues = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/WebToApp")
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Sherwood WTA")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
 
@@ -467,7 +467,7 @@ class LongPressHandler(
         } else {
 
             val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            val appDir = File(picturesDir, "WebToApp")
+            val appDir = File(picturesDir, "Sherwood WTA")
             if (!appDir.exists()) appDir.mkdirs()
 
             val file = File(appDir, fileName)

@@ -29,7 +29,7 @@ class TlsMitmCaManagerTest {
         assertThat(TlsMitmCaManager.isCaInitialized()).isTrue()
         val caCert = TlsMitmCaManager.getCaCertificate()
         assertThat(caCert).isNotNull()
-        assertThat(caCert!!.issuerX500Principal.name).contains("WebToApp")
+        assertThat(caCert!!.issuerX500Principal.name).contains("Sherwood WTA")
     }
 
     @Test

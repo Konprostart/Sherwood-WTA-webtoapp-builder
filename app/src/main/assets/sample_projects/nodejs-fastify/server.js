@@ -85,7 +85,7 @@ body::before{content:'';position:fixed;top:-40%;left:-40%;width:180%;height:180%
 </div>
 <div class="card"><div class="card-h"><span class="card-t">🚀 服务器</span><span class="card-b" style="background:rgba(0,255,136,0.1);color:#00ff88">● 运行中</span></div><div class="info-grid"><div class="info"><div class="info-label">运行时间</div><div class="info-val" id="uptime">-</div></div><div class="info"><div class="info-label">请求数</div><div class="info-val" id="reqs">-</div></div><div class="info"><div class="info-label">堆内存</div><div class="info-val" id="heap">-</div></div><div class="info"><div class="info-label">RSS</div><div class="info-val" id="rss">-</div></div></div></div>
 <div class="card"><div class="card-h"><span class="card-t">📊 系统</span><span class="card-b">信息</span></div><div class="info-grid"><div class="info"><div class="info-label">平台</div><div class="info-val" id="plat">-</div></div><div class="info"><div class="info-label">架构</div><div class="info-val" id="arch">-</div></div><div class="info"><div class="info-label">Node.js</div><div class="info-val" id="node">-</div></div><div class="info"><div class="info-label">PID</div><div class="info-val">${process.pid}</div></div></div></div>
-<div class="ft"><div class="ft-b">⚡ Fastify · Node.js · WebToApp</div></div>
+<div class="ft"><div class="ft-b">⚡ Fastify · Node.js · Sherwood WTA</div></div>
 </div>
 <script>
 function fetchStats(){

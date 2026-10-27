@@ -113,7 +113,7 @@ body::before{content:'';position:fixed;top:-40%;left:-40%;width:180%;height:180%
 <div class="editor-actions"><button class="save-btn" onclick="saveNote()">保存</button><button class="cancel-btn" onclick="closeEditor()">取消</button></div>
 </div>
 <div class="notes" id="noteList"></div>
-<div class="ft"><div class="ft-b">📝 Koa · Node.js · WebToApp</div></div>
+<div class="ft"><div class="ft-b">📝 Koa · Node.js · Sherwood WTA</div></div>
 </div>
 <script>
 var notes=[],currentId=null;

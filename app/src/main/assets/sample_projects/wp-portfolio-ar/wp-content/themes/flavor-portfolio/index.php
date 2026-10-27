@@ -9,7 +9,7 @@
 <body>
     <section class="hero">
         <h1>🎨 معرض أعمالي</h1>
-        <p>نموذج معرض أعمال / موقع أعمال WordPress · تم إنشاؤه بواسطة WebToApp</p>
+        <p>نموذج معرض أعمال / موقع أعمال WordPress · تم إنشاؤه بواسطة Sherwood WTA</p>
     </section>
     <main class="portfolio-grid">
         <div class="portfolio-item">

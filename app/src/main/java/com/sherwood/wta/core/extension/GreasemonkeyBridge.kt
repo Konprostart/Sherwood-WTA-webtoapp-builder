@@ -60,7 +60,7 @@ class GreasemonkeyBridge(
             grants: ${JSONArray(grants)},
             resources: _resources
         },
-        scriptHandler: 'WebToApp',
+        scriptHandler: 'Sherwood WTA',
         version: '1.0'
     };
 

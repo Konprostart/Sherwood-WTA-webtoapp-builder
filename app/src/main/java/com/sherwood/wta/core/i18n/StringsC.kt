@@ -7444,8 +7444,8 @@ object StringsC {
         AppLanguage.FRENCH -> "Module d'extension \"%s\" - Sherwood WTA\n\nImportez ce fichier dans Sherwood WTA pour l'utiliser"
         AppLanguage.GERMAN -> "Erweiterungsmodul \"%s\" - Sherwood WTA\n\nDiese Datei in Sherwood WTA importieren, um zu verwenden"
         AppLanguage.RUSSIAN -> "Модуль расширения \"%s\" - Sherwood WTA\n\nИмпортируйте этот файл в Sherwood WTA для использования"
-        AppLanguage.JAPANESE -> "拡張モジュール「%s」- Sherwood WTA\n\nWebToAppでこのファイルをインポートして使用"
-        AppLanguage.KOREAN -> "확장 모듈 \"%s\" - Sherwood WTA\n\nWebToApp에서 이 파일을 가져와 사용"
+        AppLanguage.JAPANESE -> "拡張モジュール「%s」- Sherwood WTA\n\nSherwood WTAでこのファイルをインポートして使用"
+        AppLanguage.KOREAN -> "확장 모듈 \"%s\" - Sherwood WTA\n\nSherwood WTA에서 이 파일을 가져와 사용"
     }
 
     val extensionModuleSubtitle: String get() = when (Strings.lang) {
