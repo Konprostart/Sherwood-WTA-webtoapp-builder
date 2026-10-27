@@ -308,6 +308,7 @@ val syncShellRuntimeSources by tasks.registering(Sync::class) {
         "**/core/frontend/GitHubUrlPolicy.kt",
         "**/core/frontend/RepoBridgeMetadata.kt",
         "**/core/frontend/GitDataApiClient.kt",
+        "**/core/frontend/RepoBridgeCommitUseCase.kt",
 
         "**/core/extension/QrCodeUtils.kt",
         "**/core/extension/CodeSnippets.kt",
