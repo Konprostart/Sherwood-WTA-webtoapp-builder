@@ -2,6 +2,7 @@ package com.sherwood.wta.core.frontend
 
 import android.content.Context
 import com.sherwood.wta.core.logging.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -73,9 +74,9 @@ sealed class RepoBridgeCommitResult {
  * ref is advanced with `force=false` and the imported commit as the expected base.
  *
  * There is no local git repository and no manifest file, so a user can edit files
- * with any tool and still get an accurate diff. The client applies the size and
- * count limits below so a mis-click cannot upload a huge tree one request at a
- * time.
+ * with any tool and still get an accurate diff. The size limit below only applies to
+ * files that actually changed, and the file limit keeps one mis-click from uploading
+ * a huge tree one request at a time.
  */
 class RepoBridgeCommitUseCase(
     context: Context,
@@ -88,45 +89,72 @@ class RepoBridgeCommitUseCase(
 
     /** Reads the remote base tree and reports what a commit would upload. */
     suspend fun prepare(): RepoBridgePrepareResult = withContext(Dispatchers.IO) {
-        when (val loaded = loadPlan()) {
-            is PlanLoad.Error -> {
-                cachedPlan = null
-                RepoBridgePrepareResult.Failure(loaded.reason, loaded.detail)
-            }
-            is PlanLoad.Ok -> {
-                val scanned = scanLocal(loaded.plan.prefix)
-                if (scanned is ScanResult.Error) {
-                    cachedPlan = null
-                    return@withContext RepoBridgePrepareResult.Failure(
-                        scanned.reason,
-                        scanned.detail
-                    )
-                }
-                val files = (scanned as ScanResult.Ok).files
-                cachedPlan = loaded.plan
-                val metadata = loaded.plan.metadata
-                RepoBridgePrepareResult.Ready(
-                    owner = metadata.owner,
-                    repo = metadata.repo,
-                    branch = metadata.ref,
-                    baseSha = loaded.plan.baseSha,
-                    changes = diff(files, loaded.plan.remoteBlobs)
-                )
-            }
+        try {
+            prepareInternal()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Prepare failed: ${e.javaClass.simpleName}")
+            cachedPlan = null
+            RepoBridgePrepareResult.Failure(RepoBridgeCommitFailureKind.UNEXPECTED)
         }
+    }
+
+    private suspend fun prepareInternal(): RepoBridgePrepareResult {
+        val loaded = loadPlan()
+        if (loaded is PlanLoad.Error) {
+            cachedPlan = null
+            return RepoBridgePrepareResult.Failure(loaded.reason, loaded.detail)
+        }
+        val plan = (loaded as PlanLoad.Ok).plan
+        val scanned = scanLocal(plan.prefix)
+        if (scanned is ScanResult.Error) {
+            cachedPlan = null
+            return RepoBridgePrepareResult.Failure(scanned.reason, scanned.detail)
+        }
+        val files = (scanned as ScanResult.Ok).files
+        val changes = diff(files, plan.remoteBlobs)
+        val oversized = oversizedChange(changes, files)
+        if (oversized != null) {
+            cachedPlan = null
+            return RepoBridgePrepareResult.Failure(
+                RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
+                oversized
+            )
+        }
+        cachedPlan = plan
+        return RepoBridgePrepareResult.Ready(
+            owner = plan.metadata.owner,
+            repo = plan.metadata.repo,
+            branch = plan.metadata.ref,
+            baseSha = plan.baseSha,
+            changes = changes
+        )
     }
 
     /** Uploads the working copy on top of the imported commit and advances the branch. */
     suspend fun commit(message: String): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
+        try {
+            commitInternal(message)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Commit failed: ${e.javaClass.simpleName}")
+            cachedPlan = null
+            RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.UNEXPECTED)
+        }
+    }
+
+    private suspend fun commitInternal(message: String): RepoBridgeCommitResult {
         val trimmed = message.trim()
         if (trimmed.isEmpty()) {
-            return@withContext RepoBridgeCommitResult.Failure(
+            return RepoBridgeCommitResult.Failure(
                 RepoBridgeCommitFailureKind.NO_COMMIT_MESSAGE
             )
         }
 
         val plan = cachedPlan ?: when (val loaded = loadPlan()) {
-            is PlanLoad.Error -> return@withContext RepoBridgeCommitResult.Failure(
+            is PlanLoad.Error -> return RepoBridgeCommitResult.Failure(
                 loaded.reason,
                 loaded.detail
             )
@@ -135,23 +163,26 @@ class RepoBridgeCommitUseCase(
 
         val scanned = scanLocal(plan.prefix)
         if (scanned is ScanResult.Error) {
-            return@withContext RepoBridgeCommitResult.Failure(
-                scanned.reason,
-                scanned.detail
-            )
+            return RepoBridgeCommitResult.Failure(scanned.reason, scanned.detail)
         }
         val files = (scanned as ScanResult.Ok).files
         val changes = diff(files, plan.remoteBlobs)
 
         if (changes.isEmpty) {
-            return@withContext RepoBridgeCommitResult.Failure(
+            return RepoBridgeCommitResult.Failure(
                 RepoBridgeCommitFailureKind.NO_CHANGES
             )
         }
         if (changes.total > MAX_CHANGED_FILES) {
-            return@withContext RepoBridgeCommitResult.Failure(
+            return RepoBridgeCommitResult.Failure(
                 RepoBridgeCommitFailureKind.TOO_MANY_FILES,
                 "${changes.total}"
+            )
+        }
+        oversizedChange(changes, files)?.let { detail ->
+            return RepoBridgeCommitResult.Failure(
+                RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
+                detail
             )
         }
 
@@ -160,17 +191,11 @@ class RepoBridgeCommitUseCase(
 
         for (path in changes.added + changes.modified) {
             val local = files[path] ?: continue
-            if (local.size > MAX_FILE_BYTES) {
-                return@withContext RepoBridgeCommitResult.Failure(
-                    RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
-                    path
-                )
-            }
             val content = try {
                 local.file.readBytes()
             } catch (e: IOException) {
                 AppLogger.w(TAG, "Cannot read ${local.file.name}: ${e.javaClass.simpleName}")
-                return@withContext RepoBridgeCommitResult.Failure(
+                return RepoBridgeCommitResult.Failure(
                     RepoBridgeCommitFailureKind.IO_ERROR,
                     path
                 )
@@ -179,7 +204,7 @@ class RepoBridgeCommitUseCase(
                 is GitDataResult.Success ->
                     entries += GitTreeEntry(path, blob.value, mode = FILE_MODE)
                 is GitDataResult.Failure ->
-                    return@withContext RepoBridgeCommitResult.Failure(
+                    return RepoBridgeCommitResult.Failure(
                         blob.kind.toCommitFailure(),
                         blob.message
                     )
@@ -197,7 +222,7 @@ class RepoBridgeCommitUseCase(
             entries = entries
         )) {
             is GitDataResult.Success -> tree.value
-            is GitDataResult.Failure -> return@withContext RepoBridgeCommitResult.Failure(
+            is GitDataResult.Failure -> return RepoBridgeCommitResult.Failure(
                 tree.kind.toCommitFailure(),
                 tree.message
             )
@@ -211,7 +236,7 @@ class RepoBridgeCommitUseCase(
             parentSha = plan.baseSha
         )) {
             is GitDataResult.Success -> commit.value
-            is GitDataResult.Failure -> return@withContext RepoBridgeCommitResult.Failure(
+            is GitDataResult.Failure -> return RepoBridgeCommitResult.Failure(
                 commit.kind.toCommitFailure(),
                 commit.message
             )
@@ -229,7 +254,7 @@ class RepoBridgeCommitUseCase(
                 if (ref.kind == GitDataFailureKind.CONFLICT) {
                     cachedPlan = null
                 }
-                return@withContext RepoBridgeCommitResult.Failure(
+                return RepoBridgeCommitResult.Failure(
                     ref.kind.toCommitFailure(),
                     ref.message
                 )
@@ -316,45 +341,70 @@ class RepoBridgeCommitUseCase(
         val rootPath = root.path + File.separator
         val files = LinkedHashMap<String, LocalFile>()
 
-        val paths = root.walkTopDown()
-            .onEnter { it == root || it.name != GIT_DIR }
-            .filter { it.isFile }
-            .toList()
+        val pending = ArrayDeque<File>()
+        pending.addLast(root)
+        while (pending.isNotEmpty()) {
+            val dir = pending.removeLast()
+            val children = dir.listFiles() ?: continue
+            for (child in children) {
+                if (child.isDirectory) {
+                    if (child.name == GIT_DIR) continue
+                    if (isSymlink(child)) continue
+                    pending.addLast(child)
+                    continue
+                }
+                if (!child.isFile) continue
 
-        for (file in paths) {
-            val canonical = try {
-                file.canonicalFile
-            } catch (e: IOException) {
-                return ScanResult.Error(RepoBridgeCommitFailureKind.IO_ERROR, file.name)
+                val canonical = try {
+                    child.canonicalFile
+                } catch (e: IOException) {
+                    return ScanResult.Error(RepoBridgeCommitFailureKind.IO_ERROR, child.name)
+                }
+                if (!canonical.path.startsWith(rootPath)) continue
+
+                val relativePath = canonical.relativeTo(root).invariantSeparatorsPath
+                if (relativePath == RepoBridgeMetadataStore.FILE_NAME ||
+                    relativePath == "${RepoBridgeMetadataStore.FILE_NAME}.tmp"
+                ) {
+                    continue
+                }
+
+                val size = canonical.length()
+                val blobSha = try {
+                    gitBlobSha(canonical)
+                } catch (e: IOException) {
+                    return ScanResult.Error(RepoBridgeCommitFailureKind.IO_ERROR, relativePath)
+                }
+
+                val repoPath = prefix?.let { "$it$relativePath" } ?: relativePath
+                files[repoPath] = LocalFile(canonical, blobSha, size)
             }
-            if (!canonical.path.startsWith(rootPath)) continue
-
-            val relativePath = canonical.relativeTo(root).invariantSeparatorsPath
-            if (relativePath == RepoBridgeMetadataStore.FILE_NAME ||
-                relativePath == "${RepoBridgeMetadataStore.FILE_NAME}.tmp"
-            ) {
-                continue
-            }
-
-            val size = canonical.length()
-            if (size > MAX_FILE_BYTES) {
-                return ScanResult.Error(
-                    RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
-                    relativePath
-                )
-            }
-
-            val blobSha = try {
-                gitBlobSha(canonical)
-            } catch (e: IOException) {
-                return ScanResult.Error(RepoBridgeCommitFailureKind.IO_ERROR, relativePath)
-            }
-
-            val repoPath = prefix?.let { "$it$relativePath" } ?: relativePath
-            files[repoPath] = LocalFile(canonical, blobSha, size)
         }
 
         return ScanResult.Ok(files)
+    }
+
+    private fun isSymlink(file: File): Boolean = try {
+        file.canonicalPath != file.absolutePath
+    } catch (e: IOException) {
+        true
+    }
+
+    /**
+     * Reports the first path that changed and is too large to upload. Unchanged
+     * files never block a commit, however big they are, because they are not sent.
+     */
+    private fun oversizedChange(
+        changes: RepoBridgeChangeSet,
+        files: Map<String, LocalFile>
+    ): String? {
+        for (path in changes.added + changes.modified) {
+            val size = files[path]?.size ?: continue
+            if (size > MAX_FILE_BYTES) {
+                return "$path (${size / (1024 * 1024)} MB)"
+            }
+        }
+        return null
     }
 
     private fun diff(
@@ -438,7 +488,13 @@ class RepoBridgeCommitUseCase(
         private const val TAG = "RepoBridgeCommit"
 
         const val MAX_CHANGED_FILES = 1000
-        const val MAX_FILE_BYTES = 100L * 1024 * 1024
+
+        /**
+         * Per-file ceiling for changed files. Kept low because the upload path holds
+         * the bytes, the base64 string and the JSON body in memory at once; 10 MB
+         * peaks around 50 MB of heap on a phone.
+         */
+        const val MAX_FILE_BYTES = 10L * 1024 * 1024
         private const val FILE_MODE = "100644"
         private const val GIT_DIR = ".git"
 

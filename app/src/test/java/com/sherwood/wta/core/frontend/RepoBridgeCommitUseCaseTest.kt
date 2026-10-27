@@ -176,7 +176,9 @@ class RepoBridgeCommitUseCaseTest {
         assertThat(entries.map { it.first }).containsExactly("new.txt", "edit.txt", "old.txt")
         assertThat(entries.first { it.first == "new.txt" }.second.get("sha").asString).isEqualTo(BLOB_NEW)
         assertThat(entries.first { it.first == "edit.txt" }.second.get("sha").asString).isEqualTo(BLOB_EDIT)
-        assertThat(entries.first { it.first == "old.txt" }.second.has("sha")).isFalse()
+        val deletion = entries.first { it.first == "old.txt" }.second
+        assertThat(deletion.has("sha")).isTrue()
+        assertThat(deletion.get("sha").isJsonNull).isTrue()
 
         val commitRequest = server.takeRequest()
         assertThat(commitRequest.path).isEqualTo("/repos/$OWNER/$REPO/git/commits")
@@ -300,6 +302,96 @@ class RepoBridgeCommitUseCaseTest {
         val result = useCase().prepare() as RepoBridgePrepareResult.Failure
 
         assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.REMOTE_REJECTED)
+    }
+
+    @Test
+    fun `deleting a file sends an explicit null sha and nothing else`() = runBlocking {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        enqueueBase(
+            blobEntry("keep.txt", "same"),
+            blobEntry("old.txt", "bye")
+        )
+        server.enqueue(ok("""{"sha":"$NEW_TREE"}"""))
+        server.enqueue(ok("""{"sha":"$NEW_COMMIT"}"""))
+        server.enqueue(ok("""{"ref":"refs/heads/main","object":{"sha":"$BASE"}}"""))
+        server.enqueue(ok("""{"ref":"refs/heads/main","object":{"sha":"$NEW_COMMIT"}}"""))
+
+        val useCase = useCase()
+        assertThat(useCase.prepare()).isInstanceOf(RepoBridgePrepareResult.Ready::class.java)
+        val result = useCase.commit("Drop old file") as RepoBridgeCommitResult.Success
+        assertThat(result.changedFiles).isEqualTo(1)
+
+        server.takeRequest()
+        server.takeRequest()
+        val treeRequest = server.takeRequest()
+        val treeJson = JsonParser.parseString(treeRequest.body.readUtf8()).asJsonObject
+        val entries = treeJson.getAsJsonArray("tree").map { it.asJsonObject }
+        assertThat(entries).hasSize(1)
+        assertThat(entries.single().get("path").asString).isEqualTo("old.txt")
+        assertThat(entries.single().has("sha")).isTrue()
+        assertThat(entries.single().get("sha").isJsonNull).isTrue()
+        assertThat(server.requestCount).isEqualTo(6)
+    }
+
+    @Test
+    fun `unchanged oversized file does not block the commit`() = runBlocking {
+        writeMetadata()
+        val oversized = "x".repeat((RepoBridgeCommitUseCase.MAX_FILE_BYTES + 1L).toInt())
+        writeFile("huge.bin", oversized)
+        writeFile("edit.txt", "new")
+        enqueueBase(
+            blobEntry("huge.bin", oversized),
+            blobEntry("edit.txt", "old")
+        )
+        enqueueWrites(listOf(BLOB_EDIT))
+
+        val useCase = useCase()
+        val prepared = useCase.prepare() as RepoBridgePrepareResult.Ready
+        assertThat(prepared.changes.added).isEmpty()
+        assertThat(prepared.changes.modified).containsExactly("edit.txt")
+        assertThat(prepared.changes.deleted).isEmpty()
+
+        val result = useCase.commit("Edit") as RepoBridgeCommitResult.Success
+        assertThat(result.changedFiles).isEqualTo(1)
+    }
+
+    @Test
+    fun `changed oversized file fails before uploading anything`() = runBlocking {
+        writeMetadata()
+        val oversized = "x".repeat((RepoBridgeCommitUseCase.MAX_FILE_BYTES + 1L).toInt())
+        writeFile("huge.bin", oversized)
+        enqueueBase(blobEntry("huge.bin", "small"))
+
+        val result = useCase().prepare() as RepoBridgePrepareResult.Failure
+
+        assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.FILE_TOO_LARGE)
+        assertThat(result.detail).contains("huge.bin")
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `unexpected failure during prepare is reported instead of crashing`() = runBlocking {
+        writeMetadata()
+        writeFile("index.html", "hi")
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val broken = RepoBridgeCommitUseCase(
+            context = context,
+            projectDir = projectDir,
+            client = GitDataApiClient(
+                context = context,
+                tokenProvider = { throw IllegalStateException("boom") },
+                httpClient = OkHttpClient(),
+                apiBaseUrl = apiBase,
+                urlGuard = {}
+            ),
+            metadataStore = metadataStore
+        )
+
+        val result = broken.prepare() as RepoBridgePrepareResult.Failure
+
+        assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.UNEXPECTED)
+        assertThat(server.requestCount).isEqualTo(0)
     }
 
     private fun blobContent(body: String): String =

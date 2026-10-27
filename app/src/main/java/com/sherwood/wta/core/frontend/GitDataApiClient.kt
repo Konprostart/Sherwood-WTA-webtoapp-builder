@@ -3,9 +3,10 @@ package com.sherwood.wta.core.frontend
 import android.content.Context
 import android.util.Base64
 import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.google.gson.annotations.SerializedName
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.network.NetworkModule
 import kotlinx.coroutines.Dispatchers
@@ -190,12 +191,7 @@ class GitDataApiClient(
                 message = "No tree entries to create"
             )
         }
-        val payload = gson.toJson(
-            TreeRequest(
-                baseTree = baseTreeSha,
-                tree = entries.map { TreeEntryPayload(it.path, it.mode, "blob", it.sha) }
-            )
-        )
+        val payload = treePayload(baseTreeSha, entries)
         val url = apiUrl("repos", owner, repo, "git", "trees")
         request("POST", url, payload) { body ->
             parseObject(body)?.stringSha("sha")
@@ -368,21 +364,38 @@ class GitDataApiClient(
         return (fromJson ?: body).trim().take(MAX_ERROR_MESSAGE_LENGTH).takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * Builds the tree body by hand so a deletion carries an explicit `"sha": null`.
+     * Gson drops null fields by default, and GitHub only removes a path when the key
+     * is present with a null value.
+     */
+    private fun treePayload(baseTreeSha: String?, entries: List<GitTreeEntry>): String =
+        JsonObject().apply {
+            if (baseTreeSha != null) addProperty("base_tree", baseTreeSha)
+            add(
+                "tree",
+                JsonArray().apply {
+                    entries.forEach { entry ->
+                        add(
+                            JsonObject().apply {
+                                addProperty("path", entry.path)
+                                addProperty("mode", entry.mode)
+                                addProperty("type", "blob")
+                                if (entry.sha == null) {
+                                    add("sha", JsonNull.INSTANCE)
+                                } else {
+                                    addProperty("sha", entry.sha)
+                                }
+                            }
+                        )
+                    }
+                }
+            )
+        }.toString()
+
     private data class BlobRequest(
         val content: String,
         val encoding: String
-    )
-
-    private data class TreeRequest(
-        @SerializedName("base_tree") val baseTree: String?,
-        val tree: List<TreeEntryPayload>
-    )
-
-    private data class TreeEntryPayload(
-        val path: String,
-        val mode: String,
-        val type: String,
-        val sha: String?
     )
 
     private data class CommitRequest(
