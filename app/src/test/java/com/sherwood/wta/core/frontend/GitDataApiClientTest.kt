@@ -235,11 +235,43 @@ class GitDataApiClientTest {
     }
 
     @Test
-    fun `missing token fails locally without a request`() = runBlocking {
+    fun `missing token fails locally with NO_TOKEN and sends nothing`() = runBlocking {
         val result = client(token = null).createCommit(OWNER, REPO, "msg", NEW_TREE, BASE_COMMIT)
 
-        assertThat(result.failure().kind).isEqualTo(GitDataFailureKind.UNAUTHORIZED)
+        assertThat(result.failure().kind).isEqualTo(GitDataFailureKind.NO_TOKEN)
         assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `403 without a rate-limit signal maps to FORBIDDEN, not RATE_LIMITED`() = runBlocking {
+        server.enqueue(error(403, """{"message":"Resource not accessible by integration"}"""))
+
+        val result = client().createBlob(OWNER, REPO, "hello".toByteArray())
+
+        assertThat(result.failure().kind).isEqualTo(GitDataFailureKind.FORBIDDEN)
+        assertThat(result.failure().statusCode).isEqualTo(403)
+    }
+
+    @Test
+    fun `secondary rate limit with retry-after maps to RATE_LIMITED`() = runBlocking {
+        server.enqueue(
+            error(403, """{"message":"You have exceeded a secondary rate limit"}""")
+                .setHeader("retry-after", "60")
+        )
+
+        val result = client().createBlob(OWNER, REPO, "hello".toByteArray())
+
+        assertThat(result.failure().kind).isEqualTo(GitDataFailureKind.RATE_LIMITED)
+    }
+
+    @Test
+    fun `404 maps to NOT_FOUND`() = runBlocking {
+        server.enqueue(error(404, """{"message":"Not Found"}"""))
+
+        val result = client().createBlob(OWNER, REPO, "hello".toByteArray())
+
+        assertThat(result.failure().kind).isEqualTo(GitDataFailureKind.NOT_FOUND)
+        assertThat(result.failure().statusCode).isEqualTo(404)
     }
 
     private fun ok(body: String): MockResponse = MockResponse()

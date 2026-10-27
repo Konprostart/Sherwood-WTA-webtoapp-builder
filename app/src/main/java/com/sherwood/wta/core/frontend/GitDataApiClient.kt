@@ -20,9 +20,16 @@ import java.io.IOException
 
 /** Why a Git Data API call failed. */
 enum class GitDataFailureKind {
+    /** No token is saved, so nothing was sent to GitHub. */
+    NO_TOKEN,
+    /** GitHub answered 401: the saved token is invalid or expired. */
     UNAUTHORIZED,
+    /** GitHub answered 403 without a rate-limit signal: the token lacks access. */
     FORBIDDEN,
+    /** GitHub answered 429, or 403 with a rate-limit signal. */
     RATE_LIMITED,
+    /** GitHub answered 404: the repository or branch is missing or invisible to the token. */
+    NOT_FOUND,
     /** The remote branch no longer points at the expected commit. */
     CONFLICT,
     /** GitHub rejected the payload (422), e.g. a malformed tree entry. */
@@ -265,7 +272,7 @@ class GitDataApiClient(
     ): GitDataResult<T> {
         val token = tokenProvider.currentToken()?.takeIf { GitHubTokenFormat.isValid(it) }
             ?: return GitDataResult.Failure(
-                GitDataFailureKind.UNAUTHORIZED,
+                GitDataFailureKind.NO_TOKEN,
                 message = "No GitHub token configured"
             )
 
@@ -290,6 +297,7 @@ class GitDataApiClient(
                     return failureFor(
                         code = response.code,
                         rateLimitRemaining = response.header("x-ratelimit-remaining"),
+                        retryAfter = response.header("retry-after"),
                         message = extractErrorMessage(text)
                     )
                 }
@@ -313,16 +321,23 @@ class GitDataApiClient(
         }
     }
 
+    /**
+     * A 403 is a rate limit only with a rate-limit signal: an exhausted quota
+     * (`x-ratelimit-remaining: 0`) or a secondary limit that asks to wait (`retry-after`).
+     * Any other 403 means the token lacks access, which needs a different fix.
+     */
     private fun failureFor(
         code: Int,
         rateLimitRemaining: String?,
+        retryAfter: String?,
         message: String?
     ): GitDataResult.Failure = when {
         code == 401 -> GitDataResult.Failure(GitDataFailureKind.UNAUTHORIZED, code, message)
         code == 429 -> GitDataResult.Failure(GitDataFailureKind.RATE_LIMITED, code, message)
-        code == 403 && rateLimitRemaining == "0" ->
+        code == 403 && (rateLimitRemaining == "0" || retryAfter != null) ->
             GitDataResult.Failure(GitDataFailureKind.RATE_LIMITED, code, message)
         code == 403 -> GitDataResult.Failure(GitDataFailureKind.FORBIDDEN, code, message)
+        code == 404 -> GitDataResult.Failure(GitDataFailureKind.NOT_FOUND, code, message)
         code == 409 -> GitDataResult.Failure(GitDataFailureKind.CONFLICT, code, message)
         code == 422 && message?.contains("fast forward", ignoreCase = true) == true ->
             GitDataResult.Failure(GitDataFailureKind.CONFLICT, code, message)

@@ -26,6 +26,13 @@ data class RepoBridgeMetadata(
     val baseSha: String? = null,
     @SerializedName("subPath")
     val subPath: String? = null,
+    /**
+     * The commit a push is about to move the branch to. It is written before the ref
+     * update and cleared once [baseSha] catches up, so a failed metadata write after a
+     * successful push can be recovered on the next run.
+     */
+    @SerializedName("pendingBaseSha")
+    val pendingBaseSha: String? = null,
     @SerializedName("importedAt")
     val importedAtEpochMs: Long = System.currentTimeMillis()
 ) {
@@ -38,6 +45,7 @@ data class RepoBridgeMetadata(
         if (ref.any { it.isWhitespace() }) return false
         if (owner.contains('/') || repo.contains('/')) return false
         if (baseSha != null && !isSha(baseSha)) return false
+        if (pendingBaseSha != null && !isSha(pendingBaseSha)) return false
         if (subPath != null) {
             if (subPath.isBlank()) return false
             if (subPath.startsWith("/") || subPath.startsWith("\\")) return false

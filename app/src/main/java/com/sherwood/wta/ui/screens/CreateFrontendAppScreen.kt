@@ -1324,7 +1324,26 @@ private fun GitHubImportCard(
     if (showCommitDialog && commitProjectDir != null) {
         RepoBridgeCommitDialog(
             projectDir = commitProjectDir,
-            onDismiss = { showCommitDialog = false }
+            onDismiss = { showCommitDialog = false },
+            onReimport = {
+                // Same repository, branch and sub-path as the saved provenance. The fetch
+                // builds a new folder, so unpushed edits stay in the old one.
+                val meta = RepoBridgeMetadataStore().read(commitProjectDir)
+                if (meta != null) {
+                    showCommitDialog = false
+                    val input = "${meta.owner}/${meta.repo}"
+                    url = input
+                    branch = meta.ref
+                    subPath = meta.subPath.orEmpty()
+                    scope.launch {
+                        fetcher.fetch(
+                            input = input,
+                            explicitBranch = meta.ref,
+                            explicitSubPath = meta.subPath
+                        ).onSuccess(onFetched)
+                    }
+                }
+            }
         )
     }
 

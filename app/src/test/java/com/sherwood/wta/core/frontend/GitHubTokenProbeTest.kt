@@ -74,6 +74,15 @@ class GitHubTokenProbeTest {
     }
 
     @Test
+    fun `403 without a rate-limit signal maps to Forbidden`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(403).setBody("""{"message": "Forbidden"}"""))
+
+        val result = fetcher().probeToken(TOKEN)
+
+        assertThat(result).isEqualTo(GitHubTokenProbeResult.Forbidden)
+    }
+
+    @Test
     fun `403 maps to RateLimited`() = runBlocking {
         server.enqueue(
             MockResponse()

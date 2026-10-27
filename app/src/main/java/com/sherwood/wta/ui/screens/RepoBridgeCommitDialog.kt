@@ -56,7 +56,9 @@ import java.io.File
 fun RepoBridgeCommitDialog(
     projectDir: File,
     onDismiss: () -> Unit,
-    onCommitted: (String) -> Unit = {}
+    onCommitted: (String) -> Unit = {},
+    /** Fetches a fresh copy of the branch into a new project folder. Null hides the action. */
+    onReimport: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -239,6 +241,19 @@ fun RepoBridgeCommitDialog(
 
                 failure?.let { ErrorBlock(it.reason, it.detail) }
 
+                val blockingReason = failure?.reason
+                    ?: (preparation as? RepoBridgePrepareResult.Failure)?.reason
+                if (onReimport != null && !committing && blockingReason?.needsReimport() == true) {
+                    Text(
+                        Strings.repoBridgeReimportNote,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(onClick = onReimport) {
+                        Text(Strings.repoBridgeReimport)
+                    }
+                }
+
                 success?.let {
                     Text(
                         Strings.repoBridgeCommitSuccess(it.commitSha.take(7)),
@@ -281,16 +296,17 @@ private fun ErrorBlock(
 private fun RepoBridgeCommitFailureKind.description(): String = when (this) {
     RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED ->
         Strings.repoBridgeCommitErrorMassDeletion
+    RepoBridgeCommitFailureKind.FILE_TOO_LARGE -> Strings.repoBridgeCommitErrorTooLarge
     RepoBridgeCommitFailureKind.NO_METADATA,
     RepoBridgeCommitFailureKind.TOO_MANY_FILES,
-    RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
     RepoBridgeCommitFailureKind.IO_ERROR,
     RepoBridgeCommitFailureKind.NO_COMMIT_MESSAGE ->
         Strings.repoBridgeCommitErrorLocal
     RepoBridgeCommitFailureKind.NO_BASE -> Strings.repoBridgeCommitErrorNoBase
-    RepoBridgeCommitFailureKind.UNAUTHORIZED,
-    RepoBridgeCommitFailureKind.FORBIDDEN ->
-        Strings.repoBridgeCommitErrorAuth
+    RepoBridgeCommitFailureKind.NO_TOKEN -> Strings.repoBridgeCommitErrorNoToken
+    RepoBridgeCommitFailureKind.UNAUTHORIZED -> Strings.repoBridgeCommitErrorAuth
+    RepoBridgeCommitFailureKind.FORBIDDEN -> Strings.repoBridgeCommitErrorForbidden
+    RepoBridgeCommitFailureKind.NOT_FOUND -> Strings.repoBridgeCommitErrorNotFound
     RepoBridgeCommitFailureKind.RATE_LIMITED -> Strings.repoBridgeCommitErrorRateLimit
     RepoBridgeCommitFailureKind.CONFLICT -> Strings.repoBridgeCommitErrorConflict
     RepoBridgeCommitFailureKind.NETWORK -> Strings.repoBridgeCommitErrorNetwork
@@ -299,6 +315,10 @@ private fun RepoBridgeCommitFailureKind.description(): String = when (this) {
         Strings.repoBridgeCommitErrorRemote
     RepoBridgeCommitFailureKind.NO_CHANGES -> Strings.repoBridgeCommitNoChanges
 }
+
+/** Failures where the local copy can no longer be pushed and a fresh import is the fix. */
+private fun RepoBridgeCommitFailureKind.needsReimport(): Boolean =
+    this == RepoBridgeCommitFailureKind.CONFLICT || this == RepoBridgeCommitFailureKind.NO_BASE
 
 private fun RepoBridgeCommitFailureKind.isRetryable(): Boolean = when (this) {
     RepoBridgeCommitFailureKind.NETWORK,

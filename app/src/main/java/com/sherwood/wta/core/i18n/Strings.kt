@@ -5319,6 +5319,13 @@ object Strings {
     val repoBridgeCommitErrorNetwork: String get() = StringsE.repoBridgeCommitErrorNetwork
     val repoBridgeCommitErrorRemote: String get() = StringsE.repoBridgeCommitErrorRemote
     val repoBridgeCommitErrorMassDeletion: String get() = StringsE.repoBridgeCommitErrorMassDeletion
+    val repoBridgeCommitErrorTooLarge: String get() = StringsE.repoBridgeCommitErrorTooLarge
+    val repoBridgeCommitErrorNoToken: String get() = StringsE.repoBridgeCommitErrorNoToken
+    val repoBridgeCommitErrorForbidden: String get() = StringsE.repoBridgeCommitErrorForbidden
+    val repoBridgeCommitErrorNotFound: String get() = StringsE.repoBridgeCommitErrorNotFound
+    val repoBridgeReimport: String get() = StringsE.repoBridgeReimport
+    val repoBridgeReimportNote: String get() = StringsE.repoBridgeReimportNote
+    val gitTokenProbeForbidden: String get() = StringsE.gitTokenProbeForbidden
     val repoBridgeMassDeletionConfirm: String get() = StringsE.repoBridgeMassDeletionConfirm
     fun repoBridgeMassDeletionWarning(deleted: Int, total: Int): String =
         StringsE.repoBridgeMassDeletionWarning(deleted, total)

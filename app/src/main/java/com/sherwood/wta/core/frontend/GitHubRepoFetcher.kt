@@ -51,6 +51,8 @@ sealed class GitHubTokenProbeResult {
     object InvalidToken : GitHubTokenProbeResult()
     object Unauthorized : GitHubTokenProbeResult()
     object RateLimited : GitHubTokenProbeResult()
+    /** 403 without a rate-limit signal: the token is valid but cannot access GitHub this way. */
+    object Forbidden : GitHubTokenProbeResult()
     object NetworkError : GitHubTokenProbeResult()
     object UnexpectedResponse : GitHubTokenProbeResult()
     data class HttpError(val code: Int) : GitHubTokenProbeResult()
@@ -225,7 +227,12 @@ class GitHubRepoFetcher(
                             }
                         }
                         resp.code == 401 -> GitHubTokenProbeResult.Unauthorized
-                        resp.code == 403 || resp.code == 429 -> GitHubTokenProbeResult.RateLimited
+                        resp.code == 429 ||
+                            (resp.code == 403 &&
+                                (resp.header("x-ratelimit-remaining") == "0" ||
+                                    resp.header("retry-after") != null)) ->
+                            GitHubTokenProbeResult.RateLimited
+                        resp.code == 403 -> GitHubTokenProbeResult.Forbidden
                         else -> GitHubTokenProbeResult.HttpError(resp.code)
                     }
                 }

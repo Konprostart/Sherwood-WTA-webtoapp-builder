@@ -133,6 +133,7 @@ fun GitSettingsScreen(
                 GitHubTokenProbeResult.InvalidToken -> Strings.gitTokenInvalid to true
                 GitHubTokenProbeResult.Unauthorized -> Strings.gitTokenProbeUnauthorized to true
                 GitHubTokenProbeResult.RateLimited -> Strings.gitTokenProbeRateLimited to true
+                GitHubTokenProbeResult.Forbidden -> Strings.gitTokenProbeForbidden to true
                 GitHubTokenProbeResult.NetworkError -> Strings.gitTokenProbeNetwork to true
                 GitHubTokenProbeResult.UnexpectedResponse -> Strings.gitTokenProbeUnexpected to true
                 is GitHubTokenProbeResult.HttpError -> Strings.gitTokenProbeHttpError(result.code) to true

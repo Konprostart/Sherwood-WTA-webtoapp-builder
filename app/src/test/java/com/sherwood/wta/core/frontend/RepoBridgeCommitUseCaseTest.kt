@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -241,7 +242,7 @@ class RepoBridgeCommitUseCaseTest {
 
         val result = useCase(token = null).prepare() as RepoBridgePrepareResult.Failure
 
-        assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.UNAUTHORIZED)
+        assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.NO_TOKEN)
         assertThat(server.requestCount).isEqualTo(0)
     }
 
@@ -500,6 +501,118 @@ class RepoBridgeCommitUseCaseTest {
         val result = useCase().commit("drop two of four")
 
         assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+    }
+
+    private fun modeEntry(path: String, content: String, mode: String): String =
+        """{"path":"$path","mode":"$mode","type":"blob","sha":"${gitBlobSha(content)}"}"""
+
+    /** Maps each path in a tree request body to its mode. */
+    private fun modesSentIn(request: RecordedRequest): Map<String, String> {
+        val tree = JsonParser.parseString(request.body.readUtf8())
+            .asJsonObject.getAsJsonArray("tree")
+        return tree.associate { entry ->
+            val obj = entry.asJsonObject
+            obj.get("path").asString to obj.get("mode").asString
+        }
+    }
+
+    @Test
+    fun `modified executable and symlink keep the mode they have on GitHub`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("run.sh", "echo new")
+        writeFile("link", "target-new")
+        server.enqueue(ok("""{"sha":"$BASE","tree":{"sha":"$BASE_TREE"}}"""))
+        server.enqueue(
+            ok(
+                """{"sha":"$BASE_TREE","tree":[${modeEntry("run.sh", "echo old", "100755")},""" +
+                    """${modeEntry("link", "target-old", "120000")}],"truncated":false}"""
+            )
+        )
+        enqueueWrites(listOf(BLOB_EDIT, BLOB_NEW))
+
+        val result = useCase().commit("Keep modes")
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+        repeat(4) { server.takeRequest() } // base commit, base tree, two blobs
+        val treeRequest = server.takeRequest()
+        assertThat(modesSentIn(treeRequest)).containsExactly(
+            "run.sh", "100755",
+            "link", "120000"
+        )
+    }
+
+    @Test
+    fun `a new file is pushed as a regular file`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("fresh.sh", "echo hi")
+        enqueueBase(blobEntry("keep.txt", "same"))
+        enqueueWrites(listOf(BLOB_NEW))
+
+        useCase().commit("Add script")
+
+        repeat(3) { server.takeRequest() } // base commit, base tree, blob
+        assertThat(modesSentIn(server.takeRequest())).containsExactly("fresh.sh", "100644")
+    }
+
+    @Test
+    fun `a pending base that the branch already points at is adopted`() = runBlocking<Unit> {
+        writeMetadata()
+        metadataStore.write(
+            projectDir,
+            metadataStore.read(projectDir)!!.copy(pendingBaseSha = NEW_COMMIT)
+        )
+        writeFile("keep.txt", "same")
+        server.enqueue(ok("""{"ref":"refs/heads/main","object":{"sha":"$NEW_COMMIT"}}"""))
+        server.enqueue(ok("""{"sha":"$NEW_COMMIT","tree":{"sha":"$NEW_TREE"}}"""))
+        server.enqueue(
+            ok(
+                """{"sha":"$NEW_TREE","tree":[${blobEntry("keep.txt", "same")}],"truncated":false}"""
+            )
+        )
+
+        val prepared = useCase().prepare() as RepoBridgePrepareResult.Ready
+
+        assertThat(prepared.baseSha).isEqualTo(NEW_COMMIT)
+        assertThat(prepared.changes.isEmpty).isTrue()
+        val saved = metadataStore.read(projectDir)!!
+        assertThat(saved.baseSha).isEqualTo(NEW_COMMIT)
+        assertThat(saved.pendingBaseSha).isNull()
+    }
+
+    @Test
+    fun `a stale pending base is dropped when the branch still points at the old base`() =
+        runBlocking<Unit> {
+            writeMetadata()
+            metadataStore.write(
+                projectDir,
+                metadataStore.read(projectDir)!!.copy(pendingBaseSha = NEW_COMMIT)
+            )
+            writeFile("keep.txt", "same")
+            server.enqueue(ok("""{"ref":"refs/heads/main","object":{"sha":"$BASE"}}"""))
+            enqueueBase(blobEntry("keep.txt", "same"))
+
+            val prepared = useCase().prepare() as RepoBridgePrepareResult.Ready
+
+            assertThat(prepared.baseSha).isEqualTo(BASE)
+            val saved = metadataStore.read(projectDir)!!
+            assertThat(saved.baseSha).isEqualTo(BASE)
+            assertThat(saved.pendingBaseSha).isNull()
+        }
+
+    @Test
+    fun `a successful push records the new base and clears the pending sha`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("edit.txt", "new")
+        enqueueBase(blobEntry("edit.txt", "old"))
+        enqueueWrites(listOf(BLOB_EDIT))
+
+        val result = useCase().commit("Edit")
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+        val saved = metadataStore.read(projectDir)!!
+        assertThat(saved.baseSha).isEqualTo(NEW_COMMIT)
+        assertThat(saved.pendingBaseSha).isNull()
     }
 
     private fun ok(body: String): MockResponse = MockResponse()

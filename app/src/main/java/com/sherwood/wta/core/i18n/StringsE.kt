@@ -17041,16 +17041,16 @@ object StringsE {
     }
 
     val gitTokenProbeRateLimited: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "已达到速率限制或权限不足（403）。请稍后再试。"
-        AppLanguage.ENGLISH -> "Rate limit reached or permission denied (403). Try again later."
-        AppLanguage.ARABIC -> "تم بلوغ حد المعدل أو تم رفض الإذن (403). حاول لاحقًا."
-        AppLanguage.PORTUGUESE -> "Limite de requisições atingido ou permissão negada (403). Tente novamente mais tarde."
-        AppLanguage.SPANISH -> "Se alcanzó el límite de solicitudes o se denegó el permiso (403). Inténtalo más tarde."
-        AppLanguage.FRENCH -> "Limite de requêtes atteinte ou autorisation refusée (403). Réessayez plus tard."
-        AppLanguage.GERMAN -> "Ratenlimit erreicht oder Berechtigung verweigert (403). Versuche es später erneut."
-        AppLanguage.RUSSIAN -> "Достигнут лимит запросов или недостаточно прав (403). Повторите позже."
-        AppLanguage.JAPANESE -> "レート制限に達したか権限がありません（403）。後でもう一度お試しください。"
-        AppLanguage.KOREAN -> "요청 한도에 도달했거나 권한이 없습니다(403). 나중에 다시 시도하세요."
+        AppLanguage.CHINESE -> "已达到 GitHub 速率限制。请稍后再试。"
+        AppLanguage.ENGLISH -> "GitHub rate limit reached. Try again later."
+        AppLanguage.ARABIC -> "تم بلوغ حد معدل GitHub. حاول لاحقًا."
+        AppLanguage.PORTUGUESE -> "Limite de requisições do GitHub atingido. Tente mais tarde."
+        AppLanguage.SPANISH -> "Se alcanzó el límite de solicitudes de GitHub. Inténtalo más tarde."
+        AppLanguage.FRENCH -> "Limite de requêtes GitHub atteinte. Réessayez plus tard."
+        AppLanguage.GERMAN -> "GitHub-Ratenlimit erreicht. Versuche es später erneut."
+        AppLanguage.RUSSIAN -> "Достигнут лимит запросов GitHub. Повторите позже."
+        AppLanguage.JAPANESE -> "GitHub のレート制限に達しました。後でもう一度お試しください。"
+        AppLanguage.KOREAN -> "GitHub 요청 한도에 도달했습니다. 나중에 다시 시도하세요."
     }
 
     val gitTokenProbeNetwork: String get() = when (Strings.lang) {
@@ -17224,16 +17224,16 @@ object StringsE {
     }
 
     val repoBridgeCommitErrorLocal: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "无法推送此项目文件夹。请确认它是导入的仓库，且没有文件超过 100 MB。"
-        AppLanguage.ENGLISH -> "The project folder cannot be pushed. Check that it is an imported repository and no file exceeds 100 MB."
-        AppLanguage.ARABIC -> "لا يمكن دفع مجلد المشروع. تأكد من أنه مستودع مستورد وأنه لا يوجد ملف يتجاوز 100 ميغابايت."
-        AppLanguage.PORTUGUESE -> "A pasta do projeto não pode ser enviada. Verifique se é um repositório importado e se nenhum arquivo excede 100 MB."
-        AppLanguage.SPANISH -> "No se puede subir la carpeta del proyecto. Comprueba que sea un repositorio importado y que ningún archivo supere los 100 MB."
-        AppLanguage.FRENCH -> "Le dossier du projet ne peut pas être poussé. Vérifiez qu'il s'agit d'un dépôt importé et qu'aucun fichier ne dépasse 100 Mo."
-        AppLanguage.GERMAN -> "Der Projektordner kann nicht gepusht werden. Prüfe, ob es ein importiertes Repository ist und keine Datei 100 MB überschreitet."
-        AppLanguage.RUSSIAN -> "Папку проекта нельзя отправить. Убедитесь, что это импортированный репозиторий и ни один файл не превышает 100 МБ."
-        AppLanguage.JAPANESE -> "プロジェクトフォルダーをプッシュできません。インポートしたリポジトリであること、100 MB を超えるファイルがないことを確認してください。"
-        AppLanguage.KOREAN -> "프로젝트 폴더를 푸시할 수 없습니다. 가져온 저장소인지, 100MB를 초과하는 파일이 없는지 확인하세요."
+        AppLanguage.CHINESE -> "无法推送此项目文件夹。请确认它是导入的仓库。"
+        AppLanguage.ENGLISH -> "The project folder cannot be pushed. Check that it is an imported repository."
+        AppLanguage.ARABIC -> "لا يمكن دفع مجلد المشروع. تأكد من أنه مستودع مستورد."
+        AppLanguage.PORTUGUESE -> "A pasta do projeto não pode ser enviada. Verifique se é um repositório importado."
+        AppLanguage.SPANISH -> "No se puede subir la carpeta del proyecto. Comprueba que sea un repositorio importado."
+        AppLanguage.FRENCH -> "Le dossier du projet ne peut pas être poussé. Vérifiez qu'il s'agit d'un dépôt importé."
+        AppLanguage.GERMAN -> "Der Projektordner kann nicht gepusht werden. Prüfe, ob es ein importiertes Repository ist."
+        AppLanguage.RUSSIAN -> "Папку проекта нельзя отправить. Убедитесь, что это импортированный репозиторий."
+        AppLanguage.JAPANESE -> "プロジェクトフォルダーをプッシュできません。インポートしたリポジトリであることを確認してください。"
+        AppLanguage.KOREAN -> "프로젝트 폴더를 푸시할 수 없습니다. 가져온 저장소인지 확인하세요."
     }
 
     val repoBridgeCommitErrorNoBase: String get() = when (Strings.lang) {
@@ -17250,42 +17250,42 @@ object StringsE {
     }
 
     val repoBridgeCommitErrorAuth: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "GitHub 拒绝了令牌。请在 Git 访问设置中检查 PAT。"
-        AppLanguage.ENGLISH -> "GitHub rejected the token. Check your PAT in Git access settings."
-        AppLanguage.ARABIC -> "رفض GitHub الرمز. تحقق من PAT في إعدادات وصول Git."
-        AppLanguage.PORTUGUESE -> "O GitHub rejeitou o token. Verifique seu PAT nas configurações de acesso Git."
-        AppLanguage.SPANISH -> "GitHub rechazó el token. Revisa tu PAT en los ajustes de acceso Git."
-        AppLanguage.FRENCH -> "GitHub a rejeté le jeton. Vérifiez votre PAT dans les paramètres d'accès Git."
-        AppLanguage.GERMAN -> "GitHub hat das Token abgelehnt. Prüfe dein PAT in den Git-Zugriffseinstellungen."
-        AppLanguage.RUSSIAN -> "GitHub отклонил токен. Проверьте PAT в настройках доступа Git."
-        AppLanguage.JAPANESE -> "GitHub がトークンを拒否しました。Git アクセス設定で PAT を確認してください。"
-        AppLanguage.KOREAN -> "GitHub에서 토큰을 거부했습니다. Git 액세스 설정에서 PAT를 확인하세요."
+        AppLanguage.CHINESE -> "GitHub 拒绝了令牌 (401)。令牌无效或已过期。请在 Git 访问设置中保存新的 PAT。"
+        AppLanguage.ENGLISH -> "GitHub rejected the token (401). It is invalid or expired. Save a new PAT in Git access settings."
+        AppLanguage.ARABIC -> "رفض GitHub الرمز (401). الرمز غير صالح أو منتهي الصلاحية. احفظ PAT جديدًا في إعدادات وصول Git."
+        AppLanguage.PORTUGUESE -> "O GitHub rejeitou o token (401). Ele é inválido ou expirou. Salve um novo PAT nas configurações de acesso Git."
+        AppLanguage.SPANISH -> "GitHub rechazó el token (401). No es válido o ha caducado. Guarda un PAT nuevo en los ajustes de acceso Git."
+        AppLanguage.FRENCH -> "GitHub a rejeté le jeton (401). Il est invalide ou expiré. Enregistrez un nouveau PAT dans les paramètres d'accès Git."
+        AppLanguage.GERMAN -> "GitHub hat das Token abgelehnt (401). Es ist ungültig oder abgelaufen. Speichere einen neuen PAT in den Git-Zugriffseinstellungen."
+        AppLanguage.RUSSIAN -> "GitHub отклонил токен (401). Он недействителен или истёк. Сохраните новый PAT в настройках доступа Git."
+        AppLanguage.JAPANESE -> "GitHub がトークンを拒否しました (401)。無効または期限切れです。Git アクセス設定で新しい PAT を保存してください。"
+        AppLanguage.KOREAN -> "GitHub가 토큰을 거부했습니다 (401). 유효하지 않거나 만료되었습니다. Git 액세스 설정에서 새 PAT를 저장하세요."
     }
 
     val repoBridgeCommitErrorRateLimit: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "已达到 GitHub 速率限制。请稍后再试。"
-        AppLanguage.ENGLISH -> "GitHub rate limit reached. Try again later."
-        AppLanguage.ARABIC -> "تم بلوغ حد معدل GitHub. حاول لاحقًا."
-        AppLanguage.PORTUGUESE -> "Limite de requisições do GitHub atingido. Tente mais tarde."
-        AppLanguage.SPANISH -> "Se alcanzó el límite de solicitudes de GitHub. Inténtalo más tarde."
-        AppLanguage.FRENCH -> "Limite de requêtes GitHub atteinte. Réessayez plus tard."
-        AppLanguage.GERMAN -> "GitHub-Ratenlimit erreicht. Versuche es später erneut."
-        AppLanguage.RUSSIAN -> "Достигнут лимит запросов GitHub. Повторите позже."
-        AppLanguage.JAPANESE -> "GitHub のレート制限に達しました。後でもう一度お試しください。"
-        AppLanguage.KOREAN -> "GitHub 요청 한도에 도달했습니다. 나중에 다시 시도하세요."
+        AppLanguage.CHINESE -> "已达到 GitHub 速率限制 (403/429)。请等待几分钟后再试。"
+        AppLanguage.ENGLISH -> "GitHub rate limit reached (403/429). Wait a few minutes, then try again."
+        AppLanguage.ARABIC -> "تم بلوغ حد معدل GitHub (403/429). انتظر بضع دقائق ثم حاول مجددًا."
+        AppLanguage.PORTUGUESE -> "Limite de requisições do GitHub atingido (403/429). Aguarde alguns minutos e tente novamente."
+        AppLanguage.SPANISH -> "Se alcanzó el límite de solicitudes de GitHub (403/429). Espera unos minutos y vuelve a intentarlo."
+        AppLanguage.FRENCH -> "Limite de requêtes GitHub atteinte (403/429). Attendez quelques minutes, puis réessayez."
+        AppLanguage.GERMAN -> "GitHub-Ratenlimit erreicht (403/429). Warte ein paar Minuten und versuche es erneut."
+        AppLanguage.RUSSIAN -> "Достигнут лимит запросов GitHub (403/429). Подождите несколько минут и повторите."
+        AppLanguage.JAPANESE -> "GitHub のレート制限に達しました (403/429)。数分待ってから再試行してください。"
+        AppLanguage.KOREAN -> "GitHub 요청 한도에 도달했습니다 (403/429). 몇 분 후 다시 시도하세요."
     }
 
     val repoBridgeCommitErrorConflict: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "分支在 GitHub 上已变更。请重新导入或拉取最新更改后再推送。"
-        AppLanguage.ENGLISH -> "The branch changed on GitHub. Re-import or pull the latest changes before pushing again."
-        AppLanguage.ARABIC -> "تغيّر الفرع على GitHub. أعد الاستيراد أو اسحب أحدث التغييرات قبل الدفع مجددًا."
-        AppLanguage.PORTUGUESE -> "O branch mudou no GitHub. Reimporte ou atualize as alterações antes de enviar novamente."
-        AppLanguage.SPANISH -> "La rama cambió en GitHub. Vuelve a importar o actualiza los cambios antes de subir de nuevo."
-        AppLanguage.FRENCH -> "La branche a changé sur GitHub. Réimportez ou récupérez les dernières modifications avant de pousser à nouveau."
-        AppLanguage.GERMAN -> "Der Branch hat sich auf GitHub geändert. Importiere erneut oder hole die neuesten Änderungen, bevor du wieder pushst."
-        AppLanguage.RUSSIAN -> "Ветка изменилась на GitHub. Повторно импортируйте или получите последние изменения перед отправкой."
-        AppLanguage.JAPANESE -> "GitHub 上でブランチが変更されました。再インポートするか最新の変更を取得してから再度プッシュしてください。"
-        AppLanguage.KOREAN -> "GitHub에서 브랜치가 변경되었습니다. 다시 가져오거나 최신 변경 사항을 받은 후 다시 푸시하세요."
+        AppLanguage.CHINESE -> "自此副本导入以来，分支已在 GitHub 上变更。请重新导入仓库以继续。"
+        AppLanguage.ENGLISH -> "The branch changed on GitHub since this copy was imported. Re-import the repository to continue."
+        AppLanguage.ARABIC -> "تغيّر الفرع على GitHub منذ استيراد هذه النسخة. أعد استيراد المستودع للمتابعة."
+        AppLanguage.PORTUGUESE -> "O branch mudou no GitHub desde a importação desta cópia. Reimporte o repositório para continuar."
+        AppLanguage.SPANISH -> "La rama cambió en GitHub desde que se importó esta copia. Vuelve a importar el repositorio para continuar."
+        AppLanguage.FRENCH -> "La branche a changé sur GitHub depuis l'import de cette copie. Réimportez le dépôt pour continuer."
+        AppLanguage.GERMAN -> "Der Branch hat sich auf GitHub seit dem Import dieser Kopie geändert. Importiere das Repository erneut, um fortzufahren."
+        AppLanguage.RUSSIAN -> "Ветка изменилась на GitHub после импорта этой копии. Повторно импортируйте репозиторий, чтобы продолжить."
+        AppLanguage.JAPANESE -> "このコピーのインポート後にGitHub上のブランチが変更されました。続行するにはリポジトリを再インポートしてください。"
+        AppLanguage.KOREAN -> "이 복사본을 가져온 이후 GitHub에서 브랜치가 변경되었습니다. 계속하려면 저장소를 다시 가져오세요."
     }
 
     val repoBridgeCommitErrorNetwork: String get() = when (Strings.lang) {
@@ -17339,6 +17339,97 @@ object StringsE {
         AppLanguage.RUSSIAN -> "Отправка удалит большую часть репозитория. Подтвердите удаление, чтобы продолжить."
         AppLanguage.JAPANESE -> "このプッシュではリポジトリの大部分が削除されます。続行するには削除を確認してください。"
         AppLanguage.KOREAN -> "이 푸시는 저장소의 대부분을 삭제합니다. 계속하려면 삭제를 확인하세요."
+    }
+
+    val repoBridgeCommitErrorTooLarge: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "有变更的文件超过 10 MB，无法推送。"
+        AppLanguage.ENGLISH -> "A changed file is larger than 10 MB and cannot be pushed."
+        AppLanguage.ARABIC -> "يتجاوز ملف معدّل 10 ميغابايت ولا يمكن دفعه."
+        AppLanguage.PORTUGUESE -> "Um arquivo alterado é maior que 10 MB e não pode ser enviado."
+        AppLanguage.SPANISH -> "Un archivo modificado supera los 10 MB y no se puede subir."
+        AppLanguage.FRENCH -> "Un fichier modifié dépasse 10 Mo et ne peut pas être poussé."
+        AppLanguage.GERMAN -> "Eine geänderte Datei ist größer als 10 MB und kann nicht gepusht werden."
+        AppLanguage.RUSSIAN -> "Изменённый файл больше 10 МБ и не может быть отправлен."
+        AppLanguage.JAPANESE -> "変更されたファイルが 10 MB を超えているため、プッシュできません。"
+        AppLanguage.KOREAN -> "변경된 파일이 10MB를 초과하여 푸시할 수 없습니다."
+    }
+
+    val repoBridgeCommitErrorNoToken: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "尚未保存 GitHub 令牌。请在 设置 → Git 访问 中添加令牌后重试。"
+        AppLanguage.ENGLISH -> "No GitHub token is saved. Add one in Settings → Git access, then try again."
+        AppLanguage.ARABIC -> "لا يوجد رمز GitHub محفوظ. أضف رمزًا في الإعدادات ← وصول Git ثم أعد المحاولة."
+        AppLanguage.PORTUGUESE -> "Nenhum token do GitHub salvo. Adicione um em Configurações → Acesso Git e tente novamente."
+        AppLanguage.SPANISH -> "No hay ningún token de GitHub guardado. Añade uno en Ajustes → Acceso Git y vuelve a intentarlo."
+        AppLanguage.FRENCH -> "Aucun jeton GitHub enregistré. Ajoutez-en un dans Paramètres → Accès Git, puis réessayez."
+        AppLanguage.GERMAN -> "Kein GitHub-Token gespeichert. Füge eines unter Einstellungen → Git-Zugriff hinzu und versuche es erneut."
+        AppLanguage.RUSSIAN -> "Токен GitHub не сохранён. Добавьте его в Настройки → Доступ Git и повторите."
+        AppLanguage.JAPANESE -> "GitHub トークンが保存されていません。設定 → Git アクセスで追加してから再試行してください。"
+        AppLanguage.KOREAN -> "저장된 GitHub 토큰이 없습니다. 설정 → Git 액세스에서 추가한 후 다시 시도하세요."
+    }
+
+    val repoBridgeCommitErrorForbidden: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "GitHub 拒绝访问 (403)。令牌可能没有该仓库的写入权限。"
+        AppLanguage.ENGLISH -> "GitHub denied access (403). The token may lack write permission for this repository."
+        AppLanguage.ARABIC -> "رفض GitHub الوصول (403). قد لا يملك الرمز صلاحية الكتابة لهذا المستودع."
+        AppLanguage.PORTUGUESE -> "O GitHub negou o acesso (403). O token pode não ter permissão de escrita neste repositório."
+        AppLanguage.SPANISH -> "GitHub denegó el acceso (403). El token puede no tener permiso de escritura en este repositorio."
+        AppLanguage.FRENCH -> "GitHub a refusé l'accès (403). Le jeton n'a peut-être pas le droit d'écriture sur ce dépôt."
+        AppLanguage.GERMAN -> "GitHub hat den Zugriff verweigert (403). Dem Token fehlt möglicherweise das Schreibrecht für dieses Repository."
+        AppLanguage.RUSSIAN -> "GitHub отказал в доступе (403). Возможно, у токена нет права записи в этот репозиторий."
+        AppLanguage.JAPANESE -> "GitHub がアクセスを拒否しました (403)。このリポジトリへの書き込み権限がトークンにない可能性があります。"
+        AppLanguage.KOREAN -> "GitHub가 접근을 거부했습니다 (403). 이 저장소에 대한 쓰기 권한이 토큰에 없을 수 있습니다."
+    }
+
+    val repoBridgeCommitErrorNotFound: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "未找到仓库或分支 (404)。请检查 URL，或确认令牌可以访问该仓库。"
+        AppLanguage.ENGLISH -> "Repository or branch not found (404). Check the URL, or confirm the token can access this repository."
+        AppLanguage.ARABIC -> "لم يُعثر على المستودع أو الفرع (404). تحقق من الرابط، أو تأكد من أن الرمز يستطيع الوصول إلى هذا المستودع."
+        AppLanguage.PORTUGUESE -> "Repositório ou branch não encontrado (404). Verifique a URL ou confirme que o token tem acesso a este repositório."
+        AppLanguage.SPANISH -> "No se encontró el repositorio o la rama (404). Revisa la URL o confirma que el token tiene acceso a este repositorio."
+        AppLanguage.FRENCH -> "Dépôt ou branche introuvable (404). Vérifiez l'URL ou confirmez que le jeton peut accéder à ce dépôt."
+        AppLanguage.GERMAN -> "Repository oder Branch nicht gefunden (404). Prüfe die URL oder ob das Token Zugriff auf dieses Repository hat."
+        AppLanguage.RUSSIAN -> "Репозиторий или ветка не найдены (404). Проверьте URL или убедитесь, что токен имеет доступ к репозиторию."
+        AppLanguage.JAPANESE -> "リポジトリまたはブランチが見つかりません (404)。URL を確認するか、トークンがこのリポジトリにアクセスできるか確認してください。"
+        AppLanguage.KOREAN -> "저장소 또는 브랜치를 찾을 수 없습니다 (404). URL을 확인하거나 토큰이 이 저장소에 접근할 수 있는지 확인하세요."
+    }
+
+    val repoBridgeReimport: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "重新导入分支"
+        AppLanguage.ENGLISH -> "Re-import branch"
+        AppLanguage.ARABIC -> "أعد استيراد الفرع"
+        AppLanguage.PORTUGUESE -> "Reimportar branch"
+        AppLanguage.SPANISH -> "Reimportar rama"
+        AppLanguage.FRENCH -> "Réimporter la branche"
+        AppLanguage.GERMAN -> "Branch erneut importieren"
+        AppLanguage.RUSSIAN -> "Повторно импортировать ветку"
+        AppLanguage.JAPANESE -> "ブランチを再インポート"
+        AppLanguage.KOREAN -> "브랜치 다시 가져오기"
+    }
+
+    val repoBridgeReimportNote: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "将分支的新副本下载到新的项目文件夹中。此文件夹中未推送的更改不会带过去。"
+        AppLanguage.ENGLISH -> "Fetches a fresh copy of the branch into a new project folder. Unpushed changes in this folder are not carried over."
+        AppLanguage.ARABIC -> "يجلب نسخة جديدة من الفرع إلى مجلد مشروع جديد. التغييرات غير المرسلة في هذا المجلد لن تُنقل."
+        AppLanguage.PORTUGUESE -> "Baixa uma cópia nova do branch para uma nova pasta de projeto. Alterações não enviadas nesta pasta não são transferidas."
+        AppLanguage.SPANISH -> "Descarga una copia nueva de la rama en una carpeta de proyecto nueva. Los cambios no subidos de esta carpeta no se trasladan."
+        AppLanguage.FRENCH -> "Télécharge une copie fraîche de la branche dans un nouveau dossier de projet. Les modifications non poussées de ce dossier ne sont pas reprises."
+        AppLanguage.GERMAN -> "Lädt eine frische Kopie des Branches in einen neuen Projektordner. Nicht gepushte Änderungen in diesem Ordner werden nicht übernommen."
+        AppLanguage.RUSSIAN -> "Загружает свежую копию ветки в новую папку проекта. Непушнутые изменения из старой папки не переносятся."
+        AppLanguage.JAPANESE -> "ブランチの新しいコピーを新しいプロジェクトフォルダーに取得します。このフォルダーの未プッシュの変更は引き継がれません。"
+        AppLanguage.KOREAN -> "브랜치의 새 복사본을 새 프로젝트 폴더로 받습니다. 이 폴더의 푸시되지 않은 변경 사항은 옮겨지지 않습니다."
+    }
+
+    val gitTokenProbeForbidden: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "令牌有效，但 GitHub 拒绝访问 (403)。请检查令牌权限。"
+        AppLanguage.ENGLISH -> "Token is valid, but GitHub denied access (403). Check the token's permissions."
+        AppLanguage.ARABIC -> "الرمز صالح، لكن GitHub رفض الوصول (403). تحقق من صلاحيات الرمز."
+        AppLanguage.PORTUGUESE -> "O token é válido, mas o GitHub negou o acesso (403). Verifique as permissões do token."
+        AppLanguage.SPANISH -> "El token es válido, pero GitHub denegó el acceso (403). Revisa los permisos del token."
+        AppLanguage.FRENCH -> "Le jeton est valide, mais GitHub a refusé l'accès (403). Vérifiez les autorisations du jeton."
+        AppLanguage.GERMAN -> "Das Token ist gültig, aber GitHub hat den Zugriff verweigert (403). Prüfe die Berechtigungen des Tokens."
+        AppLanguage.RUSSIAN -> "Токен действителен, но GitHub отказал в доступе (403). Проверьте права токена."
+        AppLanguage.JAPANESE -> "トークンは有効ですが、GitHub がアクセスを拒否しました (403)。トークンの権限を確認してください。"
+        AppLanguage.KOREAN -> "토큰은 유효하지만 GitHub가 접근을 거부했습니다 (403). 토큰 권한을 확인하세요."
     }
 
     val repoBridgeCommitErrorRemote: String get() = when (Strings.lang) {

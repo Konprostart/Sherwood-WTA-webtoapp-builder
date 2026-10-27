@@ -13,6 +13,8 @@ import java.security.MessageDigest
 enum class RepoBridgeCommitFailureKind {
     NO_METADATA,
     NO_BASE,
+    NO_TOKEN,
+    NOT_FOUND,
     NO_COMMIT_MESSAGE,
     NO_CHANGES,
     TOO_MANY_FILES,
@@ -229,7 +231,7 @@ class RepoBridgeCommitUseCase(
             }
             when (val blob = client.createBlob(metadata.owner, metadata.repo, content)) {
                 is GitDataResult.Success ->
-                    entries += GitTreeEntry(path, blob.value, mode = FILE_MODE)
+                    entries += GitTreeEntry(path, blob.value, mode = modeFor(plan, path))
                 is GitDataResult.Failure ->
                     return RepoBridgeCommitResult.Failure(
                         blob.kind.toCommitFailure(),
@@ -269,6 +271,15 @@ class RepoBridgeCommitUseCase(
             )
         }
 
+        // Record the commit we are about to publish. If the process dies or the metadata
+        // write fails after the ref moves, the next prepare can still find it.
+        try {
+            metadataStore.write(projectDir, metadata.copy(pendingBaseSha = commitSha))
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Pending base not recorded: ${e.javaClass.simpleName}")
+            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.IO_ERROR, FILE_METADATA)
+        }
+
         when (val ref = client.updateRef(
             owner = metadata.owner,
             repo = metadata.repo,
@@ -290,7 +301,7 @@ class RepoBridgeCommitUseCase(
 
         cachedPlan = null
         val metadataSaved = runCatching {
-            metadataStore.write(projectDir, metadata.copy(baseSha = commitSha))
+            metadataStore.write(projectDir, metadata.copy(baseSha = commitSha, pendingBaseSha = null))
         }.onFailure {
             AppLogger.w(TAG, "Commit pushed but metadata was not saved: ${it.javaClass.simpleName}")
         }.isSuccess
@@ -306,8 +317,27 @@ class RepoBridgeCommitUseCase(
         if (!projectDir.isDirectory) {
             return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_METADATA)
         }
-        val metadata = metadataStore.read(projectDir)
+        var metadata = metadataStore.read(projectDir)
             ?: return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_METADATA)
+
+        // A push that reached GitHub but could not record its base leaves a pending sha.
+        // If the branch already points at it, adopt it; otherwise the pending sha is stale.
+        metadata.pendingBaseSha?.let { pending ->
+            val remoteHead = when (val ref = client.getRef(metadata.owner, metadata.repo, metadata.ref)) {
+                is GitDataResult.Success -> ref.value.sha
+                is GitDataResult.Failure ->
+                    return PlanLoad.Error(ref.kind.toCommitFailure(), ref.message)
+            }
+            metadata = if (remoteHead == pending) {
+                AppLogger.i(TAG, "Adopting the pushed base commit left pending by an earlier run")
+                metadata.copy(baseSha = pending, pendingBaseSha = null)
+            } else {
+                metadata.copy(pendingBaseSha = null)
+            }
+            runCatching { metadataStore.write(projectDir, metadata) }
+                .onFailure { AppLogger.w(TAG, "Could not persist recovered base: ${it.javaClass.simpleName}") }
+        }
+
         val baseSha = metadata.baseSha
             ?: return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_BASE)
 
@@ -336,12 +366,13 @@ class RepoBridgeCommitUseCase(
             ?.takeIf { it.isNotEmpty() }
             ?.let { "$it/" }
 
-        val remoteBlobs = buildMap {
-            for (entry in tree.entries) {
-                if (entry.type != "blob" || entry.sha == null) continue
-                if (prefix != null && !entry.path.startsWith(prefix)) continue
-                put(entry.path, entry.sha)
-            }
+        val remoteBlobs = linkedMapOf<String, String>()
+        val remoteModes = linkedMapOf<String, String>()
+        for (entry in tree.entries) {
+            if (entry.type != "blob" || entry.sha == null) continue
+            if (prefix != null && !entry.path.startsWith(prefix)) continue
+            remoteBlobs[entry.path] = entry.sha
+            remoteModes[entry.path] = entry.mode
         }
 
         return PlanLoad.Ok(
@@ -350,10 +381,19 @@ class RepoBridgeCommitUseCase(
                 baseSha = baseSha,
                 baseTreeSha = baseCommit.treeSha,
                 prefix = prefix,
-                remoteBlobs = remoteBlobs
+                remoteBlobs = remoteBlobs,
+                remoteModes = remoteModes
             )
         )
     }
+
+    /**
+     * The mode a path keeps on push. The base tree is the source of truth: a script that
+     * was 100755 on GitHub stays 100755 after an edit, and a symlink stays 120000 whose
+     * content is its target. New paths get a regular file.
+     */
+    private fun modeFor(plan: Plan, path: String): String =
+        plan.remoteModes[path]?.takeIf { it in ALLOWED_MODES } ?: FILE_MODE
 
     private fun scanLocal(prefix: String?): ScanResult {
         val root = try {
@@ -471,6 +511,8 @@ class RepoBridgeCommitUseCase(
     }
 
     private fun GitDataFailureKind.toCommitFailure(): RepoBridgeCommitFailureKind = when (this) {
+        GitDataFailureKind.NO_TOKEN -> RepoBridgeCommitFailureKind.NO_TOKEN
+        GitDataFailureKind.NOT_FOUND -> RepoBridgeCommitFailureKind.NOT_FOUND
         GitDataFailureKind.UNAUTHORIZED -> RepoBridgeCommitFailureKind.UNAUTHORIZED
         GitDataFailureKind.FORBIDDEN -> RepoBridgeCommitFailureKind.FORBIDDEN
         GitDataFailureKind.RATE_LIMITED -> RepoBridgeCommitFailureKind.RATE_LIMITED
@@ -486,7 +528,8 @@ class RepoBridgeCommitUseCase(
         val baseSha: String,
         val baseTreeSha: String,
         val prefix: String?,
-        val remoteBlobs: Map<String, String>
+        val remoteBlobs: Map<String, String>,
+        val remoteModes: Map<String, String>
     )
 
     private data class LocalFile(
@@ -523,6 +566,10 @@ class RepoBridgeCommitUseCase(
          */
         const val MAX_FILE_BYTES = 10L * 1024 * 1024
         private const val FILE_MODE = "100644"
+        private const val FILE_METADATA = "repo_bridge.json"
+
+        /** Modes GitHub accepts for blobs: regular, executable, and symlink. */
+        private val ALLOWED_MODES = setOf("100644", "100755", "120000")
         private const val GIT_DIR = ".git"
 
         private val HEX_CHARS = "0123456789abcdef".toCharArray()
