@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,7 +74,7 @@ fun CreateFrontendAppScreen(
 
     var buildMode by remember { mutableStateOf(BuildMode.IMPORT_DIST) }
 
-    var projectPath by remember { mutableStateOf<String?>(null) }
+    var projectPath by rememberSaveable { mutableStateOf<String?>(null) }
     var folderImportPath by remember { mutableStateOf<String?>(null) }
     var projectName by remember { mutableStateOf("") }
     var appIcon by remember { mutableStateOf<Uri?>(null) }
@@ -245,6 +246,7 @@ fun CreateFrontendAppScreen(
 
                 GitHubImportCard(
                     fetcher = githubFetcher,
+                    projectPath = projectPath,
                     onFetched = { result ->
                         projectPath = result.localPath
                         projectName = result.subPath
@@ -1160,6 +1162,7 @@ private fun copyFrontendDocumentTreeToCache(context: android.content.Context, ur
 @Composable
 private fun GitHubImportCard(
     fetcher: GitHubRepoFetcher,
+    projectPath: String?,
     onFetched: (GitHubFetchResult) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -1170,8 +1173,11 @@ private fun GitHubImportCard(
     var branch by remember { mutableStateOf("") }
     var subPath by remember { mutableStateOf("") }
     var showLogs by remember { mutableStateOf(false) }
-    var imported by remember { mutableStateOf<GitHubFetchResult?>(null) }
-    var showCommitDialog by remember { mutableStateOf(false) }
+    var showCommitDialog by rememberSaveable { mutableStateOf(false) }
+
+    val commitProjectDir = remember(projectPath) {
+        projectPath?.let(::File)?.takeIf { RepoBridgeMetadataStore().exists(it) }
+    }
 
     val isFetching = fetchState is GitHubFetchState.Resolving ||
         fetchState is GitHubFetchState.Downloading ||
@@ -1280,10 +1286,7 @@ private fun GitHubImportCard(
                                 explicitBranch = branch.trim().takeIf { it.isNotBlank() },
                                 explicitSubPath = subPath.trim().takeIf { it.isNotBlank() }
                             )
-                            result.onSuccess { fetched ->
-                                imported = fetched
-                                onFetched(fetched)
-                            }
+                            result.onSuccess { fetched -> onFetched(fetched) }
                         }
                     },
                     enabled = canFetch,
@@ -1304,7 +1307,7 @@ private fun GitHubImportCard(
                 }
             }
 
-            if (imported?.metadataFile != null) {
+            if (commitProjectDir != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 PremiumOutlinedButton(
                     onClick = { showCommitDialog = true },
@@ -1318,10 +1321,9 @@ private fun GitHubImportCard(
         }
     }
 
-    val importedProject = imported
-    if (showCommitDialog && importedProject?.metadataFile != null) {
+    if (showCommitDialog && commitProjectDir != null) {
         RepoBridgeCommitDialog(
-            projectDir = File(importedProject.localPath),
+            projectDir = commitProjectDir,
             onDismiss = { showCommitDialog = false }
         )
     }
