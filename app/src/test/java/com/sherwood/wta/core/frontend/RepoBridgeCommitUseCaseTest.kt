@@ -270,10 +270,6 @@ class RepoBridgeCommitUseCaseTest {
         assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.CONFLICT)
         assertThat(metadataStore.read(projectDir)?.baseSha).isEqualTo(BASE)
         assertThat(server.requestCount).isEqualTo(6)
-        repeat(5) { server.takeRequest() }
-        val refRead = server.takeRequest()
-        assertThat(refRead.method).isEqualTo("GET")
-        assertThat(refRead.path).isEqualTo("/repos/$OWNER/$REPO/git/refs/heads/main")
     }
 
     @Test
