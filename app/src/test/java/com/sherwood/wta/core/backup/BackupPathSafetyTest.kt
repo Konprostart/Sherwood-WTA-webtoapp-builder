@@ -93,12 +93,21 @@ class BackupPathSafetyTest {
     @Test
     fun `keystore and adblock branches accept exact names only`() {
         val ks = manager.stageLocalBackupEntry(
-            "local/keystores/webtoapp_keystore.p12",
+            "local/keystores/custom_keystore.p12",
             stagedEntryStream()
         )
         assertThat(ks).isNotNull()
-        assertThat(ks!!.targetFile.name).isEqualTo("webtoapp_keystore.p12")
+        assertThat(ks!!.targetFile.name).isEqualTo("custom_keystore.p12")
         ks.tempFile.delete()
+
+        // webtoapp_keystore.p12 (PKCS12_AUTO) is excluded from backups: a plain-zip
+        // archive must never carry the auto private key.
+        assertThat(
+            manager.stageLocalBackupEntry(
+                "local/keystores/webtoapp_keystore.p12",
+                stagedEntryStream()
+            )
+        ).isNull()
 
         assertThat(
             manager.stageLocalBackupEntry("local/keystores/../evil.p12", stagedEntryStream())
