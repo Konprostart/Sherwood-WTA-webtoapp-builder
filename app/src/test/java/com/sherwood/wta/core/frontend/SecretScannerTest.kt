@@ -143,18 +143,21 @@ class SecretScannerTest {
         assertThat(SecretScanner.scan("image.png", pngHeader)).isEmpty()
     }
 
+    private fun ruleIdsOf(path: String, content: ByteArray): List<String> =
+        SecretScanner.scan(path, content).map { it.ruleId }
+
     @Test
     fun `utf-16 content is decoded and scanned`() {
         val pemLe = "-----BEGIN PRIVATE KEY-----\nMIIEvQ\n".toByteArray(Charsets.UTF_16LE)
-        assertThat(SecretScanner.scan("config.js", pemLe)).containsExactly("private_key")
+        assertThat(ruleIdsOf("config.js", pemLe)).containsExactly("private_key")
         val pemBe = "-----BEGIN PRIVATE KEY-----\nMIIEvQ\n".toByteArray(Charsets.UTF_16BE)
-        assertThat(SecretScanner.scan("config.js", pemBe)).containsExactly("private_key")
+        assertThat(ruleIdsOf("config.js", pemBe)).containsExactly("private_key")
     }
 
     @Test
     fun `a stray NUL byte cannot hide credential text`() {
         val sneaky = byteArrayOf(0x00) + "-----BEGIN PRIVATE KEY-----".toByteArray()
-        assertThat(SecretScanner.scan("config.js", sneaky)).containsExactly("private_key")
+        assertThat(ruleIdsOf("config.js", sneaky)).containsExactly("private_key")
     }
 
     @Test
@@ -162,10 +165,10 @@ class SecretScannerTest {
         val filler = "x".toByteArray()
         val big = filler + "-----BEGIN PRIVATE KEY-----".toByteArray() +
             ByteArray(SecretScanner.MAX_CONTENT_BYTES + 2048) { 'a'.code.toByte() }
-        assertThat(SecretScanner.scan("big.txt", big)).containsExactly("private_key")
+        assertThat(ruleIdsOf("big.txt", big)).containsExactly("private_key")
         val tail = ByteArray(SecretScanner.MAX_CONTENT_BYTES + 2048) { 'a'.code.toByte() } +
             "-----BEGIN OPENSSH PRIVATE KEY-----".toByteArray()
-        assertThat(SecretScanner.scan("tail.txt", tail)).containsExactly("private_key")
+        assertThat(ruleIdsOf("tail.txt", tail)).containsExactly("private_key")
     }
 
     @Test
