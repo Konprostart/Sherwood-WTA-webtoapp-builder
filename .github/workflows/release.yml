@@ -104,6 +104,8 @@ jobs:
           mkdir -p release-artifacts
           cp app/build/outputs/apk/standard/release/app-standard-release.apk \
             "release-artifacts/Sherwood-WTA-${VERSION}.apk"
+          # The Play bundle is verified and kept as a workflow artifact only.
+          # The GitHub Release ships the single standard APK.
           cp app/build/outputs/bundle/gplayRelease/app-gplay-release.aab \
             "release-artifacts/Sherwood-WTA-${VERSION}-gplay.aab"
 
@@ -114,13 +116,20 @@ jobs:
             rm -f "$ANDROID_KEYSTORE_PATH"
           fi
 
+      - name: Keep Play bundle as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-bundle-${{ github.run_number }}
+          path: release-artifacts/Sherwood-WTA-${{ env.VERSION }}-gplay.aab
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             release-artifacts/Sherwood-WTA-${VERSION}.apk \
-            release-artifacts/Sherwood-WTA-${VERSION}-gplay.aab \
             --title "Sherwood WTA ${VERSION}" \
             --generate-notes \
             --verify-tag

@@ -63,6 +63,7 @@ jobs:
             -PskipShellTemplateSync=true \
             -PallowDebugSignedRelease=true \
             :app:compileStandardDebugKotlin \
+            :app:compileGplayDebugKotlin \
             :shell:compileDebugKotlin \
             :app:testStandardDebugUnitTest \
             :app:checkConfigFieldDrift
@@ -92,12 +93,6 @@ jobs:
           - variant: standard-release
             task: ":app:assembleStandardRelease"
             path: "app/build/outputs/apk/standard/release/*.apk"
-          - variant: gplay-debug
-            task: ":app:assembleGplayDebug"
-            path: "app/build/outputs/apk/gplay/debug/*.apk"
-          - variant: gplay-release
-            task: ":app:assembleGplayRelease"
-            path: "app/build/outputs/apk/gplay/release/*.apk"
 
     steps:
       - name: Download code
@@ -248,18 +243,6 @@ jobs:
             -PallowDebugSignedRelease=true \
             :app:assembleStandardRelease
 
-      - name: Build APK gplay debug
-        run: |
-          ./gradlew --no-daemon --no-configuration-cache \
-            -PallowDebugSignedRelease=true \
-            :app:assembleGplayDebug
-
-      - name: Build APK gplay release
-        run: |
-          ./gradlew --no-daemon --no-configuration-cache \
-            -PallowDebugSignedRelease=true \
-            :app:assembleGplayRelease
-
       - name: Build shell template debug and release
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
@@ -292,13 +275,5 @@ jobs:
           path: |
             app/build/outputs/apk/standard/**/*.apk
             shell/build/outputs/apk/**/*.apk
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload gplay APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: gplay-apks-com.sherwood.wta.play-DEBUG-SIGNED-do-not-distribute-${{ github.run_number }}
-          path: app/build/outputs/apk/gplay/**/*.apk
           if-no-files-found: error
           retention-days: 14
