@@ -65,4 +65,12 @@ class RepoBridgeReviewTest {
         assertThat(reviewFingerprint(base)).isNotEqualTo(reviewFingerprint(otherStatus))
         assertThat(reviewFingerprint(base)).isNotEqualTo(reviewFingerprint(otherBlob))
     }
+
+    @Test
+    fun `paths are wrapped in a first-strong isolate with a matching pop`() {
+        val wrapped = isolatedPath("assets/app.js")
+        assertThat(wrapped.first()).isEqualTo('\u2068')
+        assertThat(wrapped.last()).isEqualTo('\u2069')
+        assertThat(wrapped.substring(1, wrapped.length - 1)).isEqualTo("assets/app.js")
+    }
 }

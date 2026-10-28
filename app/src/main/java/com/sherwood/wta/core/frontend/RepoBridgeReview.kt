@@ -81,3 +81,10 @@ fun List<ReviewItem>.filtered(filter: ReviewFilter): List<ReviewItem> = when (fi
     ReviewFilter.DELETED -> filter { it.status == ReviewStatus.DELETED }
     ReviewFilter.FLAGGED -> filter { it.hasBlocking || it.hasWarning }
 }
+
+/**
+ * Wraps a repo path in a first-strong isolate (FSI ... PDI). Paths are mostly Latin text
+ * with slashes and dots; inside an Arabic layout they would otherwise reorder around the
+ * separators and show the wrong file name first.
+ */
+fun isolatedPath(path: String): String = "\u2068$path\u2069"

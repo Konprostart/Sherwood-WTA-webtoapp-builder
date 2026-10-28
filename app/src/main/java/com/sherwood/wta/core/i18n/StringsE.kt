@@ -17471,6 +17471,228 @@ object StringsE {
         AppLanguage.KOREAN -> "일부 파일에 비밀 정보가 있을 수 있습니다. 검토 후 확인하고 푸시하세요."
     }
 
+    val repoBridgeReviewTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "审阅更改"
+        AppLanguage.ENGLISH -> "Review changes"
+        AppLanguage.ARABIC -> "مراجعة التغييرات"
+        AppLanguage.PORTUGUESE -> "Revisar alterações"
+        AppLanguage.SPANISH -> "Revisar cambios"
+        AppLanguage.FRENCH -> "Examiner les modifications"
+        AppLanguage.GERMAN -> "Änderungen prüfen"
+        AppLanguage.RUSSIAN -> "Проверка изменений"
+        AppLanguage.JAPANESE -> "変更のレビュー"
+        AppLanguage.KOREAN -> "변경 사항 검토"
+    }
+
+    val repoBridgeReviewDone: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "完成"
+        AppLanguage.ENGLISH -> "Done"
+        AppLanguage.ARABIC -> "تم"
+        AppLanguage.PORTUGUESE -> "Concluído"
+        AppLanguage.SPANISH -> "Listo"
+        AppLanguage.FRENCH -> "OK"
+        AppLanguage.GERMAN -> "Fertig"
+        AppLanguage.RUSSIAN -> "Готово"
+        AppLanguage.JAPANESE -> "完了"
+        AppLanguage.KOREAN -> "완료"
+    }
+
+    val repoBridgeReviewFilterAll: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "全部"
+        AppLanguage.ENGLISH -> "All"
+        AppLanguage.ARABIC -> "الكل"
+        AppLanguage.PORTUGUESE -> "Todos"
+        AppLanguage.SPANISH -> "Todos"
+        AppLanguage.FRENCH -> "Tous"
+        AppLanguage.GERMAN -> "Alle"
+        AppLanguage.RUSSIAN -> "Все"
+        AppLanguage.JAPANESE -> "すべて"
+        AppLanguage.KOREAN -> "전체"
+    }
+
+    val repoBridgeReviewFilterAdded: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "新增"
+        AppLanguage.ENGLISH -> "Added"
+        AppLanguage.ARABIC -> "مضاف"
+        AppLanguage.PORTUGUESE -> "Adicionados"
+        AppLanguage.SPANISH -> "Añadidos"
+        AppLanguage.FRENCH -> "Ajoutés"
+        AppLanguage.GERMAN -> "Hinzugefügt"
+        AppLanguage.RUSSIAN -> "Добавлено"
+        AppLanguage.JAPANESE -> "追加"
+        AppLanguage.KOREAN -> "추가됨"
+    }
+
+    val repoBridgeReviewFilterModified: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "修改"
+        AppLanguage.ENGLISH -> "Modified"
+        AppLanguage.ARABIC -> "معدّل"
+        AppLanguage.PORTUGUESE -> "Modificados"
+        AppLanguage.SPANISH -> "Modificados"
+        AppLanguage.FRENCH -> "Modifiés"
+        AppLanguage.GERMAN -> "Geändert"
+        AppLanguage.RUSSIAN -> "Изменено"
+        AppLanguage.JAPANESE -> "変更"
+        AppLanguage.KOREAN -> "수정됨"
+    }
+
+    val repoBridgeReviewFilterDeleted: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "删除"
+        AppLanguage.ENGLISH -> "Deleted"
+        AppLanguage.ARABIC -> "محذوف"
+        AppLanguage.PORTUGUESE -> "Excluídos"
+        AppLanguage.SPANISH -> "Eliminados"
+        AppLanguage.FRENCH -> "Supprimés"
+        AppLanguage.GERMAN -> "Gelöscht"
+        AppLanguage.RUSSIAN -> "Удалено"
+        AppLanguage.JAPANESE -> "削除"
+        AppLanguage.KOREAN -> "삭제됨"
+    }
+
+    val repoBridgeReviewFilterFlagged: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "可疑"
+        AppLanguage.ENGLISH -> "Flagged"
+        AppLanguage.ARABIC -> "مُعلَّم"
+        AppLanguage.PORTUGUESE -> "Sinalizados"
+        AppLanguage.SPANISH -> "Marcados"
+        AppLanguage.FRENCH -> "Signalés"
+        AppLanguage.GERMAN -> "Markiert"
+        AppLanguage.RUSSIAN -> "Помечено"
+        AppLanguage.JAPANESE -> "要確認"
+        AppLanguage.KOREAN -> "확인 필요"
+    }
+
+    val repoBridgeReviewInclude: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "包含在推送中"
+        AppLanguage.ENGLISH -> "Include in push"
+        AppLanguage.ARABIC -> "تضمين في الدفع"
+        AppLanguage.PORTUGUESE -> "Incluir no envio"
+        AppLanguage.SPANISH -> "Incluir en la subida"
+        AppLanguage.FRENCH -> "Inclure dans l'envoi"
+        AppLanguage.GERMAN -> "In den Push aufnehmen"
+        AppLanguage.RUSSIAN -> "Включить в отправку"
+        AppLanguage.JAPANESE -> "プッシュに含める"
+        AppLanguage.KOREAN -> "푸시에 포함"
+    }
+
+    val repoBridgeReviewAcceptWarning: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "我已检查此文件"
+        AppLanguage.ENGLISH -> "I checked this file"
+        AppLanguage.ARABIC -> "راجعتُ هذا الملف"
+        AppLanguage.PORTUGUESE -> "Verifiquei este arquivo"
+        AppLanguage.SPANISH -> "He revisado este archivo"
+        AppLanguage.FRENCH -> "J'ai vérifié ce fichier"
+        AppLanguage.GERMAN -> "Ich habe diese Datei geprüft"
+        AppLanguage.RUSSIAN -> "Я проверил этот файл"
+        AppLanguage.JAPANESE -> "このファイルを確認しました"
+        AppLanguage.KOREAN -> "이 파일을 확인했습니다"
+    }
+
+    val repoBridgeReviewBlockedHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "删除此文件或取消包含，才能推送。"
+        AppLanguage.ENGLISH -> "Remove this file or turn off Include to push."
+        AppLanguage.ARABIC -> "أزل هذا الملف أو ألغِ التضمين للدفع."
+        AppLanguage.PORTUGUESE -> "Remova este arquivo ou desmarque Incluir para enviar."
+        AppLanguage.SPANISH -> "Elimina este archivo o desactiva Incluir para subir."
+        AppLanguage.FRENCH -> "Supprimez ce fichier ou décochez Inclure pour pousser."
+        AppLanguage.GERMAN -> "Entferne diese Datei oder deaktiviere „In den Push aufnehmen“."
+        AppLanguage.RUSSIAN -> "Удалите файл или снимите «Включить в отправку»."
+        AppLanguage.JAPANESE -> "このファイルを削除するか、「プッシュに含める」をオフにしてください。"
+        AppLanguage.KOREAN -> "이 파일을 삭제하거나 '푸시에 포함'을 끄세요."
+    }
+
+    val repoBridgeReviewWarnHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "可能包含机密信息，推送前请检查。"
+        AppLanguage.ENGLISH -> "Possible secret. Check it before pushing."
+        AppLanguage.ARABIC -> "قد يحتوي على سر. تحقق منه قبل الدفع."
+        AppLanguage.PORTUGUESE -> "Possível segredo. Verifique antes de enviar."
+        AppLanguage.SPANISH -> "Posible secreto. Compruébalo antes de subir."
+        AppLanguage.FRENCH -> "Secret possible. Vérifiez-le avant de pousser."
+        AppLanguage.GERMAN -> "Mögliches Geheimnis. Prüfe es vor dem Push."
+        AppLanguage.RUSSIAN -> "Возможный секрет. Проверьте перед отправкой."
+        AppLanguage.JAPANESE -> "機密情報の可能性があります。プッシュ前に確認してください。"
+        AppLanguage.KOREAN -> "비밀 정보일 수 있습니다. 푸시 전에 확인하세요."
+    }
+
+    val repoBridgeReviewEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "没有符合此筛选条件的文件。"
+        AppLanguage.ENGLISH -> "Nothing matches this filter."
+        AppLanguage.ARABIC -> "لا يوجد ما يطابق هذا الفلتر."
+        AppLanguage.PORTUGUESE -> "Nada corresponde a este filtro."
+        AppLanguage.SPANISH -> "Nada coincide con este filtro."
+        AppLanguage.FRENCH -> "Aucun élément ne correspond à ce filtre."
+        AppLanguage.GERMAN -> "Keine Treffer für diesen Filter."
+        AppLanguage.RUSSIAN -> "Нет файлов по этому фильтру."
+        AppLanguage.JAPANESE -> "このフィルターに一致する項目はありません。"
+        AppLanguage.KOREAN -> "이 필터에 해당하는 항목이 없습니다."
+    }
+
+    val repoBridgeRuleSensitiveFile: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "敏感文件名"
+        AppLanguage.ENGLISH -> "Sensitive file name"
+        AppLanguage.ARABIC -> "اسم ملف حساس"
+        AppLanguage.PORTUGUESE -> "Nome de arquivo sensível"
+        AppLanguage.SPANISH -> "Nombre de archivo sensible"
+        AppLanguage.FRENCH -> "Nom de fichier sensible"
+        AppLanguage.GERMAN -> "Sensibler Dateiname"
+        AppLanguage.RUSSIAN -> "Имя файла с конфиденциальными данными"
+        AppLanguage.JAPANESE -> "機密性の高いファイル名"
+        AppLanguage.KOREAN -> "민감한 파일 이름"
+    }
+
+    val repoBridgeRulePrivateKey: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "私钥"
+        AppLanguage.ENGLISH -> "Private key"
+        AppLanguage.ARABIC -> "مفتاح خاص"
+        AppLanguage.PORTUGUESE -> "Chave privada"
+        AppLanguage.SPANISH -> "Clave privada"
+        AppLanguage.FRENCH -> "Clé privée"
+        AppLanguage.GERMAN -> "Privater Schlüssel"
+        AppLanguage.RUSSIAN -> "Закрытый ключ"
+        AppLanguage.JAPANESE -> "秘密鍵"
+        AppLanguage.KOREAN -> "개인 키"
+    }
+
+    val repoBridgeRuleAccessToken: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "访问令牌"
+        AppLanguage.ENGLISH -> "Access token"
+        AppLanguage.ARABIC -> "رمز وصول"
+        AppLanguage.PORTUGUESE -> "Token de acesso"
+        AppLanguage.SPANISH -> "Token de acceso"
+        AppLanguage.FRENCH -> "Jeton d'accès"
+        AppLanguage.GERMAN -> "Zugriffstoken"
+        AppLanguage.RUSSIAN -> "Токен доступа"
+        AppLanguage.JAPANESE -> "アクセストークン"
+        AppLanguage.KOREAN -> "액세스 토큰"
+    }
+
+    val repoBridgeRuleSecretValue: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "疑似机密值"
+        AppLanguage.ENGLISH -> "Possible secret value"
+        AppLanguage.ARABIC -> "قيمة سر محتملة"
+        AppLanguage.PORTUGUESE -> "Possível valor secreto"
+        AppLanguage.SPANISH -> "Posible valor secreto"
+        AppLanguage.FRENCH -> "Valeur secrète possible"
+        AppLanguage.GERMAN -> "Mögliches Geheimnis"
+        AppLanguage.RUSSIAN -> "Возможное значение секрета"
+        AppLanguage.JAPANESE -> "機密値の可能性"
+        AppLanguage.KOREAN -> "비밀 값일 수 있음"
+    }
+
+    fun repoBridgeReviewIncludedSummary(included: Int, excluded: Int): String =
+        when (Strings.lang) {
+            AppLanguage.CHINESE -> "包含 ${included} 个，排除 ${excluded} 个"
+            AppLanguage.ENGLISH -> "${included} included, ${excluded} excluded"
+            AppLanguage.ARABIC -> "تم تضمين ${included}، واستُبعد ${excluded}"
+            AppLanguage.PORTUGUESE -> "${included} incluídos, ${excluded} excluídos"
+            AppLanguage.SPANISH -> "${included} incluidos, ${excluded} excluidos"
+            AppLanguage.FRENCH -> "${included} inclus, ${excluded} exclus"
+            AppLanguage.GERMAN -> "${included} enthalten, ${excluded} ausgeschlossen"
+            AppLanguage.RUSSIAN -> "Включено: ${included}, исключено: ${excluded}"
+            AppLanguage.JAPANESE -> "${included} 件を含む、${excluded} 件を除外"
+            AppLanguage.KOREAN -> "${included}개 포함, ${excluded}개 제외"
+        }
+
     val repoBridgeCommitErrorRemote: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "GitHub 拒绝了该提交。"
         AppLanguage.ENGLISH -> "GitHub rejected the commit."

@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,8 +34,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.sherwood.wta.core.frontend.RepoBridgeCommitFailureKind
 import com.sherwood.wta.core.frontend.RepoBridgeCommitResult
+import com.sherwood.wta.core.frontend.RepoBridgeChangeSet
 import com.sherwood.wta.core.frontend.RepoBridgeCommitUseCase
+import com.sherwood.wta.core.frontend.ReviewDecision
+import com.sherwood.wta.core.frontend.ReviewItem
+import com.sherwood.wta.core.frontend.ReviewStatus
+import com.sherwood.wta.core.frontend.blockingIncluded
+import com.sherwood.wta.core.frontend.includedItems
 import com.sherwood.wta.core.frontend.isMassDeletion
+import com.sherwood.wta.core.frontend.unreviewedWarnings
 import com.sherwood.wta.core.frontend.RepoBridgePrepareResult
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.design.WtaAlertDialog
@@ -73,6 +81,11 @@ fun RepoBridgeCommitDialog(
     var committing by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<RepoBridgeCommitResult?>(null) }
     var confirmDeletion by rememberSaveable { mutableStateOf(false) }
+    // Exclusions and acknowledgements are the user's decision for one review. They are kept
+    // across rotation; a new review (retry) clears them, so nothing carries over silently.
+    val excluded = rememberSaveable { mutableStateListOf<String>() }
+    val acceptedWarnings = rememberSaveable { mutableStateListOf<String>() }
+    var showReview by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(useCase, attempt) {
         preparing = true
@@ -84,9 +97,17 @@ fun RepoBridgeCommitDialog(
     val ready = preparation as? RepoBridgePrepareResult.Ready
     val success = result as? RepoBridgeCommitResult.Success
     val failure = result as? RepoBridgeCommitResult.Failure
-    val massDeletion = ready?.let { it.changes.isMassDeletion(it.remoteFileCount) } == true
+    val excludedSet = excluded.toSet()
+    val acceptedSet = acceptedWarnings.toSet()
+    val included = ready?.review?.includedItems(excludedSet).orEmpty()
+    val appliedChanges = included.toChangeSet()
+    val blocking = ready?.review?.blockingIncluded(excludedSet).orEmpty()
+    val unreviewed = ready?.review?.unreviewedWarnings(excludedSet, acceptedSet).orEmpty()
+    val massDeletion = ready?.let { appliedChanges.isMassDeletion(it.remoteFileCount) } == true
     val canSend = ready != null &&
-        !ready.changes.isEmpty &&
+        included.isNotEmpty() &&
+        blocking.isEmpty() &&
+        unreviewed.isEmpty() &&
         message.isNotBlank() &&
         !committing &&
         success == null &&
@@ -96,10 +117,16 @@ fun RepoBridgeCommitDialog(
         if (!canSend || ready == null) return
         committing = true
         result = null
-        // The use case refuses a mass deletion larger than what the user confirmed here.
-        val confirmed = if (confirmDeletion) ready.changes.deleted.size else 0
+        // The use case refuses a mass deletion larger than what the user confirmed here,
+        // and refuses the push if the working copy no longer matches this review.
+        val confirmed = if (confirmDeletion) appliedChanges.deleted.size else 0
+        val decision = ReviewDecision(
+            fingerprint = ready.review.fingerprint,
+            excluded = excludedSet,
+            acceptedWarnings = acceptedSet
+        )
         scope.launch {
-            result = useCase.commit(message, confirmedDeletions = confirmed)
+            result = useCase.commit(message, confirmedDeletions = confirmed, decision = decision)
             committing = false
         }
     }
@@ -179,18 +206,44 @@ fun RepoBridgeCommitDialog(
                                     Strings.repoBridgeCommitNoChanges
                                 } else {
                                     Strings.repoBridgeCommitSummary(
-                                        prep.changes.added.size,
-                                        prep.changes.modified.size,
-                                        prep.changes.deleted.size
+                                        appliedChanges.added.size,
+                                        appliedChanges.modified.size,
+                                        appliedChanges.deleted.size
                                     )
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            if (!prep.changes.isEmpty) {
+                                Text(
+                                    Strings.repoBridgeReviewIncludedSummary(
+                                        included.size,
+                                        excludedSet.size
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                TextButton(onClick = { showReview = true }) {
+                                    Text(Strings.repoBridgeReviewTitle)
+                                }
+                            }
+                            if (blocking.isNotEmpty()) {
+                                Text(
+                                    Strings.repoBridgeCommitErrorSecretBlocked,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else if (unreviewed.isNotEmpty()) {
+                                Text(
+                                    Strings.repoBridgeCommitErrorSecretWarnings,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                             if (massDeletion) {
                                 Text(
                                     Strings.repoBridgeMassDeletionWarning(
-                                        prep.changes.deleted.size,
+                                        appliedChanges.deleted.size,
                                         prep.remoteFileCount
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
@@ -240,6 +293,19 @@ fun RepoBridgeCommitDialog(
                 }
 
                 failure?.let { ErrorBlock(it.reason, it.detail) }
+                if (failure?.reason == RepoBridgeCommitFailureKind.REVIEW_STALE && !committing) {
+                    TextButton(
+                        onClick = {
+                            result = null
+                            excluded.clear()
+                            acceptedWarnings.clear()
+                            confirmDeletion = false
+                            attempt++
+                        }
+                    ) {
+                        Text(Strings.btnRetry)
+                    }
+                }
 
                 val blockingReason = failure?.reason
                     ?: (preparation as? RepoBridgePrepareResult.Failure)?.reason
@@ -271,6 +337,14 @@ fun RepoBridgeCommitDialog(
             }
         }
     )
+    if (showReview && ready != null) {
+        RepoBridgeReviewScreen(
+            review = ready.review,
+            excluded = excluded,
+            acceptedWarnings = acceptedWarnings,
+            onDone = { showReview = false }
+        )
+    }
 }
 
 @Composable
@@ -318,6 +392,13 @@ private fun RepoBridgeCommitFailureKind.description(): String = when (this) {
         Strings.repoBridgeCommitErrorRemote
     RepoBridgeCommitFailureKind.NO_CHANGES -> Strings.repoBridgeCommitNoChanges
 }
+
+/** The changed files of [this] set, as a change set for the mass-deletion check. */
+private fun List<ReviewItem>.toChangeSet(): RepoBridgeChangeSet = RepoBridgeChangeSet(
+    added = filter { it.status == ReviewStatus.ADDED }.map { it.path },
+    modified = filter { it.status == ReviewStatus.MODIFIED }.map { it.path },
+    deleted = filter { it.status == ReviewStatus.DELETED }.map { it.path }
+)
 
 /** Failures where the local copy can no longer be pushed and a fresh import is the fix. */
 private fun RepoBridgeCommitFailureKind.needsReimport(): Boolean =
