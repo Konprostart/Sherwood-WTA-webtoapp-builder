@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -505,11 +506,17 @@ class RepoBridgeCommitUseCaseTest {
 
     private val privateKeyText = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\n-----END RSA PRIVATE KEY-----\n"
 
-    private suspend fun reviewedPrepare(): RepoBridgePrepareResult.Ready =
-        useCase().prepare() as RepoBridgePrepareResult.Ready
+    /** The cached plan lives in one use case instance, so a test uses the same instance for both calls. */
+    private suspend fun reviewedPrepare(uc: RepoBridgeCommitUseCase): RepoBridgePrepareResult.Ready =
+        uc.prepare() as RepoBridgePrepareResult.Ready
+
+    /** Fails fast instead of hanging when a request that the test expects never arrives. */
+    private fun takeRequestOrFail(): RecordedRequest =
+        server.takeRequest(5, TimeUnit.SECONDS) ?: error("expected a request that never arrived")
 
     @Test
     fun `prepare reviews every path with its status and secret findings`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("edit.txt", "new")
@@ -521,7 +528,7 @@ class RepoBridgeCommitUseCaseTest {
             blobEntry("gone.txt", "bye")
         )
 
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
         val byPath = prepared.review.items.associateBy { it.path }
 
         assertThat(byPath.keys).containsExactly("config/.env", "deploy/key.txt", "edit.txt", "gone.txt")
@@ -535,13 +542,14 @@ class RepoBridgeCommitUseCaseTest {
 
     @Test
     fun `a blocking secret is refused and nothing is uploaded`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("deploy/key.txt", privateKeyText)
         enqueueBase(blobEntry("keep.txt", "same"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
 
-        val result = useCase().commit(
+        val result = uc.commit(
             "Add key",
             decision = ReviewDecision(prepared.review.fingerprint)
         ) as RepoBridgeCommitResult.Failure
@@ -553,15 +561,16 @@ class RepoBridgeCommitUseCaseTest {
 
     @Test
     fun `excluding the blocking file pushes the rest and leaves it out of the tree`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("fresh.sh", "echo hi")
         writeFile("deploy/key.txt", privateKeyText)
         enqueueBase(blobEntry("keep.txt", "same"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
         enqueueWrites(listOf(BLOB_NEW))
 
-        val result = useCase().commit(
+        val result = uc.commit(
             "Add script",
             decision = ReviewDecision(
                 fingerprint = prepared.review.fingerprint,
@@ -570,20 +579,21 @@ class RepoBridgeCommitUseCaseTest {
         )
 
         assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
-        repeat(3) { server.takeRequest() } // base commit, base tree, the one uploaded blob
-        assertThat(modesSentIn(server.takeRequest()).keys).containsExactly("fresh.sh")
+        repeat(3) { takeRequestOrFail() } // base commit, base tree, the one uploaded blob
+        assertThat(modesSentIn(takeRequestOrFail()).keys).containsExactly("fresh.sh")
     }
 
     @Test
     fun `excluding a changed file keeps its remote version`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("edit.txt", "new")
         writeFile("fresh.sh", "echo hi")
         enqueueBase(blobEntry("edit.txt", "old"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
         enqueueWrites(listOf(BLOB_NEW))
 
-        useCase().commit(
+        uc.commit(
             "Add script",
             decision = ReviewDecision(
                 fingerprint = prepared.review.fingerprint,
@@ -591,20 +601,21 @@ class RepoBridgeCommitUseCaseTest {
             )
         )
 
-        repeat(3) { server.takeRequest() }
+        repeat(3) { takeRequestOrFail() }
         // edit.txt is neither uploaded nor deleted, so it is absent from the tree request.
-        assertThat(modesSentIn(server.takeRequest()).keys).containsExactly("fresh.sh")
+        assertThat(modesSentIn(takeRequestOrFail()).keys).containsExactly("fresh.sh")
     }
 
     @Test
     fun `a warned file needs an explicit acceptance`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("config/.env", "TOKEN_NAME=x")
         enqueueBase(blobEntry("keep.txt", "same"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
 
-        val refused = useCase().commit(
+        val refused = uc.commit(
             "Add env",
             decision = ReviewDecision(prepared.review.fingerprint)
         ) as RepoBridgeCommitResult.Failure
@@ -616,14 +627,15 @@ class RepoBridgeCommitUseCaseTest {
 
     @Test
     fun `an accepted warning lets the push through`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("config/.env", "TOKEN_NAME=x")
         enqueueBase(blobEntry("keep.txt", "same"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
         enqueueWrites(listOf(BLOB_NEW))
 
-        val result = useCase().commit(
+        val result = uc.commit(
             "Add env",
             decision = ReviewDecision(
                 fingerprint = prepared.review.fingerprint,
@@ -636,14 +648,15 @@ class RepoBridgeCommitUseCaseTest {
 
     @Test
     fun `a change after review is refused with REVIEW_STALE and nothing is uploaded`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("keep.txt", "same")
         writeFile("edit.txt", "reviewed")
         enqueueBase(blobEntry("keep.txt", "same"), blobEntry("edit.txt", "old"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
 
         writeFile("edit.txt", "changed after review")
-        val result = useCase().commit(
+        val result = uc.commit(
             "Edit",
             decision = ReviewDecision(prepared.review.fingerprint)
         ) as RepoBridgeCommitResult.Failure
@@ -654,14 +667,15 @@ class RepoBridgeCommitUseCaseTest {
 
     @Test
     fun `a same-length edit after review is caught by the content fingerprint`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("edit.txt", "reviewed")
         enqueueBase(blobEntry("edit.txt", "old"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
 
         // Same length, different bytes: the review must compare content, not size.
         writeFile("edit.txt", "reviewee")
-        val result = useCase().commit(
+        val result = uc.commit(
             "Edit",
             decision = ReviewDecision(prepared.review.fingerprint)
         ) as RepoBridgeCommitResult.Failure
@@ -672,13 +686,14 @@ class RepoBridgeCommitUseCaseTest {
 
     @Test
     fun `a matching review commits as before`() = runBlocking<Unit> {
+        val uc = useCase()
         writeMetadata()
         writeFile("edit.txt", "new")
         enqueueBase(blobEntry("edit.txt", "old"))
-        val prepared = reviewedPrepare()
+        val prepared = reviewedPrepare(uc)
         enqueueWrites(listOf(BLOB_EDIT))
 
-        val result = useCase().commit("Edit", decision = ReviewDecision(prepared.review.fingerprint))
+        val result = uc.commit("Edit", decision = ReviewDecision(prepared.review.fingerprint))
 
         assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
     }
