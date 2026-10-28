@@ -79,6 +79,9 @@ fun RepoBridgeCommitDialog(
     var preparation by remember { mutableStateOf<RepoBridgePrepareResult?>(null) }
     var message by rememberSaveable { mutableStateOf("") }
     var committing by remember { mutableStateOf(false) }
+    // Set synchronously in the click handler, before recomposition can re-run it:
+    // a double tap would otherwise launch two commits on the same use case.
+    var sending by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<RepoBridgeCommitResult?>(null) }
     var confirmDeletion by rememberSaveable { mutableStateOf(false) }
     // Exclusions and acknowledgements are the user's decision for one review. They are kept
@@ -109,12 +112,15 @@ fun RepoBridgeCommitDialog(
         blocking.isEmpty() &&
         unreviewed.isEmpty() &&
         message.isNotBlank() &&
+        !preparing &&
         !committing &&
+        !sending &&
         success == null &&
         (!massDeletion || confirmDeletion)
 
     fun send() {
-        if (!canSend || ready == null) return
+        if (sending || committing || !canSend || ready == null) return
+        sending = true
         committing = true
         result = null
         // The use case refuses a mass deletion larger than what the user confirmed here,
@@ -128,6 +134,7 @@ fun RepoBridgeCommitDialog(
         scope.launch {
             result = useCase.commit(message, confirmedDeletions = confirmed, decision = decision)
             committing = false
+            sending = false
         }
     }
 

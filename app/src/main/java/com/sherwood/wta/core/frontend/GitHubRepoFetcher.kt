@@ -499,9 +499,21 @@ class GitHubRepoFetcher(
         name.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
 
     private fun log(line: String) {
-        _logs.value = _logs.value + line
-        AppLogger.d(TAG, line)
+        val safe = redact(line)
+        _logs.value = _logs.value + safe
+        AppLogger.d(TAG, safe)
     }
+
+    /**
+     * Logs are shown in a copy-all dialog and written to the log file, so they must never
+     * carry credentials: pasted URLs with embedded user:password, bare tokens and
+     * Basic-auth-looking strings are masked before a line is stored or printed.
+     */
+    private fun redact(line: String): String =
+        line
+            .replace(Regex("(https?://)[^/@\\s:]+:[^@\\s]+@"), "$1***@")
+            .replace(Regex("\\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{40,})\\b"), "[redacted]")
+            .replace(Regex("(?i)\\b(bearer|token|password)\\s+[A-Za-z0-9._+/\\-]{20,}"), "$1 [redacted]")
 
     private fun fail(message: String): Result<GitHubFetchResult> {
         _state.value = GitHubFetchState.Error(message)

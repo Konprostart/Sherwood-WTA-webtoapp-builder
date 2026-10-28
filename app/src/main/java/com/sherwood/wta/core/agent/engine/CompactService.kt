@@ -11,6 +11,7 @@ import com.sherwood.wta.core.agent.tool.Tool
 import com.sherwood.wta.data.model.ApiKeyConfig
 import com.sherwood.wta.data.model.SavedModel
 import com.sherwood.wta.core.logging.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.fold
 
@@ -143,6 +144,7 @@ class CompactService(
         val summaryText = try {
             collectText(req, textApiKey, keyPool, textModel.model.id)
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.w(TAG, "compact summarisation failed: ${t.message}")
             return Result(messages, summary = null, reason = "summarisation failed: ${t.message}")
         }

@@ -19,6 +19,7 @@ import com.sherwood.wta.core.extension.ModuleVersion
 import com.sherwood.wta.core.extension.UrlMatchRule
 import com.sherwood.wta.core.extension.UserScriptParser
 import com.sherwood.wta.core.logging.AppLogger
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -62,6 +63,7 @@ class SaveSessionAsModuleUseCase(
                 else -> Result.Failure("Unhandled kind ${artifact.kind}")
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.e(TAG, "Save artifact as module failed", t)
             Result.Failure(t.message ?: "unknown error")
         }

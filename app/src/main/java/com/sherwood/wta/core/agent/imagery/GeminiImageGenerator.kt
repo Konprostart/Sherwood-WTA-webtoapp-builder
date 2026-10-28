@@ -10,9 +10,9 @@ import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.data.model.AiProvider
 import com.sherwood.wta.data.model.ApiKeyConfig
 import com.sherwood.wta.data.model.SavedModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -59,12 +59,11 @@ internal class GeminiImageGenerator(context: Context) : ImageGenerator {
 
             val base = HttpHelpers.baseUrl(apiKey)
             val endpoint = "/v1beta/models/${model.model.id}:generateContent"
-            val url = HttpHelpers.joinUrl(base, endpoint).toHttpUrl().newBuilder()
-                .addQueryParameter("key", apiKey.apiKey.trim())
-                .build()
+            val url = HttpHelpers.joinUrl(base, endpoint)
 
             val req = Request.Builder()
                 .url(url)
+                .header("x-goog-api-key", apiKey.apiKey.trim())
                 .post(payload.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
@@ -81,6 +80,7 @@ internal class GeminiImageGenerator(context: Context) : ImageGenerator {
                 parseGeminiResponse(raw)
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.e(TAG, "Gemini image generation failed: ${t.message}", t)
             ImageGenerator.Result.Error(t.message ?: "image generation failed")
         }

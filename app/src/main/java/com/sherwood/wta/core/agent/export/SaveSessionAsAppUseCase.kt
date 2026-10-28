@@ -32,6 +32,7 @@ import com.sherwood.wta.data.repository.WebAppRepository
 import com.sherwood.wta.util.HtmlProjectHelper
 import com.sherwood.wta.util.HtmlStorage
 import com.sherwood.wta.util.IconStorage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -88,6 +89,7 @@ class SaveSessionAsAppUseCase(
                 else -> Result.Failure("Unhandled kind ${artifact.kind}")
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.e(TAG, "Save artifact as app failed", t)
             Result.Failure(t.message ?: "unknown error")
         }

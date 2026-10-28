@@ -9,6 +9,7 @@ import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.data.model.AiProvider
 import com.sherwood.wta.data.model.ApiKeyConfig
 import com.sherwood.wta.data.model.SavedModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -82,6 +83,7 @@ internal class OpenAiImageGenerator(context: Context) : ImageGenerator {
                 parseB64Response(raw)
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.e(TAG, "OpenAI image generation failed: ${t.message}", t)
             ImageGenerator.Result.Error(t.message ?: "image generation failed")
         }

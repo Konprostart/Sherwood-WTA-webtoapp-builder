@@ -4,6 +4,8 @@ import android.content.Context
 import com.sherwood.wta.core.logging.AppLogger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -105,10 +107,13 @@ class RepoBridgeCommitUseCase(
 
     private var cachedPlan: Plan? = null
 
+    /** Serializes prepare and commit: two overlapping calls would race on cachedPlan. */
+    private val commitMutex = Mutex()
+
     /** Reads the remote base tree and reports what a commit would upload. */
     suspend fun prepare(): RepoBridgePrepareResult = withContext(Dispatchers.IO) {
         try {
-            prepareInternal()
+            commitMutex.withLock { prepareInternal() }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -175,7 +180,7 @@ class RepoBridgeCommitUseCase(
         decision: ReviewDecision? = null
     ): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
         try {
-            commitInternal(message, confirmedDeletions, decision)
+            commitMutex.withLock { commitInternal(message, confirmedDeletions, decision) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -215,15 +220,8 @@ class RepoBridgeCommitUseCase(
             return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_CHANGES)
         }
 
-        val review = when (val built = buildReview(allChanges, files, plan)) {
-            is ReviewBuild.Error -> return RepoBridgeCommitResult.Failure(built.reason, built.detail)
-            is ReviewBuild.Ok -> built.review
-        }
-        if (decision != null && decision.fingerprint != review.fingerprint) {
-            cachedPlan = null
-            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.REVIEW_STALE)
-        }
-
+        // Size, count and exclusion gates run before any file is read, so a huge file
+        // that slipped in after Prepare fails fast instead of exhausting memory.
         val excluded = decision?.excluded.orEmpty()
         val changes = allChanges.without(excluded)
         if (changes.isEmpty) {
@@ -240,6 +238,15 @@ class RepoBridgeCommitUseCase(
                 RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
                 detail
             )
+        }
+
+        val review = when (val built = buildReview(allChanges, files, plan)) {
+            is ReviewBuild.Error -> return RepoBridgeCommitResult.Failure(built.reason, built.detail)
+            is ReviewBuild.Ok -> built.review
+        }
+        if (decision != null && decision.fingerprint != review.fingerprint) {
+            cachedPlan = null
+            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.REVIEW_STALE)
         }
 
         val pushed = review.items.filter { it.path !in excluded }
@@ -397,6 +404,9 @@ class RepoBridgeCommitUseCase(
         for ((status, paths) in uploaded) {
             for (path in paths) {
                 val local = files[path] ?: continue
+                if (local.size > MAX_FILE_BYTES) {
+                    return ReviewBuild.Error(RepoBridgeCommitFailureKind.FILE_TOO_LARGE, path)
+                }
                 val content = try {
                     local.file.readBytes()
                 } catch (e: IOException) {
@@ -405,12 +415,11 @@ class RepoBridgeCommitUseCase(
                 if (blobShaOf(content) != local.blobSha) {
                     return ReviewBuild.Error(RepoBridgeCommitFailureKind.REVIEW_STALE, path)
                 }
-                val scannable = content.takeIf { it.size <= SecretScanner.MAX_CONTENT_BYTES }
                 items += ReviewItem(
                     path = path,
                     status = status,
                     sizeBytes = local.size,
-                    findings = SecretScanner.scan(path, scannable)
+                    findings = SecretScanner.scan(path, content)
                 )
                 entries += Triple(status, path, local.blobSha)
             }
@@ -542,7 +551,10 @@ class RepoBridgeCommitUseCase(
         pending.addLast(root)
         while (pending.isNotEmpty()) {
             val dir = pending.removeLast()
-            val children = dir.listFiles() ?: continue
+            // A directory we cannot list must not look like an empty one: remote files
+            // under it would otherwise be reported as DELETED and pushed as deletions.
+            val children = dir.listFiles()
+                ?: return ScanResult.Error(RepoBridgeCommitFailureKind.IO_ERROR, dir.name)
             for (child in children) {
                 if (child.isDirectory) {
                     if (child.name == GIT_DIR) continue
@@ -550,7 +562,9 @@ class RepoBridgeCommitUseCase(
                     pending.addLast(child)
                     continue
                 }
-                if (!child.isFile) continue
+                if (!child.isFile) {
+                    return ScanResult.Error(RepoBridgeCommitFailureKind.IO_ERROR, child.name)
+                }
 
                 val canonical = try {
                     child.canonicalFile

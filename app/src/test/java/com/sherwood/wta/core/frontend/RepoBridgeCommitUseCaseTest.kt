@@ -359,6 +359,25 @@ class RepoBridgeCommitUseCaseTest {
     }
 
     @Test
+    fun `a file growing past the size limit after review fails fast without uploading`() =
+        runBlocking<Unit> {
+            writeMetadata()
+            writeFile("huge.bin", "small")
+            enqueueBase(blobEntry("huge.bin", "small"))
+
+            val useCase = useCase()
+            useCase.prepare() as RepoBridgePrepareResult.Ready
+
+            val grown = "x".repeat((RepoBridgeCommitUseCase.MAX_FILE_BYTES + 1L).toInt())
+            writeFile("huge.bin", grown)
+
+            val result = useCase.commit("Edit") as RepoBridgeCommitResult.Failure
+
+            assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.FILE_TOO_LARGE)
+            assertThat(server.requestCount).isEqualTo(2)
+        }
+
+    @Test
     fun `changed oversized file fails before uploading anything`() = runBlocking<Unit> {
         writeMetadata()
         val oversized = "x".repeat((RepoBridgeCommitUseCase.MAX_FILE_BYTES + 1L).toInt())

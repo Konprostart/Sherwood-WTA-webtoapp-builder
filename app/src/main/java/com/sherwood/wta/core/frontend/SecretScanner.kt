@@ -31,8 +31,11 @@ data class SecretFinding(
  */
 object SecretScanner {
 
-    /** Content larger than this is not scanned; the name rules still apply. */
+    /** Content is scanned in chunks of this size; chunks overlap so a rule is never split. */
     const val MAX_CONTENT_BYTES = 512 * 1024
+
+    /** Overlap between consecutive scan chunks, larger than any rule match. */
+    private const val CHUNK_OVERLAP_BYTES = 1024
 
     private val ALLOWED_ENV_SUFFIXES = setOf("example", "sample", "template", "dist", "defaults")
 
@@ -59,15 +62,70 @@ object SecretScanner {
 
     /**
      * Scans one repo-relative [path]. Pass [content] only for files small enough to read
-     * (see [MAX_CONTENT_BYTES]); pass null to run name rules only.
+     * in one piece (see [MAX_CONTENT_BYTES]); pass null to run name rules only. Large
+     * content is scanned in overlapping chunks, so size alone never disables the rules.
      */
     fun scan(path: String, content: ByteArray?): List<SecretFinding> {
         val findings = mutableListOf<SecretFinding>()
         scanName(path)?.let { findings += it }
-        if (content != null && content.size <= MAX_CONTENT_BYTES && !looksBinary(content)) {
-            findings += scanContent(path, String(content, Charsets.UTF_8))
+        if (content != null) {
+            findings += scanContentChunks(path, content)
         }
         return findings
+    }
+
+    private fun scanContentChunks(path: String, content: ByteArray): List<SecretFinding> {
+        if (content.size <= MAX_CONTENT_BYTES) {
+            return scanContent(path, decodeText(content))
+        }
+        val findings = mutableListOf<SecretFinding>()
+        var start = 0
+        while (start < content.size) {
+            val end = minOf(content.size, start + MAX_CONTENT_BYTES)
+            val chunk = content.copyOfRange(start, end)
+            findings += scanContent(path, decodeText(chunk))
+            if (end == content.size) break
+            start = end - CHUNK_OVERLAP_BYTES
+        }
+        return findings.distinct()
+    }
+
+    /**
+     * Decodes bytes as text for scanning. UTF-16 files (BOM or NUL-heavy, as produced by
+     * some editors) are decoded as such; a stray NUL byte is stripped so a single crafted
+     * zero cannot hide the rest of the file from the rules. Plain bytes are UTF-8.
+     */
+    private fun decodeText(bytes: ByteArray): String {
+        val limit = minOf(bytes.size, 8 * 1024)
+        var nulCount = 0
+        for (i in 0 until limit) {
+            if (bytes[i] == 0.toByte()) nulCount++
+        }
+        val nulHeavy = nulCount * 4 > limit
+        if (nulHeavy) {
+            if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) {
+                return String(bytes, Charsets.UTF_16LE)
+            }
+            if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) {
+                return String(bytes, Charsets.UTF_16BE)
+            }
+            var evenNuls = 0
+            for (i in 0 until limit step 2) {
+                if (bytes[i] == 0.toByte()) evenNuls++
+            }
+            var oddNuls = 0
+            for (i in 1 until limit step 2) {
+                if (bytes[i] == 0.toByte()) oddNuls++
+            }
+            // ASCII in UTF-16LE has the NULs at odd byte positions, BE at even ones.
+            val charset = if (oddNuls >= evenNuls) Charsets.UTF_16LE else Charsets.UTF_16BE
+            return String(bytes, charset)
+        }
+        if (nulCount == 0) {
+            return String(bytes, Charsets.UTF_8)
+        }
+        val stripped = bytes.filter { it != 0.toByte() }.toByteArray()
+        return String(stripped, Charsets.UTF_8)
     }
 
     /** Name-only rules. Matches on the last path segment, case-insensitively. */
@@ -113,14 +171,5 @@ object SecretScanner {
     private fun isPlaceholder(value: String): Boolean {
         val upper = value.uppercase()
         return upper.contains("EXAMPLE") || upper.contains("XXXXXXXX") || upper.contains("YOUR_")
-    }
-
-    /** A NUL byte in the first 8 KB is the usual sign of binary data. */
-    private fun looksBinary(bytes: ByteArray): Boolean {
-        val limit = minOf(bytes.size, 8 * 1024)
-        for (i in 0 until limit) {
-            if (bytes[i] == 0.toByte()) return true
-        }
-        return false
     }
 }

@@ -233,6 +233,22 @@ class GitHubRepoFetcherAuthTest {
         return header
     }
 
+    @Test
+    fun `a pasted URL with embedded credentials is logged redacted`() = runBlocking<Unit> {
+        val embeddedToken = "ghp_" + "A".repeat(36)
+        val fetcher = fetcher(token = null)
+        val result = fetcher.fetch(
+            "https://x-access-token:$embeddedToken@github.com/octocat/hello-world"
+        )
+
+        assertThat(result.isFailure).isTrue()
+        val joined = fetcher.logs.value.joinToString("\n")
+        assertThat(joined).doesNotContain(embeddedToken)
+        assertThat(joined).contains("[redacted]")
+        assertThat(joined).contains("Invalid GitHub URL")
+    }
+
+    companion object {
     companion object {
         private const val SHA = "0123456789abcdef0123456789abcdef01234567"
         private val TOKEN = "ghp_" + "a".repeat(36)

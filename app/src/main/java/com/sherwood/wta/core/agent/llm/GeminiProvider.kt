@@ -21,9 +21,13 @@ internal class GeminiProvider(@Suppress("UNUSED_PARAMETER") context: Context) : 
     override fun supports(provider: AiProvider) = provider == AiProvider.GOOGLE
     override fun chatStream(req: ChatRequest): Flow<LlmEvent> = callbackFlow {
         val base = HttpHelpers.baseUrl(req.apiKey); val key = req.apiKey.apiKey.trim()
-        val url = "$base/v1beta/models/${req.model.id}:streamGenerateContent?alt=sse&key=$key"
+        val url = "$base/v1beta/models/${req.model.id}:streamGenerateContent?alt=sse"
         val body = buildBody(req)
-        val request = Request.Builder().url(url).header("Content-Type","application/json").post(gson.toJson(body).toRequestBody("application/json".toMediaType())).build()
+        val request = Request.Builder().url(url)
+            // The API key travels in a header, never in the URL: URLs are logged and cached.
+            .header("x-goog-api-key", key)
+            .header("Content-Type","application/json")
+            .post(gson.toJson(body).toRequestBody("application/json".toMediaType())).build()
         trySend(LlmEvent.Started)
         val call = client.newCall(request)
         call.enqueue(object : Callback {

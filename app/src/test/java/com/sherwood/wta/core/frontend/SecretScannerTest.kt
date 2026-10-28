@@ -137,16 +137,35 @@ class SecretScannerTest {
     }
 
     @Test
-    fun `binary content is never scanned for text rules`() {
-        val bytes = byteArrayOf(0x00, 0x01) + "-----BEGIN PRIVATE KEY-----".toByteArray()
-        assertThat(SecretScanner.scan("blob.bin", bytes)).isEmpty()
+    fun `genuine binary content without credential text is not flagged`() {
+        val pngHeader = byteArrayOf(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) +
+            ByteArray(2048) { ((it * 31) % 256).toByte() }
+        assertThat(SecretScanner.scan("image.png", pngHeader)).isEmpty()
     }
 
     @Test
-    fun `content above the size limit is not scanned`() {
-        val big = "-----BEGIN PRIVATE KEY-----".toByteArray() +
-            ByteArray(SecretScanner.MAX_CONTENT_BYTES) { 'a'.code.toByte() }
-        assertThat(SecretScanner.scan("big.txt", big)).isEmpty()
+    fun `utf-16 content is decoded and scanned`() {
+        val pemLe = "-----BEGIN PRIVATE KEY-----\nMIIEvQ\n".toByteArray(Charsets.UTF_16LE)
+        assertThat(SecretScanner.scan("config.js", pemLe)).containsExactly("private_key")
+        val pemBe = "-----BEGIN PRIVATE KEY-----\nMIIEvQ\n".toByteArray(Charsets.UTF_16BE)
+        assertThat(SecretScanner.scan("config.js", pemBe)).containsExactly("private_key")
+    }
+
+    @Test
+    fun `a stray NUL byte cannot hide credential text`() {
+        val sneaky = byteArrayOf(0x00) + "-----BEGIN PRIVATE KEY-----".toByteArray()
+        assertThat(SecretScanner.scan("config.js", sneaky)).containsExactly("private_key")
+    }
+
+    @Test
+    fun `content above the size limit is still scanned in chunks`() {
+        val filler = "x".toByteArray()
+        val big = filler + "-----BEGIN PRIVATE KEY-----".toByteArray() +
+            ByteArray(SecretScanner.MAX_CONTENT_BYTES + 2048) { 'a'.code.toByte() }
+        assertThat(SecretScanner.scan("big.txt", big)).containsExactly("private_key")
+        val tail = ByteArray(SecretScanner.MAX_CONTENT_BYTES + 2048) { 'a'.code.toByte() } +
+            "-----BEGIN OPENSSH PRIVATE KEY-----".toByteArray()
+        assertThat(SecretScanner.scan("tail.txt", tail)).containsExactly("private_key")
     }
 
     @Test
