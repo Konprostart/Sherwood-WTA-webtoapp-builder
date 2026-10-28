@@ -54,3 +54,30 @@ fun reviewFingerprint(entries: Collection<Triple<ReviewStatus, String, String>>)
     }
     return digest.digest().joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
 }
+
+/** Filter chips on the review screen. [FLAGGED] is any item with a block or a warning. */
+enum class ReviewFilter { ALL, ADDED, MODIFIED, DELETED, FLAGGED }
+
+/** Items still in the push after the user's exclusions. */
+fun RepoBridgeReview.includedItems(excluded: Set<String>): List<ReviewItem> =
+    items.filter { it.path !in excluded }
+
+/** Included items that would block the push. Blocking findings cannot be accepted. */
+fun RepoBridgeReview.blockingIncluded(excluded: Set<String>): List<ReviewItem> =
+    includedItems(excluded).filter { it.hasBlocking }
+
+/** Included items with a warning the user has not accepted yet. */
+fun RepoBridgeReview.unreviewedWarnings(
+    excluded: Set<String>,
+    acceptedWarnings: Set<String>
+): List<ReviewItem> =
+    includedItems(excluded).filter { it.hasWarning && it.path !in acceptedWarnings }
+
+/** The filter applied to a list of items, keeping the list order. */
+fun List<ReviewItem>.filtered(filter: ReviewFilter): List<ReviewItem> = when (filter) {
+    ReviewFilter.ALL -> this
+    ReviewFilter.ADDED -> filter { it.status == ReviewStatus.ADDED }
+    ReviewFilter.MODIFIED -> filter { it.status == ReviewStatus.MODIFIED }
+    ReviewFilter.DELETED -> filter { it.status == ReviewStatus.DELETED }
+    ReviewFilter.FLAGGED -> filter { it.hasBlocking || it.hasWarning }
+}
