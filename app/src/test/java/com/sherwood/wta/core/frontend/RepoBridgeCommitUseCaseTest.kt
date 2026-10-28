@@ -503,6 +503,186 @@ class RepoBridgeCommitUseCaseTest {
         assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
     }
 
+    private val privateKeyText = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\n-----END RSA PRIVATE KEY-----\n"
+
+    private fun reviewedPrepare(): RepoBridgePrepareResult.Ready =
+        useCase().prepare() as RepoBridgePrepareResult.Ready
+
+    @Test
+    fun `prepare reviews every path with its status and secret findings`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("edit.txt", "new")
+        writeFile("config/.env", "TOKEN_NAME=x")
+        writeFile("deploy/key.txt", privateKeyText)
+        enqueueBase(
+            blobEntry("keep.txt", "same"),
+            blobEntry("edit.txt", "old"),
+            blobEntry("gone.txt", "bye")
+        )
+
+        val prepared = reviewedPrepare()
+        val byPath = prepared.review.items.associateBy { it.path }
+
+        assertThat(byPath.keys).containsExactly("config/.env", "deploy/key.txt", "edit.txt", "gone.txt")
+        assertThat(byPath.getValue("edit.txt").status).isEqualTo(ReviewStatus.MODIFIED)
+        assertThat(byPath.getValue("gone.txt").status).isEqualTo(ReviewStatus.DELETED)
+        assertThat(byPath.getValue("gone.txt").findings).isEmpty()
+        assertThat(byPath.getValue("config/.env").hasWarning).isTrue()
+        assertThat(byPath.getValue("deploy/key.txt").hasBlocking).isTrue()
+        assertThat(prepared.review.fingerprint).hasLength(64)
+    }
+
+    @Test
+    fun `a blocking secret is refused and nothing is uploaded`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("deploy/key.txt", privateKeyText)
+        enqueueBase(blobEntry("keep.txt", "same"))
+        val prepared = reviewedPrepare()
+
+        val result = useCase().commit(
+            "Add key",
+            decision = ReviewDecision(prepared.review.fingerprint)
+        ) as RepoBridgeCommitResult.Failure
+
+        assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.SECRET_BLOCKED)
+        assertThat(result.detail).isEqualTo("deploy/key.txt")
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `excluding the blocking file pushes the rest and leaves it out of the tree`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("fresh.sh", "echo hi")
+        writeFile("deploy/key.txt", privateKeyText)
+        enqueueBase(blobEntry("keep.txt", "same"))
+        val prepared = reviewedPrepare()
+        enqueueWrites(listOf(BLOB_NEW))
+
+        val result = useCase().commit(
+            "Add script",
+            decision = ReviewDecision(
+                fingerprint = prepared.review.fingerprint,
+                excluded = setOf("deploy/key.txt")
+            )
+        )
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+        repeat(3) { server.takeRequest() } // base commit, base tree, the one uploaded blob
+        assertThat(modesSentIn(server.takeRequest()).keys).containsExactly("fresh.sh")
+    }
+
+    @Test
+    fun `excluding a changed file keeps its remote version`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("edit.txt", "new")
+        writeFile("fresh.sh", "echo hi")
+        enqueueBase(blobEntry("edit.txt", "old"))
+        val prepared = reviewedPrepare()
+        enqueueWrites(listOf(BLOB_NEW))
+
+        useCase().commit(
+            "Add script",
+            decision = ReviewDecision(
+                fingerprint = prepared.review.fingerprint,
+                excluded = setOf("edit.txt")
+            )
+        )
+
+        repeat(3) { server.takeRequest() }
+        // edit.txt is neither uploaded nor deleted, so it is absent from the tree request.
+        assertThat(modesSentIn(server.takeRequest()).keys).containsExactly("fresh.sh")
+    }
+
+    @Test
+    fun `a warned file needs an explicit acceptance`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("config/.env", "TOKEN_NAME=x")
+        enqueueBase(blobEntry("keep.txt", "same"))
+        val prepared = reviewedPrepare()
+
+        val refused = useCase().commit(
+            "Add env",
+            decision = ReviewDecision(prepared.review.fingerprint)
+        ) as RepoBridgeCommitResult.Failure
+
+        assertThat(refused.reason).isEqualTo(RepoBridgeCommitFailureKind.SECRET_WARNINGS_UNACCEPTED)
+        assertThat(refused.detail).isEqualTo("config/.env")
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `an accepted warning lets the push through`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("config/.env", "TOKEN_NAME=x")
+        enqueueBase(blobEntry("keep.txt", "same"))
+        val prepared = reviewedPrepare()
+        enqueueWrites(listOf(BLOB_NEW))
+
+        val result = useCase().commit(
+            "Add env",
+            decision = ReviewDecision(
+                fingerprint = prepared.review.fingerprint,
+                acceptedWarnings = setOf("config/.env")
+            )
+        )
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+    }
+
+    @Test
+    fun `a change after review is refused with REVIEW_STALE and nothing is uploaded`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("keep.txt", "same")
+        writeFile("edit.txt", "reviewed")
+        enqueueBase(blobEntry("keep.txt", "same"), blobEntry("edit.txt", "old"))
+        val prepared = reviewedPrepare()
+
+        writeFile("edit.txt", "changed after review")
+        val result = useCase().commit(
+            "Edit",
+            decision = ReviewDecision(prepared.review.fingerprint)
+        ) as RepoBridgeCommitResult.Failure
+
+        assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.REVIEW_STALE)
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `a same-length edit after review is caught by the content fingerprint`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("edit.txt", "reviewed")
+        enqueueBase(blobEntry("edit.txt", "old"))
+        val prepared = reviewedPrepare()
+
+        // Same length, different bytes: the review must compare content, not size.
+        writeFile("edit.txt", "reviewee")
+        val result = useCase().commit(
+            "Edit",
+            decision = ReviewDecision(prepared.review.fingerprint)
+        ) as RepoBridgeCommitResult.Failure
+
+        assertThat(result.reason).isEqualTo(RepoBridgeCommitFailureKind.REVIEW_STALE)
+        assertThat(server.requestCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `a matching review commits as before`() = runBlocking<Unit> {
+        writeMetadata()
+        writeFile("edit.txt", "new")
+        enqueueBase(blobEntry("edit.txt", "old"))
+        val prepared = reviewedPrepare()
+        enqueueWrites(listOf(BLOB_EDIT))
+
+        val result = useCase().commit("Edit", decision = ReviewDecision(prepared.review.fingerprint))
+
+        assertThat(result).isInstanceOf(RepoBridgeCommitResult.Success::class.java)
+    }
+
     private fun modeEntry(path: String, content: String, mode: String): String =
         """{"path":"$path","mode":"$mode","type":"blob","sha":"${gitBlobSha(content)}"}"""
 

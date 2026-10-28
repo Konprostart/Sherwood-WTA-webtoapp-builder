@@ -5319,6 +5319,9 @@ object Strings {
     val repoBridgeCommitErrorNetwork: String get() = StringsE.repoBridgeCommitErrorNetwork
     val repoBridgeCommitErrorRemote: String get() = StringsE.repoBridgeCommitErrorRemote
     val repoBridgeCommitErrorMassDeletion: String get() = StringsE.repoBridgeCommitErrorMassDeletion
+    val repoBridgeCommitErrorStale: String get() = StringsE.repoBridgeCommitErrorStale
+    val repoBridgeCommitErrorSecretBlocked: String get() = StringsE.repoBridgeCommitErrorSecretBlocked
+    val repoBridgeCommitErrorSecretWarnings: String get() = StringsE.repoBridgeCommitErrorSecretWarnings
     val repoBridgeCommitErrorTooLarge: String get() = StringsE.repoBridgeCommitErrorTooLarge
     val repoBridgeCommitErrorNoToken: String get() = StringsE.repoBridgeCommitErrorNoToken
     val repoBridgeCommitErrorForbidden: String get() = StringsE.repoBridgeCommitErrorForbidden

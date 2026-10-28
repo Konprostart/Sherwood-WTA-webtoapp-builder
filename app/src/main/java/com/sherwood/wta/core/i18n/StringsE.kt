@@ -17432,6 +17432,45 @@ object StringsE {
         AppLanguage.KOREAN -> "토큰은 유효하지만 GitHub가 접근을 거부했습니다 (403). 토큰 권한을 확인하세요."
     }
 
+    val repoBridgeCommitErrorStale: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "待推送的文件已与审阅时不同。请重新审阅后再推送。"
+        AppLanguage.ENGLISH -> "The files changed after you reviewed them. Review them again before pushing."
+        AppLanguage.ARABIC -> "تغيّرت الملفات بعد مراجعتها. راجعها مرة أخرى قبل الدفع."
+        AppLanguage.PORTUGUESE -> "Os arquivos mudaram depois de revisados. Revise-os novamente antes de enviar."
+        AppLanguage.SPANISH -> "Los archivos cambiaron después de revisarlos. Revísalos de nuevo antes de subir."
+        AppLanguage.FRENCH -> "Les fichiers ont changé après leur examen. Examinez-les à nouveau avant de pousser."
+        AppLanguage.GERMAN -> "Die Dateien haben sich nach der Prüfung geändert. Prüfe sie erneut, bevor du pushst."
+        AppLanguage.RUSSIAN -> "Файлы изменились после проверки. Проверьте их снова перед отправкой."
+        AppLanguage.JAPANESE -> "レビュー後にファイルが変更されました。プッシュする前にもう一度確認してください。"
+        AppLanguage.KOREAN -> "검토 후 파일이 변경되었습니다. 푸시하기 전에 다시 검토하세요."
+    }
+
+    val repoBridgeCommitErrorSecretBlocked: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此文件看起来包含私钥或访问令牌，已拒绝推送。请删除该文件或将其排除在推送之外。"
+        AppLanguage.ENGLISH -> "A file looks like a private key or access token, so the push was refused. Remove it or exclude it from the push."
+        AppLanguage.ARABIC -> "يبدو أن أحد الملفات يحتوي على مفتاح خاص أو رمز وصول، لذلك رُفض الدفع. احذف الملف أو استبعده من الدفع."
+        AppLanguage.PORTUGUESE -> "Um arquivo parece conter uma chave privada ou token de acesso, então o envio foi recusado. Remova-o ou exclua-o do envio."
+        AppLanguage.SPANISH -> "Un archivo parece contener una clave privada o un token de acceso, así que se rechazó el envío. Elimínalo o exclúyelo del envío."
+        AppLanguage.FRENCH -> "Un fichier semble contenir une clé privée ou un jeton d'accès, l'envoi a donc été refusé. Supprimez-le ou excluez-le de l'envoi."
+        AppLanguage.GERMAN -> "Eine Datei sieht nach einem privaten Schlüssel oder Zugriffstoken aus, daher wurde der Push abgelehnt. Entferne sie oder schließe sie vom Push aus."
+        AppLanguage.RUSSIAN -> "Файл похож на закрытый ключ или токен доступа, поэтому отправка отклонена. Удалите файл или исключите его из отправки."
+        AppLanguage.JAPANESE -> "ファイルに秘密鍵またはアクセストークンらしいものが含まれているため、プッシュを拒否しました。そのファイルを削除するか、プッシュから除外してください。"
+        AppLanguage.KOREAN -> "파일에 개인 키 또는 액세스 토큰으로 보이는 내용이 있어 푸시를 거부했습니다. 파일을 삭제하거나 푸시에서 제외하세요."
+    }
+
+    val repoBridgeCommitErrorSecretWarnings: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "部分文件可能包含机密信息。请先审阅并确认后再推送。"
+        AppLanguage.ENGLISH -> "Some files may contain secrets. Review them and confirm before pushing."
+        AppLanguage.ARABIC -> "قد تحتوي بعض الملفات على أسرار. راجعها وأكد قبل الدفع."
+        AppLanguage.PORTUGUESE -> "Alguns arquivos podem conter segredos. Revise-os e confirme antes de enviar."
+        AppLanguage.SPANISH -> "Algunos archivos pueden contener secretos. Revísalos y confirma antes de subir."
+        AppLanguage.FRENCH -> "Certains fichiers peuvent contenir des secrets. Examinez-les et confirmez avant de pousser."
+        AppLanguage.GERMAN -> "Einige Dateien enthalten möglicherweise Geheimnisse. Prüfe sie und bestätige, bevor du pushst."
+        AppLanguage.RUSSIAN -> "Некоторые файлы могут содержать секреты. Проверьте их и подтвердите перед отправкой."
+        AppLanguage.JAPANESE -> "一部のファイルに機密情報が含まれている可能性があります。確認してからプッシュしてください。"
+        AppLanguage.KOREAN -> "일부 파일에 비밀 정보가 있을 수 있습니다. 검토 후 확인하고 푸시하세요."
+    }
+
     val repoBridgeCommitErrorRemote: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "GitHub 拒绝了该提交。"
         AppLanguage.ENGLISH -> "GitHub rejected the commit."

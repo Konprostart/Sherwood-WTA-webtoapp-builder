@@ -20,6 +20,12 @@ enum class RepoBridgeCommitFailureKind {
     TOO_MANY_FILES,
     FILE_TOO_LARGE,
     MASS_DELETION_UNCONFIRMED,
+    /** The working copy changed after it was reviewed; review it again. */
+    REVIEW_STALE,
+    /** A file contains a credential format that is never pushed. */
+    SECRET_BLOCKED,
+    /** A file may contain a secret and the user has not confirmed it. */
+    SECRET_WARNINGS_UNACCEPTED,
     IO_ERROR,
     UNAUTHORIZED,
     FORBIDDEN,
@@ -54,7 +60,8 @@ sealed class RepoBridgePrepareResult {
         val branch: String,
         val baseSha: String,
         val remoteFileCount: Int,
-        val changes: RepoBridgeChangeSet
+        val changes: RepoBridgeChangeSet,
+        val review: RepoBridgeReview
     ) : RepoBridgePrepareResult()
 
     data class Failure(
@@ -133,6 +140,13 @@ class RepoBridgeCommitUseCase(
                 oversized
             )
         }
+        val review = when (val built = buildReview(changes, files, plan)) {
+            is ReviewBuild.Error -> {
+                cachedPlan = null
+                return RepoBridgePrepareResult.Failure(built.reason, built.detail)
+            }
+            is ReviewBuild.Ok -> built.review
+        }
         cachedPlan = plan
         return RepoBridgePrepareResult.Ready(
             owner = plan.metadata.owner,
@@ -140,23 +154,28 @@ class RepoBridgeCommitUseCase(
             branch = plan.metadata.ref,
             baseSha = plan.baseSha,
             remoteFileCount = plan.remoteBlobs.size,
-            changes = changes
+            changes = changes,
+            review = review
         )
     }
 
     /**
      * Uploads the working copy on top of the imported commit and advances the branch.
      *
+     * [decision] is the user's review. When present, its fingerprint must match the working
+     * copy at send time, and its exclusions and accepted warnings are applied. Blocking
+     * findings are refused in every case.
+     *
      * [confirmedDeletions] is the number of deletions the user saw and accepted. A mass
-     * deletion is refused unless the push removes no more files than that, so a folder
-     * that changed between preview and send cannot wipe the branch silently.
+     * deletion is refused unless the push removes no more files than that.
      */
     suspend fun commit(
         message: String,
-        confirmedDeletions: Int = 0
+        confirmedDeletions: Int = 0,
+        decision: ReviewDecision? = null
     ): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
         try {
-            commitInternal(message, confirmedDeletions)
+            commitInternal(message, confirmedDeletions, decision)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -166,7 +185,11 @@ class RepoBridgeCommitUseCase(
         }
     }
 
-    private suspend fun commitInternal(message: String, confirmedDeletions: Int): RepoBridgeCommitResult {
+    private suspend fun commitInternal(
+        message: String,
+        confirmedDeletions: Int,
+        decision: ReviewDecision?
+    ): RepoBridgeCommitResult {
         val trimmed = message.trim()
         if (trimmed.isEmpty()) {
             return RepoBridgeCommitResult.Failure(
@@ -187,12 +210,24 @@ class RepoBridgeCommitUseCase(
             return RepoBridgeCommitResult.Failure(scanned.reason, scanned.detail)
         }
         val files = (scanned as ScanResult.Ok).files
-        val changes = diff(files, plan.remoteBlobs)
+        val allChanges = diff(files, plan.remoteBlobs)
+        if (allChanges.isEmpty) {
+            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_CHANGES)
+        }
 
+        val review = when (val built = buildReview(allChanges, files, plan)) {
+            is ReviewBuild.Error -> return RepoBridgeCommitResult.Failure(built.reason, built.detail)
+            is ReviewBuild.Ok -> built.review
+        }
+        if (decision != null && decision.fingerprint != review.fingerprint) {
+            cachedPlan = null
+            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.REVIEW_STALE)
+        }
+
+        val excluded = decision?.excluded.orEmpty()
+        val changes = allChanges.without(excluded)
         if (changes.isEmpty) {
-            return RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.NO_CHANGES
-            )
+            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_CHANGES)
         }
         if (changes.total > MAX_CHANGED_FILES) {
             return RepoBridgeCommitResult.Failure(
@@ -206,6 +241,22 @@ class RepoBridgeCommitUseCase(
                 detail
             )
         }
+
+        val pushed = review.items.filter { it.path !in excluded }
+        pushed.firstOrNull { it.hasBlocking }?.let { blocked ->
+            return RepoBridgeCommitResult.Failure(
+                RepoBridgeCommitFailureKind.SECRET_BLOCKED,
+                blocked.path
+            )
+        }
+        val acceptedWarnings = decision?.acceptedWarnings.orEmpty()
+        pushed.firstOrNull { it.hasWarning && it.path !in acceptedWarnings }?.let { warned ->
+            return RepoBridgeCommitResult.Failure(
+                RepoBridgeCommitFailureKind.SECRET_WARNINGS_UNACCEPTED,
+                warned.path
+            )
+        }
+
         if (changes.isMassDeletion(plan.remoteBlobs.size) &&
             changes.deleted.size > confirmedDeletions
         ) {
@@ -220,6 +271,7 @@ class RepoBridgeCommitUseCase(
 
         for (path in changes.added + changes.modified) {
             val local = files[path] ?: continue
+            // The bytes uploaded must be the bytes that were reviewed: re-read and re-hash.
             val content = try {
                 local.file.readBytes()
             } catch (e: IOException) {
@@ -228,6 +280,10 @@ class RepoBridgeCommitUseCase(
                     RepoBridgeCommitFailureKind.IO_ERROR,
                     path
                 )
+            }
+            if (blobShaOf(content) != local.blobSha) {
+                cachedPlan = null
+                return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.REVIEW_STALE, path)
             }
             when (val blob = client.createBlob(metadata.owner, metadata.repo, content)) {
                 is GitDataResult.Success ->
@@ -311,6 +367,80 @@ class RepoBridgeCommitUseCase(
             changedFiles = changes.total,
             metadataSaved = metadataSaved
         )
+    }
+
+    private sealed class ReviewBuild {
+        data class Ok(val review: RepoBridgeReview) : ReviewBuild()
+        data class Error(
+            val reason: RepoBridgeCommitFailureKind,
+            val detail: String? = null
+        ) : ReviewBuild()
+    }
+
+    /**
+     * Builds the review of [changes]. Each added or modified file is read once and must hash
+     * to the blob sha recorded by [scanLocal]; otherwise it changed since the scan and the
+     * review is stale. Secret findings come from those same bytes.
+     */
+    private fun buildReview(
+        changes: RepoBridgeChangeSet,
+        files: Map<String, LocalFile>,
+        plan: Plan
+    ): ReviewBuild {
+        val items = mutableListOf<ReviewItem>()
+        val entries = mutableListOf<Triple<ReviewStatus, String, String>>()
+
+        val uploaded = listOf(
+            ReviewStatus.ADDED to changes.added,
+            ReviewStatus.MODIFIED to changes.modified
+        )
+        for ((status, paths) in uploaded) {
+            for (path in paths) {
+                val local = files[path] ?: continue
+                val content = try {
+                    local.file.readBytes()
+                } catch (e: IOException) {
+                    return ReviewBuild.Error(RepoBridgeCommitFailureKind.IO_ERROR, path)
+                }
+                if (blobShaOf(content) != local.blobSha) {
+                    return ReviewBuild.Error(RepoBridgeCommitFailureKind.REVIEW_STALE, path)
+                }
+                val scannable = content.takeIf { it.size <= SecretScanner.MAX_CONTENT_BYTES }
+                items += ReviewItem(
+                    path = path,
+                    status = status,
+                    sizeBytes = local.size,
+                    findings = SecretScanner.scan(path, scannable)
+                )
+                entries += Triple(status, path, local.blobSha)
+            }
+        }
+        for (path in changes.deleted) {
+            val remoteSha = plan.remoteBlobs[path] ?: continue
+            items += ReviewItem(path, ReviewStatus.DELETED, 0L, emptyList())
+            entries += Triple(ReviewStatus.DELETED, path, remoteSha)
+        }
+        return ReviewBuild.Ok(
+            RepoBridgeReview(
+                items = items.sortedBy { it.path },
+                fingerprint = reviewFingerprint(entries)
+            )
+        )
+    }
+
+    private fun RepoBridgeChangeSet.without(excluded: Set<String>): RepoBridgeChangeSet =
+        RepoBridgeChangeSet(
+            added = added.filterNot { it in excluded },
+            modified = modified.filterNot { it in excluded },
+            deleted = deleted.filterNot { it in excluded }
+        )
+
+    /** Git blob sha of in-memory content: sha1("blob <size>\0" + content), lowercase hex. */
+    private fun blobShaOf(content: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-1")
+        digest.update("blob ${content.size}\u0000".toByteArray(Charsets.US_ASCII))
+        digest.update(content)
+        return digest.digest().joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
     }
 
     private suspend fun loadPlan(): PlanLoad {

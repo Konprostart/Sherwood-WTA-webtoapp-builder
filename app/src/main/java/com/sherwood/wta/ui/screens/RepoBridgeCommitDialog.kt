@@ -296,6 +296,9 @@ private fun ErrorBlock(
 private fun RepoBridgeCommitFailureKind.description(): String = when (this) {
     RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED ->
         Strings.repoBridgeCommitErrorMassDeletion
+    RepoBridgeCommitFailureKind.REVIEW_STALE -> Strings.repoBridgeCommitErrorStale
+    RepoBridgeCommitFailureKind.SECRET_BLOCKED -> Strings.repoBridgeCommitErrorSecretBlocked
+    RepoBridgeCommitFailureKind.SECRET_WARNINGS_UNACCEPTED -> Strings.repoBridgeCommitErrorSecretWarnings
     RepoBridgeCommitFailureKind.FILE_TOO_LARGE -> Strings.repoBridgeCommitErrorTooLarge
     RepoBridgeCommitFailureKind.NO_METADATA,
     RepoBridgeCommitFailureKind.TOO_MANY_FILES,
