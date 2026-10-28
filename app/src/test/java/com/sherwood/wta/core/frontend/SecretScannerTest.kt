@@ -102,7 +102,9 @@ class SecretScannerTest {
     fun `google, slack and stripe live keys are blocked`() {
         assertThat(ruleIds("a.js", "AIza" + "S".repeat(35))).containsExactly("google_api_key")
         assertThat(ruleIds("b.js", "xoxb-1234567890-abcdefghij")).containsExactly("slack_token")
-        assertThat(ruleIds("c.js", "sk_live_" + "x".repeat(24))).containsExactly("stripe_live_key")
+        // Assembled from parts so the literal does not look like a live key to secret scanners.
+        val stripeLike = "sk" + "_live_" + "a1B2c3D4e5F6g7H8i9J0k1L2"
+        assertThat(ruleIds("c.js", stripeLike)).containsExactly("stripe_live_key")
     }
 
     // ---- content: warnings
