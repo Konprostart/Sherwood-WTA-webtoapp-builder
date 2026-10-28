@@ -93,11 +93,16 @@ jobs:
             :app:bundleGplayRelease
 
       - name: Verify APK signature
+        env:
+          # SHA-256 of the release certificate, from the repository variable
+          # RELEASE_CERT_SHA256 (hex, with or without colons).
+          EXPECTED_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}
         run: |
           apk="app/build/outputs/apk/standard/release/app-standard-release.apk"
           test -f "$apk" || { echo "::error::Release APK not found at $apk"; exit 1; }
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           "$apksigner" verify --verbose --print-certs "$apk"
+          bash .github/scripts/check-signer-pin.sh "$apksigner" "$apk" "$EXPECTED_CERT_SHA256"
 
       - name: Rename artifacts
         run: |

@@ -148,9 +148,13 @@ class DataBackupManager(private val context: Context) {
          * a user-shared backup zip would carry the private key AND its plaintext
          * password together. Restore keeps the keystores; passwords are re-entered
          * the next time a build signs with them.
+         *
+         * webtoapp_keystore.p12 (PKCS12_AUTO) is also NOT backed up: backups are a
+         * plain zip, and the auto keystore cannot be restored without its
+         * unexportable-adjacent .ks_credential sidecar anyway, so restoring it would
+         * only leak a live private key into a plaintext archive.
          */
         private val KEYSTORE_FILES = listOf(
-            "webtoapp_keystore.p12",
             "custom_keystore.p12",
             "custom_keystore_alias.txt",
             "signing_scheme_options.json"

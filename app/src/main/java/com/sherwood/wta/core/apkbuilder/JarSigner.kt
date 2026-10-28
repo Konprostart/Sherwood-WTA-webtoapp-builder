@@ -441,32 +441,36 @@ class JarSigner(private val context: Context) {
     private fun getOrCreateKeystorePassword(): CharArray {
         val passwordFile = File(context.filesDir, ".ks_credential")
 
+        val legacyPassword = "webtoapp" + "_sign"
+
         if (passwordFile.exists()) {
             try {
                 val saved = passwordFile.readText().trim()
-                if (saved.isNotEmpty()) return saved.toCharArray()
+                if (saved.isNotEmpty() && saved != legacyPassword) return saved.toCharArray()
             } catch (e: Exception) {
                 AppLogger.w(TAG, "Failed to read password file", e)
             }
         }
 
         val keyStoreFile = File(context.filesDir, DEFAULT_PKCS12_FILE)
-        val legacyPassword = "webtoapp_sign"
+        val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*"
+        val random = SecureRandom()
+
         if (keyStoreFile.exists()) {
             try {
                 val ks = KeyStore.getInstance("PKCS12")
                 FileInputStream(keyStoreFile).use { fis -> ks.load(fis, legacyPassword.toCharArray()) }
 
-                passwordFile.writeText(legacyPassword)
-                AppLogger.d(TAG, "Migrating legacy password to file storage")
-                return legacyPassword.toCharArray()
+                val rotated = CharArray(32) { chars[random.nextInt(chars.length)] }
+                FileOutputStream(keyStoreFile).use { fos -> ks.store(fos, rotated) }
+                passwordFile.writeText(String(rotated))
+                AppLogger.d(TAG, "Legacy keystore re-encrypted under a randomized password")
+                return rotated
             } catch (_: Exception) {
 
             }
         }
 
-        val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*"
-        val random = SecureRandom()
         val password = CharArray(32) { chars[random.nextInt(chars.length)] }
 
         try {
