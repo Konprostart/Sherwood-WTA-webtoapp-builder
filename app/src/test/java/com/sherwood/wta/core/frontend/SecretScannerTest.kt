@@ -138,7 +138,7 @@ class SecretScannerTest {
 
     @Test
     fun `genuine binary content without credential text is not flagged`() {
-        val pngHeader = byteArrayOf(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) +
+        val pngHeader = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) +
             ByteArray(2048) { ((it * 31) % 256).toByte() }
         assertThat(SecretScanner.scan("image.png", pngHeader)).isEmpty()
     }

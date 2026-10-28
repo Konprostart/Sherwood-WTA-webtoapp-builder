@@ -249,7 +249,6 @@ class GitHubRepoFetcherAuthTest {
     }
 
     companion object {
-    companion object {
         private const val SHA = "0123456789abcdef0123456789abcdef01234567"
         private val TOKEN = "ghp_" + "a".repeat(36)
     }
