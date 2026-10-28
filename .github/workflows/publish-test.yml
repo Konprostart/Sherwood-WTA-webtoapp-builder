@@ -6,6 +6,11 @@ name: Publish test APK
 
 on:
   workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Branch or tag to build"
+        required: true
+        default: "repo-bridge-v1.2-review-safety"
 
 permissions:
   contents: write
@@ -26,6 +31,8 @@ jobs:
     steps:
       - name: Download code
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
 
       - name: Check test signing secrets
         env:
@@ -83,6 +90,7 @@ jobs:
         run: |
           ./gradlew --no-daemon --no-configuration-cache \
             -Dkotlin.compiler.execution.strategy=in-process \
+            -PallowDebugSignedRelease=true \
             :app:assembleStandardDebug
 
       - name: Verify signer and prepare asset
