@@ -41,6 +41,10 @@ val releaseSigningStoreFile = releaseSigningValue("signing.storeFile", "ANDROID_
 val releaseSigningStorePassword = releaseSigningValue("signing.storePassword", "ANDROID_KEYSTORE_PASSWORD")
 val releaseSigningKeyAlias = releaseSigningValue("signing.keyAlias", "ANDROID_KEY_ALIAS")
 val releaseSigningKeyPassword = releaseSigningValue("signing.keyPassword", "ANDROID_KEY_PASSWORD")
+val testSigningStoreFile: File? = System.getenv("TEST_KEYSTORE_PATH")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.isFile }
 val hasReleaseSigningConfig = releaseSigningStoreFile?.isFile == true &&
     releaseSigningStorePassword != null &&
     releaseSigningKeyAlias != null &&
@@ -74,6 +78,16 @@ android {
                 storePassword = releaseSigningStorePassword
                 keyAlias = releaseSigningKeyAlias
                 keyPassword = releaseSigningKeyPassword
+            }
+        }
+        // Stable test key for the rolling test channel (publish-test.yml). Without it every
+        // CI debug build is signed by a fresh runner key and cannot update the previous one.
+        if (testSigningStoreFile != null) {
+            create("testChannel") {
+                storeFile = testSigningStoreFile
+                storePassword = System.getenv("TEST_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("TEST_KEY_ALIAS")
+                keyPassword = System.getenv("TEST_KEY_PASSWORD")
             }
         }
     }
@@ -134,6 +148,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (testSigningStoreFile != null) {
+                signingConfig = signingConfigs.getByName("testChannel")
+            }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
