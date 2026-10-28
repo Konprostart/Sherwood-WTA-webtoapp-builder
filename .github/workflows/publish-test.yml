@@ -1,0 +1,126 @@
+name: Publish test APK
+
+# The one test channel: a single standard debug APK, signed with the stable test key,
+# published as the rolling prerelease "test-latest". Each run replaces the previous one.
+# Release builds live in release.yml and are not published here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Branch or tag to build"
+        required: true
+        default: "repo-bridge-v1.2-review-safety"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-test
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TEST_RELEASE_TAG: test-latest
+      TEST_APK_NAME: Sherwood-WTA-test.apk
+
+    steps:
+      - name: Download code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Check test signing secrets
+        env:
+          TEST_KEYSTORE_BASE64: ${{ secrets.TEST_KEYSTORE_BASE64 }}
+          TEST_KEYSTORE_PASSWORD: ${{ secrets.TEST_KEYSTORE_PASSWORD }}
+          TEST_KEY_ALIAS: ${{ secrets.TEST_KEY_ALIAS }}
+          TEST_KEY_PASSWORD: ${{ secrets.TEST_KEY_PASSWORD }}
+        run: |
+          for name in TEST_KEYSTORE_BASE64 TEST_KEYSTORE_PASSWORD TEST_KEY_ALIAS TEST_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is not configured"
+              exit 1
+            fi
+          done
+
+      - name: Prepare Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Prepare Android tools
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+
+      - name: Prepare Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Install needed tools
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "cmake;3.22.1" \
+            "ndk;28.2.13676358"
+
+      - name: Decode test keystore
+        env:
+          TEST_KEYSTORE_BASE64: ${{ secrets.TEST_KEYSTORE_BASE64 }}
+        run: |
+          keystore_path="${RUNNER_TEMP}/wta-test.p12"
+          printf '%s' "$TEST_KEYSTORE_BASE64" | base64 -d > "$keystore_path"
+          chmod 600 "$keystore_path"
+          echo "TEST_KEYSTORE_PATH=$keystore_path" >> "$GITHUB_ENV"
+
+      - name: Build standard debug APK
+        env:
+          TEST_KEYSTORE_PASSWORD: ${{ secrets.TEST_KEYSTORE_PASSWORD }}
+          TEST_KEY_ALIAS: ${{ secrets.TEST_KEY_ALIAS }}
+          TEST_KEY_PASSWORD: ${{ secrets.TEST_KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache \
+            -Dkotlin.compiler.execution.strategy=in-process \
+            :app:assembleStandardDebug
+
+      - name: Verify signer and prepare asset
+        env:
+          TEST_CERT_SHA256: ${{ vars.TEST_CERT_SHA256 }}
+        run: |
+          apk="$(ls app/build/outputs/apk/standard/debug/*.apk | head -1)"
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          bash .github/scripts/check-signer-pin.sh "$apksigner" "$apk" "$TEST_CERT_SHA256"
+          mkdir -p dist
+          cp "$apk" "dist/$TEST_APK_NAME"
+          (cd dist && sha256sum "$TEST_APK_NAME" > SHA256SUMS.txt)
+          cat dist/SHA256SUMS.txt
+
+      - name: Publish rolling test release
+        run: |
+          gh release delete "$TEST_RELEASE_TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TEST_RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --draft \
+            --title "Test build (${GITHUB_SHA:0:8})" \
+            --notes "Rolling test build of the standard flavor. Replaced on every run. Commit: ${GITHUB_SHA}"
+          gh release upload "$TEST_RELEASE_TAG" dist/"$TEST_APK_NAME" dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$TEST_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+
+      - name: Remove test keystore from runner
+        if: always()
+        run: |
+          if [ -n "${TEST_KEYSTORE_PATH:-}" ]; then
+            rm -f "$TEST_KEYSTORE_PATH"
+          fi
