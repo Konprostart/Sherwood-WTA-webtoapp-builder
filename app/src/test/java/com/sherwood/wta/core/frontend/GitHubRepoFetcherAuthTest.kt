@@ -244,7 +244,7 @@ class GitHubRepoFetcherAuthTest {
         assertThat(result.isFailure).isTrue()
         val joined = fetcher.logs.value.joinToString("\n")
         assertThat(joined).doesNotContain(embeddedToken)
-        assertThat(joined).contains("[redacted]")
+        assertThat(joined).contains("https://***@github.com/octocat/hello-world")
         assertThat(joined).contains("Invalid GitHub URL")
     }
 
