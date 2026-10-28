@@ -505,7 +505,7 @@ class RepoBridgeCommitUseCaseTest {
 
     private val privateKeyText = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\n-----END RSA PRIVATE KEY-----\n"
 
-    private fun reviewedPrepare(): RepoBridgePrepareResult.Ready =
+    private suspend fun reviewedPrepare(): RepoBridgePrepareResult.Ready =
         useCase().prepare() as RepoBridgePrepareResult.Ready
 
     @Test
