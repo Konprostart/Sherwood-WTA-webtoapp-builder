@@ -67,7 +67,7 @@ fun GitSettingsScreen(
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val store = remember { GitHubTokenStore(context) }
+    val store = remember { GitHubTokenStore(context.applicationContext) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val uriHandler = LocalUriHandler.current

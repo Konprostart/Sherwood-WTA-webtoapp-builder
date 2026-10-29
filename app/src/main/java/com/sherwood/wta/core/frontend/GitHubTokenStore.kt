@@ -97,21 +97,49 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
     fun hasToken(): Boolean = prefs.contains(KEY_TOKEN)
 
     private fun encrypt(plaintext: String): String {
-        val key = EnhancedCrypto.getOrCreateMasterKey(context)
-            ?: error("Keystore master key is unavailable")
+        val masterKey = EnhancedCrypto.getOrCreateMasterKey(context)
+        if (masterKey != null) {
+            val ciphertext = EnhancedCrypto.encrypt(
+                plaintext.toByteArray(StandardCharsets.UTF_8),
+                masterKey,
+                ASSOCIATED_DATA
+            )
+            return Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+        }
+        // Fallback when Android Keystore is unavailable on this device: derive a key from
+        // the app signature + package name. Less secure than Keystore-backed encryption,
+        // but keeps the token encrypted at rest instead of plaintext.
+        AppLogger.w(TAG, "Android Keystore unavailable, falling back to app-derived key")
+        val container = EnhancedCrypto.deriveAppKey(
+            context.packageName,
+            context.packageManager.getPackageInfo(context.packageName, 0).signatures?.firstOrNull()?.toByteArray() ?: ByteArray(0)
+        )
+        val key = container.getKey()
         val ciphertext = EnhancedCrypto.encrypt(
             plaintext.toByteArray(StandardCharsets.UTF_8),
             key,
             ASSOCIATED_DATA
         )
-        return Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+        container.close()
+        return "FALLBACK:" + Base64.encodeToString(ciphertext, Base64.NO_WRAP)
     }
 
     private fun decrypt(encoded: String): String {
-        val key = EnhancedCrypto.getOrCreateMasterKey(context)
-            ?: error("Keystore master key is unavailable")
-        val ciphertext = Base64.decode(encoded, Base64.NO_WRAP)
+        val masterKey = EnhancedCrypto.getOrCreateMasterKey(context)
+        if (masterKey != null && !encoded.startsWith("FALLBACK:")) {
+            val ciphertext = Base64.decode(encoded, Base64.NO_WRAP)
+            val plaintext = EnhancedCrypto.decrypt(ciphertext, masterKey, ASSOCIATED_DATA)
+            return String(plaintext, StandardCharsets.UTF_8)
+        }
+        val container = EnhancedCrypto.deriveAppKey(
+            context.packageName,
+            context.packageManager.getPackageInfo(context.packageName, 0).signatures?.firstOrNull()?.toByteArray() ?: ByteArray(0)
+        )
+        val key = container.getKey()
+        val payload = encoded.removePrefix("FALLBACK:")
+        val ciphertext = Base64.decode(payload, Base64.NO_WRAP)
         val plaintext = EnhancedCrypto.decrypt(ciphertext, key, ASSOCIATED_DATA)
+        container.close()
         return String(plaintext, StandardCharsets.UTF_8)
     }
 
