@@ -1174,6 +1174,7 @@ private fun GitHubImportCard(
     var subPath by remember { mutableStateOf("") }
     var showLogs by remember { mutableStateOf(false) }
     var showCommitDialog by rememberSaveable { mutableStateOf(false) }
+    var showReimportWarning by remember { mutableStateOf(false) }
 
     val commitProjectDir = remember(projectPath) {
         projectPath?.let(::File)?.takeIf { RepoBridgeMetadataStore().exists(it) }
@@ -1317,6 +1318,12 @@ private fun GitHubImportCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(Strings.repoBridgeCommitTitle)
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Local changes are kept in this folder until you commit them. Re-importing replaces the folder and discards uncommitted edits.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -1330,19 +1337,41 @@ private fun GitHubImportCard(
                 // builds a new folder, so unpushed edits stay in the old one.
                 val meta = RepoBridgeMetadataStore().read(commitProjectDir)
                 if (meta != null) {
-                    showCommitDialog = false
-                    val input = "${meta.owner}/${meta.repo}"
-                    url = input
-                    branch = meta.ref
-                    subPath = meta.subPath.orEmpty()
-                    scope.launch {
-                        fetcher.fetch(
-                            input = input,
-                            explicitBranch = meta.ref,
-                            explicitSubPath = meta.subPath
-                        ).onSuccess(onFetched)
-                    }
+                    showReimportWarning = true
                 }
+            }
+        )
+    }
+
+    if (showReimportWarning) {
+        val meta = commitProjectDir?.let { RepoBridgeMetadataStore().read(it) }
+        AlertDialog(
+            onDismissRequest = { showReimportWarning = false },
+            title = { Text("Re-import repository?") },
+            text = {
+                Text("Re-importing downloads a fresh copy into a new folder. Uncommitted local changes in the current folder will be lost. Commit them first if you want to keep them.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showReimportWarning = false
+                    if (meta != null) {
+                        showCommitDialog = false
+                        val input = "${meta.owner}/${meta.repo}"
+                        url = input
+                        branch = meta.ref
+                        subPath = meta.subPath.orEmpty()
+                        scope.launch {
+                            fetcher.fetch(
+                                input = input,
+                                explicitBranch = meta.ref,
+                                explicitSubPath = meta.subPath
+                            ).onSuccess(onFetched)
+                        }
+                    }
+                }) { Text("Re-import") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReimportWarning = false }) { Text("Cancel") }
             }
         )
     }
