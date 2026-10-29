@@ -110,7 +110,23 @@ object EnhancedCrypto {
 
             if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
                 val entry = keyStore.getEntry(KEYSTORE_ALIAS, null) as? KeyStore.SecretKeyEntry
-                return entry?.secretKey
+                val key = entry?.secretKey
+                if (key != null) {
+                    // Verify the key allows caller-provided IV (needed for our IV+ct format).
+                    try {
+                        val cipher = Cipher.getInstance(AES_GCM_ALGORITHM)
+                        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TAG_SIZE, ByteArray(IV_SIZE)))
+                        // If no exception, key is compatible.
+                    } catch (e: Exception) {
+                        AppLogger.w(TAG, "Existing master key is incompatible, regenerating", e)
+                        keyStore.deleteEntry(KEYSTORE_ALIAS)
+                        // fall through to generation below
+                    }
+                    if (keyStore.containsAlias(KEYSTORE_ALIAS)) {
+                        val newEntry = keyStore.getEntry(KEYSTORE_ALIAS, null) as? KeyStore.SecretKeyEntry
+                        return newEntry?.secretKey
+                    }
+                }
             }
 
             val keyGenerator = KeyGenerator.getInstance(
