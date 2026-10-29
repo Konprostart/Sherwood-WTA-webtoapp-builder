@@ -352,6 +352,7 @@ class RepoBridgeCommitUseCase(
         )) {
             is GitDataResult.Success -> Unit
             is GitDataResult.Failure -> {
+                cachedPlan = null
                 if (ref.kind == GitDataFailureKind.CONFLICT) {
                     cachedPlan = null
                 }
@@ -510,6 +511,7 @@ class RepoBridgeCommitUseCase(
         for (entry in tree.entries) {
             if (entry.type != "blob" || entry.sha == null) continue
             if (prefix != null && !entry.path.startsWith(prefix)) continue
+            if (isSkippedRemotePath(entry.path)) continue
             remoteBlobs[entry.path] = entry.sha
             remoteModes[entry.path] = entry.mode
         }
@@ -525,6 +527,14 @@ class RepoBridgeCommitUseCase(
             )
         )
     }
+
+    /** Matches GitHubRepoFetcher's skip list so a repo that tracks these never reports them deleted. */
+    private fun isSkippedRemotePath(path: String): Boolean =
+        path.split('/').any { part ->
+            part.equals("__MACOSX", ignoreCase = true) ||
+                part.equals(".DS_Store", ignoreCase = true) ||
+                part.equals("Thumbs.db", ignoreCase = true)
+        }
 
     /**
      * The mode a path keeps on push. The base tree is the source of truth: a script that

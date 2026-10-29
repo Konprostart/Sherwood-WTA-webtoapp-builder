@@ -50,6 +50,8 @@ object SecretScanner {
         "(?i)\\b(?:password|passwd|secret|api[_-]?key|access[_-]?token)\\s*[:=]\\s*[\"']?([A-Za-z0-9/+_\\-]{16,})"
     )
 
+    private val NPM_AUTH_TOKEN_RE = Regex("(?i)\\b_authToken\\s*=\\s*[^\\s]{10,}")
+
     /** Content rules that block the push. Order is the report order. */
     private val BLOCKING_CONTENT_RULES = listOf(
         "private_key" to PRIVATE_KEY_RE,
@@ -57,7 +59,8 @@ object SecretScanner {
         "aws_access_key" to AWS_KEY_RE,
         "google_api_key" to GOOGLE_KEY_RE,
         "slack_token" to SLACK_TOKEN_RE,
-        "stripe_live_key" to STRIPE_LIVE_RE
+        "stripe_live_key" to STRIPE_LIVE_RE,
+        "npm_auth_token" to NPM_AUTH_TOKEN_RE
     )
 
     /**
@@ -134,6 +137,7 @@ object SecretScanner {
         val ruleId = when {
             name == ".env" -> "env_file"
             name.startsWith(".env.") && name.removePrefix(".env.") !in ALLOWED_ENV_SUFFIXES -> "env_file"
+            name == ".npmrc" || name == ".netrc" || name == ".pypirc" || name == ".git-credentials" -> "credential_file"
             name.endsWith(".pem") || name.endsWith(".key") || name.endsWith(".p12") ||
                 name.endsWith(".pfx") || name.endsWith(".jks") || name.endsWith(".keystore") -> "key_file"
             isSshPrivateKeyName(name) -> "ssh_key"

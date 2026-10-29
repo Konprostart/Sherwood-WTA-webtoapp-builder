@@ -172,6 +172,13 @@ class SecretScannerTest {
     }
 
     @Test
+    fun `npm auth tokens and credential files are findings`() {
+        assertThat(ruleIds(".npmrc")).containsExactly("credential_file")
+        assertThat(ruleIds(".netrc")).containsExactly("credential_file")
+        assertThat(ruleIds("x", "_authToken = npm_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6")).containsExactly("npm_auth_token")
+    }
+
+    @Test
     fun `a file can carry a name warning and a content block together`() {
         val content = "-----BEGIN OPENSSH PRIVATE KEY-----".toByteArray()
         val findings = SecretScanner.scan("deploy.pem", content)
