@@ -126,6 +126,7 @@ object EnhancedCrypto {
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(KEY_SIZE)
                 .setUserAuthenticationRequired(false)
+                .setRandomizedEncryptionRequired(false)
                 .build()
 
             keyGenerator.init(spec)
