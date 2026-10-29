@@ -111,7 +111,7 @@ fun GitSettingsScreen(
                 refreshTokenState()
                 snackbarHostState.showSnackbar(Strings.gitTokenSaved)
             } else {
-                snackbarHostState.showSnackbar(Strings.gitTokenSaveFailed)
+                snackbarHostState.showSnackbar(result.exceptionOrNull()?.message ?: Strings.gitTokenSaveFailed)
             }
         }
     }

@@ -76,10 +76,16 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
         if (!GitHubTokenFormat.isValid(token)) {
             return Result.failure(IllegalArgumentException("Unsupported GitHub token format"))
         }
-        val encrypted = runCatching { encrypt(token) }.getOrNull()
-            ?: return Result.failure(IllegalStateException("Token encryption is unavailable"))
+        val encrypted = try {
+            encrypt(token)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Token could not be encrypted", e)
+            return Result.failure(e)
+        }
         if (!prefs.edit().putString(KEY_TOKEN, encrypted).commit()) {
-            return Result.failure(IllegalStateException("Token could not be saved"))
+            val failure = IllegalStateException("SharedPreferences commit returned false")
+            AppLogger.e(TAG, "Token could not be saved", failure)
+            return Result.failure(failure)
         }
         return Result.success(Unit)
     }
