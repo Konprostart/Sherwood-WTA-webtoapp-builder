@@ -1180,6 +1180,18 @@ private fun GitHubImportCard(
         projectPath?.let(::File)?.takeIf { RepoBridgeMetadataStore().exists(it) }
     }
 
+    val hasPossibleUnsavedChanges = remember(commitProjectDir) {
+        runCatching {
+            if (commitProjectDir == null) return@runCatching false
+            val metaFile = File(commitProjectDir, "repo_bridge.json")
+            if (!metaFile.isFile) return@runCatching false
+            val metaTime = metaFile.lastModified()
+            commitProjectDir.walkTopDown()
+                .filter { it.isFile && it.name != "repo_bridge.json" && it.name != "repo_bridge.json.tmp" }
+                .any { it.lastModified() > metaTime }
+        }.getOrDefault(false)
+    }
+
     val isFetching = fetchState is GitHubFetchState.Resolving ||
         fetchState is GitHubFetchState.Downloading ||
         fetchState is GitHubFetchState.Extracting
@@ -1319,11 +1331,19 @@ private fun GitHubImportCard(
                     Text(Strings.repoBridgeCommitTitle)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Local changes are kept in this folder until you commit them. Re-importing replaces the folder and discards uncommitted edits.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (hasPossibleUnsavedChanges) {
+                    Text(
+                        "Possible unsaved changes detected (a file is newer than the last import). Commit to keep them.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text(
+                        "Local changes are kept in this folder until you commit them. Re-importing replaces the folder and discards uncommitted edits.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
