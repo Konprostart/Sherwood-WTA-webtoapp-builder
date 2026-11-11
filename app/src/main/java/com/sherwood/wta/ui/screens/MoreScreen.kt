@@ -35,6 +35,7 @@ fun MoreScreen(
     onOpenHostsAdBlock: () -> Unit = {},
     onOpenAppModifier: () -> Unit = {},
     onOpenPlugins: () -> Unit = {},
+    onOpenStudio: () -> Unit = {},
     onOpenLinuxEnvironment: () -> Unit = {},
     onOpenRuntimeDeps: () -> Unit = {},
     onOpenPortManager: () -> Unit = {},
@@ -96,6 +97,12 @@ fun MoreScreen(
                         .advancedFeaturesFlow
                         .collectAsStateWithLifecycle()
                     WtaSettingCard {
+                        MoreMenuItem(
+                            title = Strings.studioTitle,
+                            icon = painterResource(R.drawable.ic_github_mark),
+                            onClick = onOpenStudio
+                        )
+                        WtaSectionDivider()
                         MoreMenuItem(
                             title = Strings.pluginsManageTitle,
                             icon = painterResource(R.drawable.ic_sidebar_extensions),

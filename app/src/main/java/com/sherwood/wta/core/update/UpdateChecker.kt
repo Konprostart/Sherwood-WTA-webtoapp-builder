@@ -3,6 +3,7 @@ package com.sherwood.wta.core.update
 import com.sherwood.wta.core.i18n.AppLanguage
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.core.studio.EndpointConfig
 import java.io.BufferedReader
 import java.net.HttpURLConnection
 import java.net.URL
@@ -18,13 +19,6 @@ import org.json.JSONObject
 object UpdateChecker {
 
     private const val TAG = "UpdateChecker"
-
-    private const val OWNER = "Konprostart"
-    private const val REPO = "Sherwood-WTA-webtoapp-builder"
-    private const val LATEST_RELEASE_API =
-        "https://api.github.com/repos/$OWNER/$REPO/releases/latest"
-    private const val ALL_RELEASES_API =
-        "https://api.github.com/repos/$OWNER/$REPO/releases?per_page=100"
 
     private const val CONNECT_TIMEOUT_MS = 6000
     private const val READ_TIMEOUT_MS = 10000
@@ -123,12 +117,15 @@ object UpdateChecker {
         data class Failed(val message: String, val throwable: Throwable? = null) : Result()
     }
 
-    suspend fun check(currentVersionName: String): Result = withContext(Dispatchers.IO) {
+    suspend fun check(
+        currentVersionName: String,
+        endpoints: EndpointConfig = EndpointConfig.defaults()
+    ): Result = withContext(Dispatchers.IO) {
         val current = Version.parse(currentVersionName)
             ?: return@withContext Result.Failed("Cannot parse current version: $currentVersionName")
 
         try {
-            val json = fetchLatestReleaseJson()
+            val json = fetchLatestReleaseJson(endpoints)
                 ?: return@withContext Result.Failed("Empty response from release API")
 
             val release = JSONObject(json)
@@ -173,11 +170,13 @@ object UpdateChecker {
      * the user can read their notes), but [ReleaseSummary.downloadUrl] is null when there is
      * no APK to download. Draft releases are excluded by the API.
      */
-    suspend fun fetchAllReleases(): List<ReleaseSummary> = withContext(Dispatchers.IO) {
+    suspend fun fetchAllReleases(
+        endpoints: EndpointConfig = EndpointConfig.defaults()
+    ): List<ReleaseSummary> = withContext(Dispatchers.IO) {
         try {
             // Null means every candidate failed — surface it as an error so the
             // history UI shows a failure state instead of an empty list.
-            val json = fetchAllReleasesJson()
+            val json = fetchAllReleasesJson(endpoints)
                 ?: throw IllegalStateException("Empty response from release API")
             val arr = org.json.JSONArray(json)
             val out = ArrayList<ReleaseSummary>(arr.length())
@@ -238,15 +237,15 @@ object UpdateChecker {
         return best
     }
 
-    private suspend fun fetchLatestReleaseJson(): String? =
+    private suspend fun fetchLatestReleaseJson(endpoints: EndpointConfig): String? =
         // A proxy can answer 200 with a plain-text error ("Suspent",
         // "404 not found") — not every mirror actually proxies
         // api.github.com. Only a JSON object counts as a hit.
-        fetchJsonRaced(LATEST_RELEASE_API) { it.trimStart().startsWith("{") }
+        fetchJsonRaced(endpoints.latestReleaseApiUrl()) { it.trimStart().startsWith("{") }
 
-    private suspend fun fetchAllReleasesJson(): String? =
+    private suspend fun fetchAllReleasesJson(endpoints: EndpointConfig): String? =
         // The all-releases endpoint answers with an array, not an object.
-        fetchJsonRaced(ALL_RELEASES_API) { it.trimStart().startsWith("[") }
+        fetchJsonRaced(endpoints.releasesApiUrl()) { it.trimStart().startsWith("[") }
 
     /**
      * Fires one GET per mirror candidate concurrently and returns the first body

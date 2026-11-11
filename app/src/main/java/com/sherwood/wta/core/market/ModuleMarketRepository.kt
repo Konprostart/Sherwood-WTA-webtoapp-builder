@@ -30,6 +30,17 @@ class ModuleMarketRepository private constructor(
     private val context: Context
 ) {
 
+    /**
+     * All catalogue addresses come from [com.sherwood.wta.core.studio.EndpointConfig],
+     * so a fork or a mirror can be configured without touching this class.
+     */
+    private val endpoints = com.sherwood.wta.core.studio.EndpointSettingsStore.current(context)
+
+    private val sources: List<String> = listOf(
+        endpoints.modulesBaseUrl,
+        endpoints.modulesMirrorBaseUrl
+    ).distinct()
+
     companion object {
         private const val TAG = "ModuleMarket"
 
@@ -59,12 +70,6 @@ class ModuleMarketRepository private constructor(
                 INSTANCE ?: ModuleMarketRepository(context.applicationContext).also { INSTANCE = it }
             }
         }
-
-        private val SOURCES: List<String> = listOf(
-            "https://raw.githubusercontent.com/$OWNER/$REPO/$BRANCH/$MODULES_DIR",
-
-            "https://cdn.jsdelivr.net/gh/$OWNER/$REPO@$BRANCH/$MODULES_DIR"
-        )
 
     }
 
@@ -278,7 +283,8 @@ class ModuleMarketRepository private constructor(
         if (entry.sourceType == "CHROME_EXTENSION" && entry.storeId != null) {
             "https://chromewebstore.google.com/detail/${entry.storeId}"
         } else {
-            "https://github.com/$OWNER/$REPO/tree/$BRANCH/$MODULES_DIR/${entry.path}"
+            "${endpoints.githubWebBaseUrl}/${endpoints.projectOwner}/${endpoints.projectRepo}" +
+                "/tree/${endpoints.projectBranch}/$MODULES_DIR/${entry.path}"
         }
 
     fun resolveIconUrl(entry: ModuleMarketEntry): String? {
@@ -287,12 +293,13 @@ class ModuleMarketRepository private constructor(
         if (raw.startsWith("https://") || raw.startsWith("http://")) return raw
 
         val normalised = raw.removePrefix("./").removePrefix("/")
-        val direct = "${SOURCES.first()}/${entry.path}/$normalised"
+        val direct = "${sources.first()}/${entry.path}/$normalised"
         return com.sherwood.wta.core.network.GitHubMirror.proxiedCnGitHubHost(direct).first()
     }
 
     val contributingUrl: String =
-        "https://github.com/$OWNER/$REPO/blob/$BRANCH/$MODULES_DIR/README.md"
+        "${endpoints.githubWebBaseUrl}/${endpoints.projectOwner}/${endpoints.projectRepo}" +
+            "/blob/${endpoints.projectBranch}/$MODULES_DIR/README.md"
 
     /**
      * Race every mirror candidate for a catalogue file: the first non-null
@@ -304,7 +311,7 @@ class ModuleMarketRepository private constructor(
     private suspend fun fetchRaw(relativePath: String): String? {
         // GitHub hosts get the measured mirror pool; jsDelivr is not a
         // GitHub host and passes through as a single candidate.
-        val candidates = SOURCES
+        val candidates = sources
             .flatMap { base ->
                 com.sherwood.wta.core.network.GitHubMirror.proxiedCnGitHubHost("$base/$relativePath")
             }

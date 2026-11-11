@@ -547,7 +547,7 @@ private fun AuthorHeroCard(
                         isCheckingUpdate = true
                         updateResult = null
                         scope.launch {
-                            val result = com.sherwood.wta.core.update.UpdateChecker.check(versionName)
+                            val result = com.sherwood.wta.core.update.UpdateChecker.check(versionName, com.sherwood.wta.core.studio.EndpointSettingsStore.current(context))
                             updateResult = result
                             isCheckingUpdate = false
                         }
@@ -570,7 +570,7 @@ private fun AuthorHeroCard(
                         historyError = null
                         scope.launch {
                             try {
-                                historyReleases = com.sherwood.wta.core.update.UpdateChecker.fetchAllReleases()
+                                historyReleases = com.sherwood.wta.core.update.UpdateChecker.fetchAllReleases(com.sherwood.wta.core.studio.EndpointSettingsStore.current(context))
                             } catch (e: Exception) {
                                 historyError = e.message ?: e.javaClass.simpleName
                             } finally {

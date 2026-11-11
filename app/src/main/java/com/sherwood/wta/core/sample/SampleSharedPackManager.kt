@@ -30,11 +30,6 @@ object SampleSharedPackManager {
     private const val SHA_MARKER = ".sha256"
     private const val MANIFEST_FILE = "manifest.json"
 
-    private const val RAW_BASE =
-        "https://raw.githubusercontent.com/Konprostart/Sherwood-WTA-webtoapp-builder/main/sample-bundles"
-    private const val JSDELIVR_BASE =
-        "https://cdn.jsdelivr.net/gh/Konprostart/Sherwood-WTA-webtoapp-builder@main/sample-bundles"
-
     /** Unit-test seam: when true, manifest fetches behave as unreachable. */
     @Volatile
     internal var manifestUnreachable = false
@@ -71,8 +66,9 @@ object SampleSharedPackManager {
             packDir.deleteRecursively()
             packDir.mkdirs()
             val zipFile = File(packDir, "$packName.zip")
+            val endpoints = com.sherwood.wta.core.studio.EndpointSettingsStore.current(context)
             val downloaded = DependencyDownloadEngine.downloadFileWithFallback(
-                urls = candidateUrls("$packName.zip"),
+                urls = candidateUrls("$packName.zip", endpoints),
                 destFile = zipFile,
                 displayName = packName,
                 context = context,
@@ -111,14 +107,18 @@ object SampleSharedPackManager {
         File(context.filesDir, PACKS_DIR).deleteRecursively()
     }
 
-    /** Mirror-ordered candidates: CN proxies + direct raw, jsDelivr last. */
-    internal fun candidateUrls(fileName: String): List<String> =
-        (GitHubMirror.proxiedCnGitHubHost("$RAW_BASE/$fileName") +
-            "$JSDELIVR_BASE/$fileName").distinct()
+    /** Mirror-ordered candidates: CN proxies + configured direct raw, then the mirror. */
+    internal fun candidateUrls(
+        fileName: String,
+        endpoints: com.sherwood.wta.core.studio.EndpointConfig =
+            com.sherwood.wta.core.studio.EndpointConfig.defaults()
+    ): List<String> =
+        (GitHubMirror.proxiedCnGitHubHost("${endpoints.sampleBundlesBaseUrl}/$fileName") +
+            "${endpoints.sampleBundlesMirrorBaseUrl}/$fileName").distinct()
 
     private fun fetchManifest(context: Context): Map<String, PackInfo> {
         if (manifestUnreachable) return emptyMap()
-        for (url in candidateUrls(MANIFEST_FILE)) {
+        for (url in candidateUrls(MANIFEST_FILE, com.sherwood.wta.core.studio.EndpointSettingsStore.current(context))) {
             try {
                 val request = Request.Builder().url(url).build()
                 NetworkModule.defaultClient.newCall(request).execute().use { resp ->

@@ -17706,4 +17706,875 @@ object StringsE {
         AppLanguage.KOREAN -> "GitHub에서 커밋을 거부했습니다."
     }
 
+
+    val studioTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Sherwood Studio"
+        AppLanguage.ENGLISH -> "Sherwood Studio"
+        AppLanguage.ARABIC -> "Sherwood Studio"
+        AppLanguage.PORTUGUESE -> "Sherwood Studio"
+        AppLanguage.SPANISH -> "Sherwood Studio"
+        AppLanguage.FRENCH -> "Sherwood Studio"
+        AppLanguage.GERMAN -> "Sherwood Studio"
+        AppLanguage.RUSSIAN -> "Sherwood Studio"
+        AppLanguage.JAPANESE -> "Sherwood Studio"
+        AppLanguage.KOREAN -> "Sherwood Studio"
+    }
+
+    val studioTabRepos: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "仓库"
+        AppLanguage.ENGLISH -> "Repositories"
+        AppLanguage.ARABIC -> "المستودعات"
+        AppLanguage.PORTUGUESE -> "Repositórios"
+        AppLanguage.SPANISH -> "Repositorios"
+        AppLanguage.FRENCH -> "Dépôts"
+        AppLanguage.GERMAN -> "Repositorys"
+        AppLanguage.RUSSIAN -> "Репозитории"
+        AppLanguage.JAPANESE -> "リポジトリ"
+        AppLanguage.KOREAN -> "저장소"
+    }
+
+    val studioTabInbox: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "收件箱"
+        AppLanguage.ENGLISH -> "Inbox"
+        AppLanguage.ARABIC -> "الوارد"
+        AppLanguage.PORTUGUESE -> "Caixa de entrada"
+        AppLanguage.SPANISH -> "Bandeja de entrada"
+        AppLanguage.FRENCH -> "Boîte de réception"
+        AppLanguage.GERMAN -> "Posteingang"
+        AppLanguage.RUSSIAN -> "Входящие"
+        AppLanguage.JAPANESE -> "受信トレイ"
+        AppLanguage.KOREAN -> "받은편지함"
+    }
+
+    val studioTabBuilds: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建"
+        AppLanguage.ENGLISH -> "Builds"
+        AppLanguage.ARABIC -> "البناء"
+        AppLanguage.PORTUGUESE -> "Builds"
+        AppLanguage.SPANISH -> "Compilaciones"
+        AppLanguage.FRENCH -> "Compilations"
+        AppLanguage.GERMAN -> "Builds"
+        AppLanguage.RUSSIAN -> "Сборки"
+        AppLanguage.JAPANESE -> "ビルド"
+        AppLanguage.KOREAN -> "빌드"
+    }
+
+    val studioTabVault: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "保险库"
+        AppLanguage.ENGLISH -> "Vault"
+        AppLanguage.ARABIC -> "الخزنة"
+        AppLanguage.PORTUGUESE -> "Cofre"
+        AppLanguage.SPANISH -> "Bóveda"
+        AppLanguage.FRENCH -> "Coffre"
+        AppLanguage.GERMAN -> "Tresor"
+        AppLanguage.RUSSIAN -> "Хранилище"
+        AppLanguage.JAPANESE -> "保管庫"
+        AppLanguage.KOREAN -> "보관함"
+    }
+
+    val studioSettings: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "设置"
+        AppLanguage.ENGLISH -> "Settings"
+        AppLanguage.ARABIC -> "الإعدادات"
+        AppLanguage.PORTUGUESE -> "Configurações"
+        AppLanguage.SPANISH -> "Ajustes"
+        AppLanguage.FRENCH -> "Paramètres"
+        AppLanguage.GERMAN -> "Einstellungen"
+        AppLanguage.RUSSIAN -> "Настройки"
+        AppLanguage.JAPANESE -> "設定"
+        AppLanguage.KOREAN -> "설정"
+    }
+
+    val studioAccountDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "使用 OAuth 设备码连接。令牌用本机 Keystore 加密，只发送给 GitHub。"
+        AppLanguage.ENGLISH -> "Connect with OAuth Device Flow. The token is encrypted on this device and sent only to GitHub."
+        AppLanguage.ARABIC -> "اتصل عبر OAuth Device Flow. يُشفَّر الرمز على هذا الجهاز ويُرسل إلى GitHub فقط."
+        AppLanguage.PORTUGUESE -> "Conecte com OAuth Device Flow. O token é criptografado neste dispositivo e enviado apenas ao GitHub."
+        AppLanguage.SPANISH -> "Conecta con OAuth Device Flow. El token se cifra en este dispositivo y solo se envía a GitHub."
+        AppLanguage.FRENCH -> "Connectez-vous avec OAuth Device Flow. Le jeton est chiffré sur cet appareil et envoyé uniquement à GitHub."
+        AppLanguage.GERMAN -> "Mit OAuth Device Flow verbinden. Das Token wird auf diesem Gerät verschlüsselt und nur an GitHub gesendet."
+        AppLanguage.RUSSIAN -> "Подключение через OAuth Device Flow. Токен шифруется на устройстве и отправляется только на GitHub."
+        AppLanguage.JAPANESE -> "OAuth Device Flow で接続します。トークンは端末上で暗号化され、GitHub にのみ送信されます。"
+        AppLanguage.KOREAN -> "OAuth Device Flow로 연결합니다. 토큰은 이 기기에서 암호화되어 GitHub로만 전송됩니다."
+    }
+
+    val studioClientId: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "OAuth 应用 Client ID"
+        AppLanguage.ENGLISH -> "OAuth App Client ID"
+        AppLanguage.ARABIC -> "معرّف عميل OAuth"
+        AppLanguage.PORTUGUESE -> "Client ID do OAuth App"
+        AppLanguage.SPANISH -> "Client ID de OAuth App"
+        AppLanguage.FRENCH -> "Client ID de l'app OAuth"
+        AppLanguage.GERMAN -> "OAuth-App-Client-ID"
+        AppLanguage.RUSSIAN -> "Client ID OAuth-приложения"
+        AppLanguage.JAPANESE -> "OAuth アプリの Client ID"
+        AppLanguage.KOREAN -> "OAuth 앱 Client ID"
+    }
+
+    val studioClientIdHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "你自己的、已启用设备码流程的 OAuth App 公开 Client ID；不需要 client secret。"
+        AppLanguage.ENGLISH -> "Public client ID of your own OAuth App with Device Flow enabled. No client secret is needed."
+        AppLanguage.ARABIC -> "معرّف عميل عام لتطبيق OAuth الخاص بك مع تفعيل Device Flow. لا حاجة لسر العميل."
+        AppLanguage.PORTUGUESE -> "Client ID público do seu OAuth App com Device Flow ativado. Não é necessário client secret."
+        AppLanguage.SPANISH -> "Client ID público de tu OAuth App con Device Flow activado. No se necesita client secret."
+        AppLanguage.FRENCH -> "Client ID public de votre OAuth App avec Device Flow activé. Aucun client secret n'est requis."
+        AppLanguage.GERMAN -> "Öffentliche Client-ID deiner eigenen OAuth-App mit aktiviertem Device Flow. Kein Client-Secret nötig."
+        AppLanguage.RUSSIAN -> "Публичный Client ID вашего OAuth-приложения с включённым Device Flow. Client secret не нужен."
+        AppLanguage.JAPANESE -> "Device Flow を有効にした自分の OAuth アプリの公開 Client ID。client secret は不要です。"
+        AppLanguage.KOREAN -> "Device Flow가 활성화된 본인 OAuth 앱의 공개 Client ID. client secret은 필요 없습니다."
+    }
+
+    val studioConnect: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "连接 GitHub"
+        AppLanguage.ENGLISH -> "Connect GitHub"
+        AppLanguage.ARABIC -> "ربط GitHub"
+        AppLanguage.PORTUGUESE -> "Conectar GitHub"
+        AppLanguage.SPANISH -> "Conectar GitHub"
+        AppLanguage.FRENCH -> "Connecter GitHub"
+        AppLanguage.GERMAN -> "GitHub verbinden"
+        AppLanguage.RUSSIAN -> "Подключить GitHub"
+        AppLanguage.JAPANESE -> "GitHub に接続"
+        AppLanguage.KOREAN -> "GitHub 연결"
+    }
+
+    val studioWaiting: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "等待授权…"
+        AppLanguage.ENGLISH -> "Waiting for approval…"
+        AppLanguage.ARABIC -> "بانتظار الموافقة…"
+        AppLanguage.PORTUGUESE -> "Aguardando aprovação…"
+        AppLanguage.SPANISH -> "Esperando aprobación…"
+        AppLanguage.FRENCH -> "En attente d'approbation…"
+        AppLanguage.GERMAN -> "Warte auf Bestätigung…"
+        AppLanguage.RUSSIAN -> "Ожидание подтверждения…"
+        AppLanguage.JAPANESE -> "承認を待っています…"
+        AppLanguage.KOREAN -> "승인 대기 중…"
+    }
+
+    fun studioUserCode(code: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在 GitHub 上输入此代码：${code}"
+        AppLanguage.ENGLISH -> "Enter this code on GitHub: ${code}"
+        AppLanguage.ARABIC -> "أدخل هذا الرمز على GitHub: ${code}"
+        AppLanguage.PORTUGUESE -> "Digite este código no GitHub: ${code}"
+        AppLanguage.SPANISH -> "Introduce este código en GitHub: ${code}"
+        AppLanguage.FRENCH -> "Saisissez ce code sur GitHub : ${code}"
+        AppLanguage.GERMAN -> "Diesen Code auf GitHub eingeben: ${code}"
+        AppLanguage.RUSSIAN -> "Введите этот код на GitHub: ${code}"
+        AppLanguage.JAPANESE -> "GitHub でこのコードを入力: ${code}"
+        AppLanguage.KOREAN -> "GitHub에서 이 코드를 입력하세요: ${code}"
+    }
+
+    val studioOpenGitHub: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "打开 GitHub"
+        AppLanguage.ENGLISH -> "Open GitHub"
+        AppLanguage.ARABIC -> "فتح GitHub"
+        AppLanguage.PORTUGUESE -> "Abrir GitHub"
+        AppLanguage.SPANISH -> "Abrir GitHub"
+        AppLanguage.FRENCH -> "Ouvrir GitHub"
+        AppLanguage.GERMAN -> "GitHub öffnen"
+        AppLanguage.RUSSIAN -> "Открыть GitHub"
+        AppLanguage.JAPANESE -> "GitHub を開く"
+        AppLanguage.KOREAN -> "GitHub 열기"
+    }
+
+    fun studioConnected(login: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已连接为 ${login}"
+        AppLanguage.ENGLISH -> "Connected as ${login}"
+        AppLanguage.ARABIC -> "متصل باسم ${login}"
+        AppLanguage.PORTUGUESE -> "Conectado como ${login}"
+        AppLanguage.SPANISH -> "Conectado como ${login}"
+        AppLanguage.FRENCH -> "Connecté en tant que ${login}"
+        AppLanguage.GERMAN -> "Verbunden als ${login}"
+        AppLanguage.RUSSIAN -> "Подключено как ${login}"
+        AppLanguage.JAPANESE -> "${login} として接続中"
+        AppLanguage.KOREAN -> "${login}(으)로 연결됨"
+    }
+
+    val studioConnectFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "连接失败"
+        AppLanguage.ENGLISH -> "Connection failed"
+        AppLanguage.ARABIC -> "فشل الاتصال"
+        AppLanguage.PORTUGUESE -> "Falha na conexão"
+        AppLanguage.SPANISH -> "Error de conexión"
+        AppLanguage.FRENCH -> "Échec de la connexion"
+        AppLanguage.GERMAN -> "Verbindung fehlgeschlagen"
+        AppLanguage.RUSSIAN -> "Не удалось подключиться"
+        AppLanguage.JAPANESE -> "接続に失敗しました"
+        AppLanguage.KOREAN -> "연결 실패"
+    }
+
+    val studioReposEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "未找到仓库。"
+        AppLanguage.ENGLISH -> "No repositories found."
+        AppLanguage.ARABIC -> "لا توجد مستودعات."
+        AppLanguage.PORTUGUESE -> "Nenhum repositório encontrado."
+        AppLanguage.SPANISH -> "No se encontraron repositorios."
+        AppLanguage.FRENCH -> "Aucun dépôt trouvé."
+        AppLanguage.GERMAN -> "Keine Repositorys gefunden."
+        AppLanguage.RUSSIAN -> "Репозитории не найдены."
+        AppLanguage.JAPANESE -> "リポジトリが見つかりません。"
+        AppLanguage.KOREAN -> "저장소를 찾을 수 없습니다."
+    }
+
+    val studioBranches: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "分支"
+        AppLanguage.ENGLISH -> "Branches"
+        AppLanguage.ARABIC -> "الفروع"
+        AppLanguage.PORTUGUESE -> "Branches"
+        AppLanguage.SPANISH -> "Ramas"
+        AppLanguage.FRENCH -> "Branches"
+        AppLanguage.GERMAN -> "Branches"
+        AppLanguage.RUSSIAN -> "Ветки"
+        AppLanguage.JAPANESE -> "ブランチ"
+        AppLanguage.KOREAN -> "브랜치"
+    }
+
+    val studioNewBranch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "新建分支"
+        AppLanguage.ENGLISH -> "New branch"
+        AppLanguage.ARABIC -> "فرع جديد"
+        AppLanguage.PORTUGUESE -> "Nova branch"
+        AppLanguage.SPANISH -> "Nueva rama"
+        AppLanguage.FRENCH -> "Nouvelle branche"
+        AppLanguage.GERMAN -> "Neuer Branch"
+        AppLanguage.RUSSIAN -> "Новая ветка"
+        AppLanguage.JAPANESE -> "新しいブランチ"
+        AppLanguage.KOREAN -> "새 브랜치"
+    }
+
+    val studioBranchFrom: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "来源分支"
+        AppLanguage.ENGLISH -> "From branch"
+        AppLanguage.ARABIC -> "من الفرع"
+        AppLanguage.PORTUGUESE -> "A partir da branch"
+        AppLanguage.SPANISH -> "Desde la rama"
+        AppLanguage.FRENCH -> "Depuis la branche"
+        AppLanguage.GERMAN -> "Von Branch"
+        AppLanguage.RUSSIAN -> "Из ветки"
+        AppLanguage.JAPANESE -> "元のブランチ"
+        AppLanguage.KOREAN -> "기준 브랜치"
+    }
+
+    fun studioBranchCreated(name: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已创建分支 ${name}"
+        AppLanguage.ENGLISH -> "Branch ${name} created"
+        AppLanguage.ARABIC -> "تم إنشاء الفرع ${name}"
+        AppLanguage.PORTUGUESE -> "Branch ${name} criada"
+        AppLanguage.SPANISH -> "Rama ${name} creada"
+        AppLanguage.FRENCH -> "Branche ${name} créée"
+        AppLanguage.GERMAN -> "Branch ${name} erstellt"
+        AppLanguage.RUSSIAN -> "Ветка ${name} создана"
+        AppLanguage.JAPANESE -> "ブランチ ${name} を作成しました"
+        AppLanguage.KOREAN -> "브랜치 ${name} 생성됨"
+    }
+
+    val studioCheckout: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "切换"
+        AppLanguage.ENGLISH -> "Checkout"
+        AppLanguage.ARABIC -> "التبديل"
+        AppLanguage.PORTUGUESE -> "Checkout"
+        AppLanguage.SPANISH -> "Checkout"
+        AppLanguage.FRENCH -> "Changer"
+        AppLanguage.GERMAN -> "Wechseln"
+        AppLanguage.RUSSIAN -> "Переключить"
+        AppLanguage.JAPANESE -> "切り替え"
+        AppLanguage.KOREAN -> "체크아웃"
+    }
+
+    fun studioCheckoutDirty(count: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请先提交或放弃 ${count} 处本地修改。"
+        AppLanguage.ENGLISH -> "Commit or discard ${count} local changes first."
+        AppLanguage.ARABIC -> "أرسل أو تجاهل ${count} تغييرات محلية أولاً."
+        AppLanguage.PORTUGUESE -> "Faça commit ou descarte ${count} alterações locais primeiro."
+        AppLanguage.SPANISH -> "Confirma o descarta ${count} cambios locales primero."
+        AppLanguage.FRENCH -> "Validez ou abandonnez d'abord ${count} modifications locales."
+        AppLanguage.GERMAN -> "Commite oder verwerfe zuerst ${count} lokale Änderungen."
+        AppLanguage.RUSSIAN -> "Сначала закоммитьте или отмените ${count} локальных изменений."
+        AppLanguage.JAPANESE -> "先に ${count} 件のローカル変更をコミットまたは破棄してください。"
+        AppLanguage.KOREAN -> "먼저 로컬 변경 ${count}개를 커밋하거나 버리세요."
+    }
+
+    fun studioCheckoutDone(name: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已切换到 ${name}"
+        AppLanguage.ENGLISH -> "Checked out ${name}"
+        AppLanguage.ARABIC -> "تم التبديل إلى ${name}"
+        AppLanguage.PORTUGUESE -> "Checkout para ${name}"
+        AppLanguage.SPANISH -> "Cambiado a ${name}"
+        AppLanguage.FRENCH -> "Basculé sur ${name}"
+        AppLanguage.GERMAN -> "Gewechselt zu ${name}"
+        AppLanguage.RUSSIAN -> "Переключено на ${name}"
+        AppLanguage.JAPANESE -> "${name} に切り替えました"
+        AppLanguage.KOREAN -> "${name}(으)로 전환됨"
+    }
+
+    val studioPull: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "拉取"
+        AppLanguage.ENGLISH -> "Pull"
+        AppLanguage.ARABIC -> "سحب"
+        AppLanguage.PORTUGUESE -> "Pull"
+        AppLanguage.SPANISH -> "Pull"
+        AppLanguage.FRENCH -> "Tirer"
+        AppLanguage.GERMAN -> "Pull"
+        AppLanguage.RUSSIAN -> "Получить"
+        AppLanguage.JAPANESE -> "プル"
+        AppLanguage.KOREAN -> "풀"
+    }
+
+    val studioMerge: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "合并"
+        AppLanguage.ENGLISH -> "Merge"
+        AppLanguage.ARABIC -> "دمج"
+        AppLanguage.PORTUGUESE -> "Merge"
+        AppLanguage.SPANISH -> "Fusionar"
+        AppLanguage.FRENCH -> "Fusionner"
+        AppLanguage.GERMAN -> "Merge"
+        AppLanguage.RUSSIAN -> "Слить"
+        AppLanguage.JAPANESE -> "マージ"
+        AppLanguage.KOREAN -> "병합"
+    }
+
+    fun studioMerged(name: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已合并 ${name}"
+        AppLanguage.ENGLISH -> "Merged ${name}"
+        AppLanguage.ARABIC -> "تم دمج ${name}"
+        AppLanguage.PORTUGUESE -> "${name} mesclado"
+        AppLanguage.SPANISH -> "${name} fusionado"
+        AppLanguage.FRENCH -> "${name} fusionné"
+        AppLanguage.GERMAN -> "${name} zusammengeführt"
+        AppLanguage.RUSSIAN -> "${name} слито"
+        AppLanguage.JAPANESE -> "${name} をマージしました"
+        AppLanguage.KOREAN -> "${name} 병합됨"
+    }
+
+    val studioHistory: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "历史"
+        AppLanguage.ENGLISH -> "History"
+        AppLanguage.ARABIC -> "السجل"
+        AppLanguage.PORTUGUESE -> "Histórico"
+        AppLanguage.SPANISH -> "Historial"
+        AppLanguage.FRENCH -> "Historique"
+        AppLanguage.GERMAN -> "Verlauf"
+        AppLanguage.RUSSIAN -> "История"
+        AppLanguage.JAPANESE -> "履歴"
+        AppLanguage.KOREAN -> "기록"
+    }
+
+    val studioStatus: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "状态"
+        AppLanguage.ENGLISH -> "Status"
+        AppLanguage.ARABIC -> "الحالة"
+        AppLanguage.PORTUGUESE -> "Status"
+        AppLanguage.SPANISH -> "Estado"
+        AppLanguage.FRENCH -> "État"
+        AppLanguage.GERMAN -> "Status"
+        AppLanguage.RUSSIAN -> "Статус"
+        AppLanguage.JAPANESE -> "状態"
+        AppLanguage.KOREAN -> "상태"
+    }
+
+    val studioStatusClean: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "工作副本是干净的。"
+        AppLanguage.ENGLISH -> "Working copy is clean."
+        AppLanguage.ARABIC -> "نسخة العمل نظيفة."
+        AppLanguage.PORTUGUESE -> "A cópia de trabalho está limpa."
+        AppLanguage.SPANISH -> "La copia de trabajo está limpia."
+        AppLanguage.FRENCH -> "La copie de travail est propre."
+        AppLanguage.GERMAN -> "Arbeitskopie ist sauber."
+        AppLanguage.RUSSIAN -> "Рабочая копия чиста."
+        AppLanguage.JAPANESE -> "作業コピーはクリーンです。"
+        AppLanguage.KOREAN -> "작업 복사본이 깨끗합니다."
+    }
+
+    fun studioStatusChanges(count: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "${count} 个文件已更改"
+        AppLanguage.ENGLISH -> "${count} changed files"
+        AppLanguage.ARABIC -> "${count} ملفات متغيرة"
+        AppLanguage.PORTUGUESE -> "${count} arquivos alterados"
+        AppLanguage.SPANISH -> "${count} archivos modificados"
+        AppLanguage.FRENCH -> "${count} fichiers modifiés"
+        AppLanguage.GERMAN -> "${count} geänderte Dateien"
+        AppLanguage.RUSSIAN -> "${count} изменённых файлов"
+        AppLanguage.JAPANESE -> "${count} 件の変更ファイル"
+        AppLanguage.KOREAN -> "${count}개 파일 변경됨"
+    }
+
+    val studioWatch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "关注"
+        AppLanguage.ENGLISH -> "Watch"
+        AppLanguage.ARABIC -> "متابعة"
+        AppLanguage.PORTUGUESE -> "Acompanhar"
+        AppLanguage.SPANISH -> "Vigilar"
+        AppLanguage.FRENCH -> "Suivre"
+        AppLanguage.GERMAN -> "Beobachten"
+        AppLanguage.RUSSIAN -> "Отслеживать"
+        AppLanguage.JAPANESE -> "ウォッチ"
+        AppLanguage.KOREAN -> "관심"
+    }
+
+    val studioUnwatch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "取消关注"
+        AppLanguage.ENGLISH -> "Unwatch"
+        AppLanguage.ARABIC -> "إلغاء المتابعة"
+        AppLanguage.PORTUGUESE -> "Deixar de acompanhar"
+        AppLanguage.SPANISH -> "Dejar de vigilar"
+        AppLanguage.FRENCH -> "Ne plus suivre"
+        AppLanguage.GERMAN -> "Nicht mehr beobachten"
+        AppLanguage.RUSSIAN -> "Не отслеживать"
+        AppLanguage.JAPANESE -> "ウォッチ解除"
+        AppLanguage.KOREAN -> "관심 해제"
+    }
+
+    val studioInboxEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "没有可审阅的内容。请先把仓库加入关注列表。"
+        AppLanguage.ENGLISH -> "Nothing to review. Add repositories to the watchlist first."
+        AppLanguage.ARABIC -> "لا شيء للمراجعة. أضف المستودعات إلى قائمة المتابعة أولاً."
+        AppLanguage.PORTUGUESE -> "Nada para revisar. Adicione repositórios à lista de acompanhamento primeiro."
+        AppLanguage.SPANISH -> "Nada que revisar. Añade repositorios a la lista de vigilancia primero."
+        AppLanguage.FRENCH -> "Rien à examiner. Ajoutez d'abord des dépôts à la liste de suivi."
+        AppLanguage.GERMAN -> "Nichts zu prüfen. Füge zuerst Repositorys zur Beobachtungsliste hinzu."
+        AppLanguage.RUSSIAN -> "Нечего проверять. Сначала добавьте репозитории в список отслеживания."
+        AppLanguage.JAPANESE -> "確認するものがありません。先にリポジトリをウォッチリストに追加してください。"
+        AppLanguage.KOREAN -> "검토할 항목이 없습니다. 먼저 저장소를 관심 목록에 추가하세요."
+    }
+
+    fun studioPullRequest(number: Int, title: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "#${number} ${title}"
+        AppLanguage.ENGLISH -> "#${number} ${title}"
+        AppLanguage.ARABIC -> "#${number} ${title}"
+        AppLanguage.PORTUGUESE -> "#${number} ${title}"
+        AppLanguage.SPANISH -> "#${number} ${title}"
+        AppLanguage.FRENCH -> "#${number} ${title}"
+        AppLanguage.GERMAN -> "#${number} ${title}"
+        AppLanguage.RUSSIAN -> "#${number} ${title}"
+        AppLanguage.JAPANESE -> "#${number} ${title}"
+        AppLanguage.KOREAN -> "#${number} ${title}"
+    }
+
+    val studioOpenOnGitHub: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在 GitHub 打开"
+        AppLanguage.ENGLISH -> "Open on GitHub"
+        AppLanguage.ARABIC -> "فتح على GitHub"
+        AppLanguage.PORTUGUESE -> "Abrir no GitHub"
+        AppLanguage.SPANISH -> "Abrir en GitHub"
+        AppLanguage.FRENCH -> "Ouvrir sur GitHub"
+        AppLanguage.GERMAN -> "Auf GitHub öffnen"
+        AppLanguage.RUSSIAN -> "Открыть на GitHub"
+        AppLanguage.JAPANESE -> "GitHub で開く"
+        AppLanguage.KOREAN -> "GitHub에서 열기"
+    }
+
+    val studioWorkflows: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "工作流"
+        AppLanguage.ENGLISH -> "Workflows"
+        AppLanguage.ARABIC -> "سير العمل"
+        AppLanguage.PORTUGUESE -> "Workflows"
+        AppLanguage.SPANISH -> "Flujos"
+        AppLanguage.FRENCH -> "Workflows"
+        AppLanguage.GERMAN -> "Workflows"
+        AppLanguage.RUSSIAN -> "Workflow"
+        AppLanguage.JAPANESE -> "ワークフロー"
+        AppLanguage.KOREAN -> "워크플로"
+    }
+
+    val studioRuns: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "运行"
+        AppLanguage.ENGLISH -> "Runs"
+        AppLanguage.ARABIC -> "التشغيلات"
+        AppLanguage.PORTUGUESE -> "Execuções"
+        AppLanguage.SPANISH -> "Ejecuciones"
+        AppLanguage.FRENCH -> "Exécutions"
+        AppLanguage.GERMAN -> "Läufe"
+        AppLanguage.RUSSIAN -> "Запуски"
+        AppLanguage.JAPANESE -> "実行"
+        AppLanguage.KOREAN -> "실행"
+    }
+
+    val studioRunWorkflow: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "运行工作流"
+        AppLanguage.ENGLISH -> "Run workflow"
+        AppLanguage.ARABIC -> "تشغيل سير العمل"
+        AppLanguage.PORTUGUESE -> "Executar workflow"
+        AppLanguage.SPANISH -> "Ejecutar flujo"
+        AppLanguage.FRENCH -> "Lancer le workflow"
+        AppLanguage.GERMAN -> "Workflow starten"
+        AppLanguage.RUSSIAN -> "Запустить workflow"
+        AppLanguage.JAPANESE -> "ワークフローを実行"
+        AppLanguage.KOREAN -> "워크플로 실행"
+    }
+
+    val studioDispatchRef: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "分支或标签"
+        AppLanguage.ENGLISH -> "Branch or tag"
+        AppLanguage.ARABIC -> "الفرع أو الوسم"
+        AppLanguage.PORTUGUESE -> "Branch ou tag"
+        AppLanguage.SPANISH -> "Rama o etiqueta"
+        AppLanguage.FRENCH -> "Branche ou tag"
+        AppLanguage.GERMAN -> "Branch oder Tag"
+        AppLanguage.RUSSIAN -> "Ветка или тег"
+        AppLanguage.JAPANESE -> "ブランチまたはタグ"
+        AppLanguage.KOREAN -> "브랜치 또는 태그"
+    }
+
+    val studioDispatchStarted: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "工作流已启动"
+        AppLanguage.ENGLISH -> "Workflow started"
+        AppLanguage.ARABIC -> "بدأ سير العمل"
+        AppLanguage.PORTUGUESE -> "Workflow iniciado"
+        AppLanguage.SPANISH -> "Flujo iniciado"
+        AppLanguage.FRENCH -> "Workflow démarré"
+        AppLanguage.GERMAN -> "Workflow gestartet"
+        AppLanguage.RUSSIAN -> "Workflow запущен"
+        AppLanguage.JAPANESE -> "ワークフローを開始しました"
+        AppLanguage.KOREAN -> "워크플로 시작됨"
+    }
+
+    val studioLogs: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "日志"
+        AppLanguage.ENGLISH -> "Logs"
+        AppLanguage.ARABIC -> "السجلات"
+        AppLanguage.PORTUGUESE -> "Logs"
+        AppLanguage.SPANISH -> "Registros"
+        AppLanguage.FRENCH -> "Journaux"
+        AppLanguage.GERMAN -> "Logs"
+        AppLanguage.RUSSIAN -> "Логи"
+        AppLanguage.JAPANESE -> "ログ"
+        AppLanguage.KOREAN -> "로그"
+    }
+
+    val studioArtifacts: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "产物"
+        AppLanguage.ENGLISH -> "Artifacts"
+        AppLanguage.ARABIC -> "المنتجات"
+        AppLanguage.PORTUGUESE -> "Artefatos"
+        AppLanguage.SPANISH -> "Artefactos"
+        AppLanguage.FRENCH -> "Artefacts"
+        AppLanguage.GERMAN -> "Artefakte"
+        AppLanguage.RUSSIAN -> "Артефакты"
+        AppLanguage.JAPANESE -> "成果物"
+        AppLanguage.KOREAN -> "아티팩트"
+    }
+
+    val studioDownloadToVault: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "保存到保险库"
+        AppLanguage.ENGLISH -> "Save to vault"
+        AppLanguage.ARABIC -> "حفظ في الخزنة"
+        AppLanguage.PORTUGUESE -> "Salvar no cofre"
+        AppLanguage.SPANISH -> "Guardar en la bóveda"
+        AppLanguage.FRENCH -> "Enregistrer dans le coffre"
+        AppLanguage.GERMAN -> "Im Tresor speichern"
+        AppLanguage.RUSSIAN -> "Сохранить в хранилище"
+        AppLanguage.JAPANESE -> "保管庫に保存"
+        AppLanguage.KOREAN -> "보관함에 저장"
+    }
+
+    fun studioArtifactsSaved(count: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已保存 ${count} 个产物到保险库"
+        AppLanguage.ENGLISH -> "${count} artifact(s) saved to the vault"
+        AppLanguage.ARABIC -> "تم حفظ ${count} من المنتجات في الخزنة"
+        AppLanguage.PORTUGUESE -> "${count} artefato(s) salvos no cofre"
+        AppLanguage.SPANISH -> "${count} artefacto(s) guardados en la bóveda"
+        AppLanguage.FRENCH -> "${count} artefact(s) enregistrés dans le coffre"
+        AppLanguage.GERMAN -> "${count} Artefakt(e) im Tresor gespeichert"
+        AppLanguage.RUSSIAN -> "Сохранено артефактов: ${count}"
+        AppLanguage.JAPANESE -> "${count} 件の成果物を保管庫に保存しました"
+        AppLanguage.KOREAN -> "아티팩트 ${count}개를 보관함에 저장했습니다"
+    }
+
+    val studioNoArtifacts: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "本次运行没有 APK 或 AAB。"
+        AppLanguage.ENGLISH -> "No APK or AAB in this run."
+        AppLanguage.ARABIC -> "لا يوجد APK أو AAB في هذا التشغيل."
+        AppLanguage.PORTUGUESE -> "Nenhum APK ou AAB nesta execução."
+        AppLanguage.SPANISH -> "No hay APK ni AAB en esta ejecución."
+        AppLanguage.FRENCH -> "Aucun APK ou AAB dans cette exécution."
+        AppLanguage.GERMAN -> "Kein APK oder AAB in diesem Lauf."
+        AppLanguage.RUSSIAN -> "В этом запуске нет APK или AAB."
+        AppLanguage.JAPANESE -> "この実行には APK も AAB もありません。"
+        AppLanguage.KOREAN -> "이 실행에는 APK나 AAB가 없습니다."
+    }
+
+    val studioJobs: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "任务"
+        AppLanguage.ENGLISH -> "Jobs"
+        AppLanguage.ARABIC -> "المهام"
+        AppLanguage.PORTUGUESE -> "Jobs"
+        AppLanguage.SPANISH -> "Tareas"
+        AppLanguage.FRENCH -> "Tâches"
+        AppLanguage.GERMAN -> "Jobs"
+        AppLanguage.RUSSIAN -> "Задания"
+        AppLanguage.JAPANESE -> "ジョブ"
+        AppLanguage.KOREAN -> "작업"
+    }
+
+    val studioVaultEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "保险库为空。从构建中下载一个产物。"
+        AppLanguage.ENGLISH -> "The vault is empty. Download an artifact from a build."
+        AppLanguage.ARABIC -> "الخزنة فارغة. نزّل منتجًا من عملية بناء."
+        AppLanguage.PORTUGUESE -> "O cofre está vazio. Baixe um artefato de uma build."
+        AppLanguage.SPANISH -> "La bóveda está vacía. Descarga un artefacto de una compilación."
+        AppLanguage.FRENCH -> "Le coffre est vide. Téléchargez un artefact depuis une compilation."
+        AppLanguage.GERMAN -> "Der Tresor ist leer. Lade ein Artefakt aus einem Build."
+        AppLanguage.RUSSIAN -> "Хранилище пусто. Загрузите артефакт из сборки."
+        AppLanguage.JAPANESE -> "保管庫は空です。ビルドから成果物をダウンロードしてください。"
+        AppLanguage.KOREAN -> "보관함이 비어 있습니다. 빌드에서 아티팩트를 다운로드하세요."
+    }
+
+    val studioVerify: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "校验"
+        AppLanguage.ENGLISH -> "Verify"
+        AppLanguage.ARABIC -> "تحقق"
+        AppLanguage.PORTUGUESE -> "Verificar"
+        AppLanguage.SPANISH -> "Verificar"
+        AppLanguage.FRENCH -> "Vérifier"
+        AppLanguage.GERMAN -> "Prüfen"
+        AppLanguage.RUSSIAN -> "Проверить"
+        AppLanguage.JAPANESE -> "検証"
+        AppLanguage.KOREAN -> "검증"
+    }
+
+    val studioVerified: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "SHA-256 一致"
+        AppLanguage.ENGLISH -> "SHA-256 matches"
+        AppLanguage.ARABIC -> "SHA-256 مطابق"
+        AppLanguage.PORTUGUESE -> "SHA-256 confere"
+        AppLanguage.SPANISH -> "SHA-256 coincide"
+        AppLanguage.FRENCH -> "SHA-256 correspond"
+        AppLanguage.GERMAN -> "SHA-256 stimmt"
+        AppLanguage.RUSSIAN -> "SHA-256 совпадает"
+        AppLanguage.JAPANESE -> "SHA-256 が一致"
+        AppLanguage.KOREAN -> "SHA-256 일치"
+    }
+
+    val studioMismatch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "SHA-256 不一致"
+        AppLanguage.ENGLISH -> "SHA-256 does not match"
+        AppLanguage.ARABIC -> "SHA-256 غير مطابق"
+        AppLanguage.PORTUGUESE -> "SHA-256 não confere"
+        AppLanguage.SPANISH -> "SHA-256 no coincide"
+        AppLanguage.FRENCH -> "SHA-256 ne correspond pas"
+        AppLanguage.GERMAN -> "SHA-256 stimmt nicht"
+        AppLanguage.RUSSIAN -> "SHA-256 не совпадает"
+        AppLanguage.JAPANESE -> "SHA-256 が一致しません"
+        AppLanguage.KOREAN -> "SHA-256 불일치"
+    }
+
+    val studioSign: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "签名"
+        AppLanguage.ENGLISH -> "Sign"
+        AppLanguage.ARABIC -> "توقيع"
+        AppLanguage.PORTUGUESE -> "Assinar"
+        AppLanguage.SPANISH -> "Firmar"
+        AppLanguage.FRENCH -> "Signer"
+        AppLanguage.GERMAN -> "Signieren"
+        AppLanguage.RUSSIAN -> "Подписать"
+        AppLanguage.JAPANESE -> "署名"
+        AppLanguage.KOREAN -> "서명"
+    }
+
+    val studioSigned: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已签名副本已保存到保险库"
+        AppLanguage.ENGLISH -> "Signed copy saved to the vault"
+        AppLanguage.ARABIC -> "تم حفظ نسخة موقعة في الخزنة"
+        AppLanguage.PORTUGUESE -> "Cópia assinada salva no cofre"
+        AppLanguage.SPANISH -> "Copia firmada guardada en la bóveda"
+        AppLanguage.FRENCH -> "Copie signée enregistrée dans le coffre"
+        AppLanguage.GERMAN -> "Signierte Kopie im Tresor gespeichert"
+        AppLanguage.RUSSIAN -> "Подписанная копия сохранена в хранилище"
+        AppLanguage.JAPANESE -> "署名済みコピーを保管庫に保存しました"
+        AppLanguage.KOREAN -> "서명된 사본을 보관함에 저장했습니다"
+    }
+
+    fun studioSignedFrom(sha: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "签名自 ${sha}"
+        AppLanguage.ENGLISH -> "signed from ${sha}"
+        AppLanguage.ARABIC -> "موقّع من ${sha}"
+        AppLanguage.PORTUGUESE -> "assinado de ${sha}"
+        AppLanguage.SPANISH -> "firmado desde ${sha}"
+        AppLanguage.FRENCH -> "signé depuis ${sha}"
+        AppLanguage.GERMAN -> "signiert von ${sha}"
+        AppLanguage.RUSSIAN -> "подписано из ${sha}"
+        AppLanguage.JAPANESE -> "${sha} から署名"
+        AppLanguage.KOREAN -> "${sha}에서 서명됨"
+    }
+
+    val studioSigner: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "签名者"
+        AppLanguage.ENGLISH -> "Signer"
+        AppLanguage.ARABIC -> "الموقّع"
+        AppLanguage.PORTUGUESE -> "Assinante"
+        AppLanguage.SPANISH -> "Firmante"
+        AppLanguage.FRENCH -> "Signataire"
+        AppLanguage.GERMAN -> "Signierer"
+        AppLanguage.RUSSIAN -> "Подписант"
+        AppLanguage.JAPANESE -> "署名者"
+        AppLanguage.KOREAN -> "서명자"
+    }
+
+    val studioDiff: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "差异"
+        AppLanguage.ENGLISH -> "Diff"
+        AppLanguage.ARABIC -> "الفرق"
+        AppLanguage.PORTUGUESE -> "Diff"
+        AppLanguage.SPANISH -> "Diferencia"
+        AppLanguage.FRENCH -> "Diff"
+        AppLanguage.GERMAN -> "Diff"
+        AppLanguage.RUSSIAN -> "Различия"
+        AppLanguage.JAPANESE -> "差分"
+        AppLanguage.KOREAN -> "차이"
+    }
+
+    val studioNoProject: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请先把此仓库作为项目导入。"
+        AppLanguage.ENGLISH -> "Import this repository as a project first."
+        AppLanguage.ARABIC -> "استورد هذا المستودع كمشروع أولاً."
+        AppLanguage.PORTUGUESE -> "Importe este repositório como projeto primeiro."
+        AppLanguage.SPANISH -> "Importa este repositorio como proyecto primero."
+        AppLanguage.FRENCH -> "Importez d'abord ce dépôt comme projet."
+        AppLanguage.GERMAN -> "Importiere dieses Repository zuerst als Projekt."
+        AppLanguage.RUSSIAN -> "Сначала импортируйте репозиторий как проект."
+        AppLanguage.JAPANESE -> "先にこのリポジトリをプロジェクトとしてインポートしてください。"
+        AppLanguage.KOREAN -> "먼저 이 저장소를 프로젝트로 가져오세요."
+    }
+
+    val studioWorkspace: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "工作区连接"
+        AppLanguage.ENGLISH -> "Workspace link"
+        AppLanguage.ARABIC -> "ربط مساحة العمل"
+        AppLanguage.PORTUGUESE -> "Vínculo do workspace"
+        AppLanguage.SPANISH -> "Vínculo del workspace"
+        AppLanguage.FRENCH -> "Lien d'espace de travail"
+        AppLanguage.GERMAN -> "Workspace-Verknüpfung"
+        AppLanguage.RUSSIAN -> "Связь с рабочим пространством"
+        AppLanguage.JAPANESE -> "ワークスペース連携"
+        AppLanguage.KOREAN -> "워크스페이스 연결"
+    }
+
+    val studioWorkspaceDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "GitHub 是应用与工作区之间的唯一通道。写入带版本的清单并提交，外部工具无需 Sherwood 服务器即可读取。"
+        AppLanguage.ENGLISH -> "GitHub is the only channel to your workspace. Write a versioned manifest and commit it; external tools read it without any Sherwood server."
+        AppLanguage.ARABIC -> "GitHub هو القناة الوحيدة إلى مساحة العمل. اكتب بيانًا مُصدَّرًا وأرسله؛ تقرأه الأدوات الخارجية دون خادم Sherwood."
+        AppLanguage.PORTUGUESE -> "O GitHub é o único canal para o seu workspace. Grave um manifesto versionado e faça commit; ferramentas externas o leem sem servidor Sherwood."
+        AppLanguage.SPANISH -> "GitHub es el único canal a tu workspace. Escribe un manifiesto versionado y haz commit; las herramientas externas lo leen sin servidor Sherwood."
+        AppLanguage.FRENCH -> "GitHub est le seul canal vers votre espace de travail. Écrivez un manifeste versionné et validez-le ; les outils externes le lisent sans serveur Sherwood."
+        AppLanguage.GERMAN -> "GitHub ist der einzige Kanal zu deinem Workspace. Schreibe ein versioniertes Manifest und committe es; externe Tools lesen es ohne Sherwood-Server."
+        AppLanguage.RUSSIAN -> "GitHub — единственный канал к рабочему пространству. Запишите версионированный манифест и закоммитьте его; внешние инструменты прочитают его без сервера Sherwood."
+        AppLanguage.JAPANESE -> "GitHub がワークスペースへの唯一の経路です。バージョン付きマニフェストを書いてコミットすれば、Sherwood サーバーなしで外部ツールが読み取れます。"
+        AppLanguage.KOREAN -> "GitHub가 워크스페이스로 통하는 유일한 경로입니다. 버전이 있는 매니페스트를 작성해 커밋하면 외부 도구가 Sherwood 서버 없이 읽을 수 있습니다."
+    }
+
+    val studioManifest: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "清单"
+        AppLanguage.ENGLISH -> "Manifest"
+        AppLanguage.ARABIC -> "البيان"
+        AppLanguage.PORTUGUESE -> "Manifesto"
+        AppLanguage.SPANISH -> "Manifiesto"
+        AppLanguage.FRENCH -> "Manifeste"
+        AppLanguage.GERMAN -> "Manifest"
+        AppLanguage.RUSSIAN -> "Манифест"
+        AppLanguage.JAPANESE -> "マニフェスト"
+        AppLanguage.KOREAN -> "매니페스트"
+    }
+
+    val studioEndpoints: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "端点"
+        AppLanguage.ENGLISH -> "Endpoints"
+        AppLanguage.ARABIC -> "النقاط الطرفية"
+        AppLanguage.PORTUGUESE -> "Endpoints"
+        AppLanguage.SPANISH -> "Endpoints"
+        AppLanguage.FRENCH -> "Points d'accès"
+        AppLanguage.GERMAN -> "Endpunkte"
+        AppLanguage.RUSSIAN -> "Эндпоинты"
+        AppLanguage.JAPANESE -> "エンドポイント"
+        AppLanguage.KOREAN -> "엔드포인트"
+    }
+
+    val studioEndpointsDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "使用你自己的 GitHub Enterprise、镜像或分支。留空则使用默认值。"
+        AppLanguage.ENGLISH -> "Use your own GitHub Enterprise server, mirror or fork. Empty fields keep the default."
+        AppLanguage.ARABIC -> "استخدم خادم GitHub Enterprise أو مرآة أو نسخة خاصة بك. الحقول الفارغة تحتفظ بالافتراضي."
+        AppLanguage.PORTUGUESE -> "Use seu próprio GitHub Enterprise, mirror ou fork. Campos vazios mantêm o padrão."
+        AppLanguage.SPANISH -> "Usa tu propio GitHub Enterprise, espejo o fork. Los campos vacíos mantienen el valor predeterminado."
+        AppLanguage.FRENCH -> "Utilisez votre GitHub Enterprise, miroir ou fork. Les champs vides gardent la valeur par défaut."
+        AppLanguage.GERMAN -> "Nutze deinen eigenen GitHub-Enterprise-Server, Mirror oder Fork. Leere Felder behalten den Standard."
+        AppLanguage.RUSSIAN -> "Используйте свой GitHub Enterprise, зеркало или форк. Пустые поля сохраняют значение по умолчанию."
+        AppLanguage.JAPANESE -> "自分の GitHub Enterprise、ミラー、フォークを使えます。空欄なら既定値のままです。"
+        AppLanguage.KOREAN -> "자체 GitHub Enterprise, 미러 또는 포크를 사용하세요. 비워 두면 기본값이 유지됩니다."
+    }
+
+    val studioEndpointsReset: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "恢复默认"
+        AppLanguage.ENGLISH -> "Reset to defaults"
+        AppLanguage.ARABIC -> "إعادة التعيين"
+        AppLanguage.PORTUGUESE -> "Redefinir padrões"
+        AppLanguage.SPANISH -> "Restablecer valores"
+        AppLanguage.FRENCH -> "Rétablir les valeurs"
+        AppLanguage.GERMAN -> "Auf Standard zurücksetzen"
+        AppLanguage.RUSSIAN -> "Сбросить настройки"
+        AppLanguage.JAPANESE -> "既定に戻す"
+        AppLanguage.KOREAN -> "기본값으로 재설정"
+    }
+
+    val studioSaved: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已保存"
+        AppLanguage.ENGLISH -> "Saved"
+        AppLanguage.ARABIC -> "تم الحفظ"
+        AppLanguage.PORTUGUESE -> "Salvo"
+        AppLanguage.SPANISH -> "Guardado"
+        AppLanguage.FRENCH -> "Enregistré"
+        AppLanguage.GERMAN -> "Gespeichert"
+        AppLanguage.RUSSIAN -> "Сохранено"
+        AppLanguage.JAPANESE -> "保存しました"
+        AppLanguage.KOREAN -> "저장됨"
+    }
+
+    val studioInvalidEndpoint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请修正高亮的地址"
+        AppLanguage.ENGLISH -> "Fix the highlighted addresses"
+        AppLanguage.ARABIC -> "صحّح العناوين المميزة"
+        AppLanguage.PORTUGUESE -> "Corrija os endereços destacados"
+        AppLanguage.SPANISH -> "Corrige las direcciones resaltadas"
+        AppLanguage.FRENCH -> "Corrigez les adresses en surbrillance"
+        AppLanguage.GERMAN -> "Korrigiere die markierten Adressen"
+        AppLanguage.RUSSIAN -> "Исправьте выделенные адреса"
+        AppLanguage.JAPANESE -> "ハイライトされたアドレスを修正してください"
+        AppLanguage.KOREAN -> "강조된 주소를 수정하세요"
+    }
+
+    val studioLicenses: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "许可证"
+        AppLanguage.ENGLISH -> "Licenses"
+        AppLanguage.ARABIC -> "التراخيص"
+        AppLanguage.PORTUGUESE -> "Licenças"
+        AppLanguage.SPANISH -> "Licencias"
+        AppLanguage.FRENCH -> "Licences"
+        AppLanguage.GERMAN -> "Lizenzen"
+        AppLanguage.RUSSIAN -> "Лицензии"
+        AppLanguage.JAPANESE -> "ライセンス"
+        AppLanguage.KOREAN -> "라이선스"
+    }
+
+    val studioLicenseNote: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "第三方组件保留其各自许可证。此列表仅供参考，详情见 NOTICE.md。"
+        AppLanguage.ENGLISH -> "Third-party components keep their own licenses. This list is informational; see NOTICE.md for the full text."
+        AppLanguage.ARABIC -> "تحتفظ المكونات الخارجية بتراخيصها. هذه القائمة إعلامية؛ راجع NOTICE.md للنص الكامل."
+        AppLanguage.PORTUGUESE -> "Componentes de terceiros mantêm suas próprias licenças. Esta lista é informativa; veja NOTICE.md para o texto completo."
+        AppLanguage.SPANISH -> "Los componentes de terceros conservan sus licencias. Esta lista es informativa; consulta NOTICE.md para el texto completo."
+        AppLanguage.FRENCH -> "Les composants tiers conservent leurs licences. Cette liste est informative ; voir NOTICE.md pour le texte complet."
+        AppLanguage.GERMAN -> "Drittanbieter-Komponenten behalten ihre eigenen Lizenzen. Diese Liste ist informativ; vollständiger Text in NOTICE.md."
+        AppLanguage.RUSSIAN -> "Сторонние компоненты сохраняют свои лицензии. Список носит информационный характер; полный текст в NOTICE.md."
+        AppLanguage.JAPANESE -> "サードパーティ製コンポーネントは各自のライセンスを保持します。この一覧は参考情報です。全文は NOTICE.md を参照してください。"
+        AppLanguage.KOREAN -> "타사 구성 요소는 고유 라이선스를 유지합니다. 이 목록은 참고용이며 전체 내용은 NOTICE.md를 참조하세요."
+    }
+
+    val studioLicenseJgit: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "JGit 未使用：其 java.nio 依赖需要 minSdk 26，而本项目保持 minSdk 24。"
+        AppLanguage.ENGLISH -> "JGit is not used: its java.nio dependency requires minSdk 26, while this project keeps minSdk 24."
+        AppLanguage.ARABIC -> "لا يُستخدم JGit: يتطلب java.nio فيه minSdk 26 بينما يحتفظ المشروع بـ minSdk 24."
+        AppLanguage.PORTUGUESE -> "JGit não é usado: sua dependência java.nio exige minSdk 26, mas este projeto mantém minSdk 24."
+        AppLanguage.SPANISH -> "JGit no se usa: su dependencia java.nio exige minSdk 26, pero este proyecto mantiene minSdk 24."
+        AppLanguage.FRENCH -> "JGit n'est pas utilisé : sa dépendance java.nio exige minSdk 26, tandis que ce projet garde minSdk 24."
+        AppLanguage.GERMAN -> "JGit wird nicht verwendet: Die java.nio-Abhängigkeit benötigt minSdk 26, dieses Projekt bleibt bei minSdk 24."
+        AppLanguage.RUSSIAN -> "JGit не используется: зависимость от java.nio требует minSdk 26, а проект сохраняет minSdk 24."
+        AppLanguage.JAPANESE -> "JGit は使用していません。java.nio 依存のため minSdk 26 が必要ですが、本プロジェクトは minSdk 24 を維持します。"
+        AppLanguage.KOREAN -> "JGit은 사용하지 않습니다. java.nio 의존성 때문에 minSdk 26이 필요하지만 이 프로젝트는 minSdk 24를 유지합니다."
+    }
 }

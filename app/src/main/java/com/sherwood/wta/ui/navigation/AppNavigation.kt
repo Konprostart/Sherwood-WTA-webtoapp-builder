@@ -50,6 +50,7 @@ import com.sherwood.wta.ui.screens.CreatePhpAppScreen
 import com.sherwood.wta.ui.screens.CreatePythonAppScreen
 import com.sherwood.wta.ui.screens.CreateWordPressAppScreen
 import com.sherwood.wta.ui.screens.GitSettingsScreen
+import com.sherwood.wta.ui.screens.StudioScreen
 import com.sherwood.wta.ui.screens.PluginManagerScreen
 import com.sherwood.wta.ui.screens.FileManagerScreen
 import com.sherwood.wta.ui.screens.HomeScreen
@@ -100,6 +101,7 @@ object Routes {
     const val APP_MODIFIER_MODIFY = "app_modifier/modify/{packageName}"
     const val AI_SETTINGS = "ai_settings"
     const val GIT_SETTINGS = "git_settings"
+    const val STUDIO = "studio"
     const val AGENT = "agent"
     const val BROWSER_KERNEL = "browser_kernel"
     const val HOSTS_ADBLOCK = "hosts_adblock"
@@ -240,6 +242,7 @@ fun AppNavigation() {
                         onOpenAiSettings = { navController.navigate(Routes.AI_SETTINGS) },
                         onOpenAgent = { navController.navigate(Routes.AGENT) },
                         onOpenPlugins = { navController.navigate(Routes.PLUGINS) },
+                        onOpenStudio = { navController.navigate(Routes.STUDIO) },
                         onOpenLinuxEnvironment = { navController.navigate(Routes.LINUX_ENVIRONMENT) },
                         onOpenBrowserKernel = { navController.navigate(Routes.BROWSER_KERNEL) },
                         onOpenHostsAdBlock = { navController.navigate(Routes.HOSTS_ADBLOCK) },
@@ -775,12 +778,17 @@ fun AppNavigation() {
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     onBack = { navController.popBackStackSafely() },
-                    onOpenGitSettings = { navController.navigate(Routes.GIT_SETTINGS) }
+                    onOpenGitSettings = { navController.navigate(Routes.GIT_SETTINGS) },
+                    onOpenStudio = { navController.navigate(Routes.STUDIO) }
                 )
             }
 
             composable(Routes.GIT_SETTINGS) {
                 GitSettingsScreen(onBack = { navController.popBackStackSafely() })
+            }
+
+            composable(Routes.STUDIO) {
+                StudioScreen(onBack = { navController.popBackStackSafely() })
             }
 
             composable(Routes.PLUGINS) {

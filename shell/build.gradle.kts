@@ -266,6 +266,9 @@ val syncShellRuntimeSources by tasks.registering(Sync::class) {
         "**/core/download/**",
         "**/core/sample/**",
         "**/core/frontend/**",
+        // Endpoint configuration is plain data + SharedPreferences; generated apps
+        // use it to resolve the same configurable sample/module mirrors.
+        "**/core/studio/EndpointConfig.kt",
         "**/core/kernel/**",
         "**/core/share/**",
 

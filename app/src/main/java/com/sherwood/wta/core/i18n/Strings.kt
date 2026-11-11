@@ -5352,6 +5352,75 @@ object Strings {
     fun repoBridgeCommitSummary(added: Int, modified: Int, deleted: Int): String =
         StringsE.repoBridgeCommitSummary(added, modified, deleted)
     fun repoBridgeCommitSuccess(sha: String): String = StringsE.repoBridgeCommitSuccess(sha)
+    val studioTitle: String get() = StringsE.studioTitle
+    val studioTabRepos: String get() = StringsE.studioTabRepos
+    val studioTabInbox: String get() = StringsE.studioTabInbox
+    val studioTabBuilds: String get() = StringsE.studioTabBuilds
+    val studioTabVault: String get() = StringsE.studioTabVault
+    val studioSettings: String get() = StringsE.studioSettings
+    val studioAccountDesc: String get() = StringsE.studioAccountDesc
+    val studioClientId: String get() = StringsE.studioClientId
+    val studioClientIdHint: String get() = StringsE.studioClientIdHint
+    val studioConnect: String get() = StringsE.studioConnect
+    val studioWaiting: String get() = StringsE.studioWaiting
+    fun studioUserCode(code: String): String = StringsE.studioUserCode(code)
+    val studioOpenGitHub: String get() = StringsE.studioOpenGitHub
+    fun studioConnected(login: String): String = StringsE.studioConnected(login)
+    val studioConnectFailed: String get() = StringsE.studioConnectFailed
+    val studioReposEmpty: String get() = StringsE.studioReposEmpty
+    val studioBranches: String get() = StringsE.studioBranches
+    val studioNewBranch: String get() = StringsE.studioNewBranch
+    val studioBranchFrom: String get() = StringsE.studioBranchFrom
+    fun studioBranchCreated(name: String): String = StringsE.studioBranchCreated(name)
+    val studioCheckout: String get() = StringsE.studioCheckout
+    fun studioCheckoutDirty(count: Int): String = StringsE.studioCheckoutDirty(count)
+    fun studioCheckoutDone(name: String): String = StringsE.studioCheckoutDone(name)
+    val studioPull: String get() = StringsE.studioPull
+    val studioMerge: String get() = StringsE.studioMerge
+    fun studioMerged(name: String): String = StringsE.studioMerged(name)
+    val studioHistory: String get() = StringsE.studioHistory
+    val studioStatus: String get() = StringsE.studioStatus
+    val studioStatusClean: String get() = StringsE.studioStatusClean
+    fun studioStatusChanges(count: Int): String = StringsE.studioStatusChanges(count)
+    val studioWatch: String get() = StringsE.studioWatch
+    val studioUnwatch: String get() = StringsE.studioUnwatch
+    val studioInboxEmpty: String get() = StringsE.studioInboxEmpty
+    fun studioPullRequest(number: Int, title: String): String = StringsE.studioPullRequest(number, title)
+    val studioOpenOnGitHub: String get() = StringsE.studioOpenOnGitHub
+    val studioWorkflows: String get() = StringsE.studioWorkflows
+    val studioRuns: String get() = StringsE.studioRuns
+    val studioRunWorkflow: String get() = StringsE.studioRunWorkflow
+    val studioDispatchRef: String get() = StringsE.studioDispatchRef
+    val studioDispatchStarted: String get() = StringsE.studioDispatchStarted
+    val studioLogs: String get() = StringsE.studioLogs
+    val studioArtifacts: String get() = StringsE.studioArtifacts
+    val studioDownloadToVault: String get() = StringsE.studioDownloadToVault
+    fun studioArtifactsSaved(count: Int): String = StringsE.studioArtifactsSaved(count)
+    val studioNoArtifacts: String get() = StringsE.studioNoArtifacts
+    val studioJobs: String get() = StringsE.studioJobs
+    val studioVaultEmpty: String get() = StringsE.studioVaultEmpty
+    val studioVerify: String get() = StringsE.studioVerify
+    val studioVerified: String get() = StringsE.studioVerified
+    val studioMismatch: String get() = StringsE.studioMismatch
+    val studioSign: String get() = StringsE.studioSign
+    val studioSigned: String get() = StringsE.studioSigned
+    fun studioSignedFrom(sha: String): String = StringsE.studioSignedFrom(sha)
+    val studioSigner: String get() = StringsE.studioSigner
+    val studioDiff: String get() = StringsE.studioDiff
+    val studioNoProject: String get() = StringsE.studioNoProject
+    val studioWorkspace: String get() = StringsE.studioWorkspace
+    val studioWorkspaceDesc: String get() = StringsE.studioWorkspaceDesc
+    val studioManifest: String get() = StringsE.studioManifest
+    val studioEndpoints: String get() = StringsE.studioEndpoints
+    val studioEndpointsDesc: String get() = StringsE.studioEndpointsDesc
+    val studioEndpointsReset: String get() = StringsE.studioEndpointsReset
+    val studioSaved: String get() = StringsE.studioSaved
+    val studioInvalidEndpoint: String get() = StringsE.studioInvalidEndpoint
+
+    val studioLicenses: String get() = StringsE.studioLicenses
+    val studioLicenseNote: String get() = StringsE.studioLicenseNote
+    val studioLicenseJgit: String get() = StringsE.studioLicenseJgit
+
 }
 
 

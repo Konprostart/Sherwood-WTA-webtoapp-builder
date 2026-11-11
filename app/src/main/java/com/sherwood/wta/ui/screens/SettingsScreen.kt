@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material3.*
@@ -40,7 +41,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit = {},
-    onOpenGitSettings: () -> Unit = {}
+    onOpenGitSettings: () -> Unit = {},
+    onOpenStudio: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val themeManager = remember { ThemeManager.getInstance(context) }
@@ -232,6 +234,22 @@ fun SettingsScreen(
                             scope.launch { themeManager.setEnableHaptics(it) }
                         }
                     )
+                }
+            }
+
+            WtaSection(title = Strings.studioTitle) {
+                WtaSettingCard {
+                    WtaSettingRow(
+                        title = Strings.studioTitle,
+                        subtitle = Strings.studioAccountDesc,
+                        icon = Icons.Outlined.Build,
+                        onClick = onOpenStudio
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = null
+                        )
+                    }
                 }
             }
 

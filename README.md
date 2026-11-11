@@ -29,6 +29,9 @@ repositories, accounts, or community channels, and uses its own package name
 - Userscripts and browser-extension modules, a native bridge for web pages, and per-app
   build options (signing, isolation, background run, notifications).
 - Optional AI agent with user-supplied API keys.
+- Sherwood Studio: GitHub OAuth Device Flow, repository and branch management,
+  pull-request inbox, GitHub Actions builds, and a local APK/AAB vault with
+  SHA-256 verification and signing.
 
 See [`docs/`](docs/index.md) for the user guide, developer documentation, and extension
 reference.
@@ -92,4 +95,4 @@ Losing it means existing installs cannot be updated; keep an offline backup of i
 
 [The Unlicense](LICENSE). The software is in the public domain; you may copy, modify,
 publish, and distribute it for any purpose. Third-party dependencies keep their own
-licenses.
+licenses; see [NOTICE.md](NOTICE.md) for the full list and the licence assessment.

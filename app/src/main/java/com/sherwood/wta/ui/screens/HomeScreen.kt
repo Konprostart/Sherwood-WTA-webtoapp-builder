@@ -136,6 +136,7 @@ fun HomeScreen(
     onOpenAiSettings: () -> Unit = {},
     onOpenAgent: () -> Unit = {},
     onOpenPlugins: () -> Unit = {},
+    onOpenStudio: () -> Unit = {},
     onOpenLinuxEnvironment: () -> Unit = {},
     onOpenBrowserKernel: () -> Unit = {},
     onOpenHostsAdBlock: () -> Unit = {},
@@ -393,6 +394,11 @@ fun HomeScreen(
                                 leadingIcon = { Icon(Icons.Outlined.AutoAwesome, null, Modifier.size(20.dp)) }
                             )
                             HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(Strings.studioTitle) },
+                                onClick = { showMoreMenu = false; onOpenStudio() },
+                                leadingIcon = { Icon(Icons.Outlined.Build, null, Modifier.size(20.dp)) }
+                            )
                             DropdownMenuItem(
                                 text = { Text(Strings.pluginsManageTitle) },
                                 onClick = { showMoreMenu = false; onOpenPlugins() },
