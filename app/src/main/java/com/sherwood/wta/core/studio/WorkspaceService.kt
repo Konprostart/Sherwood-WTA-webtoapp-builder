@@ -27,6 +27,14 @@ data class WorkspaceStatus(
     val isClean: Boolean get() = changes.isEmpty
 }
 
+/** The remote head of the branch a working copy tracks, without touching files. */
+data class RemoteHead(
+    val branch: String,
+    val sha: String,
+    val baseSha: String?,
+    val remoteMoved: Boolean
+)
+
 data class CheckoutResult(
     val projectDir: String,
     val metadata: RepoBridgeMetadata,
@@ -179,6 +187,41 @@ class WorkspaceService(private val context: Context) {
                 WorkspaceException.GitHub(result.kind, result.message)
             )
         }
+    }
+
+    /**
+     * Fetch without modifying the working copy: resolves the remote head and reports
+     * whether it moved past the recorded base commit. A pull/checkout is a separate,
+     * explicit action.
+     */
+    suspend fun fetch(projectDir: File): Result<RemoteHead> = withContext(Dispatchers.IO) {
+        val metadata = metadataStore.read(projectDir)
+            ?: return@withContext Result.failure(
+                IllegalStateException("Project is not linked to GitHub")
+            )
+        when (val branch = api.getBranch(metadata.owner, metadata.repo, metadata.ref)) {
+            is GitHubResult.Success -> Result.success(
+                RemoteHead(
+                    branch = metadata.ref,
+                    sha = branch.value.sha,
+                    baseSha = metadata.baseSha,
+                    remoteMoved = metadata.baseSha != null && metadata.baseSha != branch.value.sha
+                )
+            )
+            is GitHubResult.Failure -> Result.failure(
+                WorkspaceException.GitHub(branch.kind, branch.message)
+            )
+        }
+    }
+
+    /** Imports a repository as a new working copy (the Studio's "clone"). */
+    suspend fun clone(
+        owner: String,
+        repo: String,
+        branch: String? = null,
+        subPath: String? = null
+    ): Result<com.sherwood.wta.core.frontend.GitHubFetchResult> = withContext(Dispatchers.IO) {
+        fetcher.fetch("$owner/$repo", explicitBranch = branch, explicitSubPath = subPath)
     }
 
     /** Pull = move the working copy to the remote head of the branch it already tracks. */

@@ -90,6 +90,7 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
     var newBranchFrom by remember { mutableStateOf("") }
     var diff by remember { mutableStateOf<FileDiff?>(null) }
     var diffError by remember { mutableStateOf<String?>(null) }
+    var commitProject by remember { mutableStateOf<File?>(null) }
 
     suspend fun loadRepositories() {
         val user = api.currentUser()
@@ -404,6 +405,50 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
                                     }
                                 )
                             }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = WtaSpacing.RowHorizontal,
+                                        vertical = 8.dp
+                                    ),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                WtaButton(
+                                    text = Strings.refresh,
+                                    size = WtaButtonSize.Small,
+                                    variant = WtaButtonVariant.Outlined,
+                                    onClick = {
+                                        scope.launch {
+                                            loading = true
+                                            workspace.fetch(project)
+                                                .onSuccess { remote ->
+                                                    status = workspace.status(project).getOrNull()
+                                                    history = runCatching {
+                                                        workspace.history(
+                                                            repo.owner,
+                                                            repo.name,
+                                                            remote.branch,
+                                                            10
+                                                        )
+                                                    }.getOrDefault(history)
+                                                }
+                                                .onFailure {
+                                                    snackbarHostState.showSnackbar(
+                                                        it.message ?: Strings.studioConnectFailed
+                                                    )
+                                                }
+                                            loading = false
+                                        }
+                                    }
+                                )
+                                WtaButton(
+                                    text = Strings.repoBridgeCommitTitle,
+                                    size = WtaButtonSize.Small,
+                                    variant = WtaButtonVariant.Outlined,
+                                    onClick = { commitProject = project }
+                                )
+                            }
                             if (status?.changes?.total?.let { it > 0 } == true) {
                                 val changes = status?.changes
                                 val changedPaths = buildList {
@@ -496,6 +541,32 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
         if (loading) {
             item { StudioBusy(Strings.loading) }
         }
+    }
+
+    commitProject?.let { project ->
+        val activeRepo = selectedRepo
+        RepoBridgeCommitDialog(
+            projectDir = project,
+            onDismiss = { commitProject = null },
+            onCommitted = { sha ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        Strings.repoBridgeCommitSuccess(sha.take(7))
+                    )
+                    status = workspace.status(project).getOrNull()
+                    if (activeRepo != null) {
+                        history = runCatching {
+                            workspace.history(
+                                activeRepo.owner,
+                                activeRepo.name,
+                                selectedBranch ?: activeRepo.defaultBranch,
+                                10
+                            )
+                        }.getOrDefault(history)
+                    }
+                }
+            }
+        )
     }
 
     if (showNewBranch) {

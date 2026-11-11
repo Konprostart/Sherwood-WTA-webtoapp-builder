@@ -72,7 +72,7 @@ data class EndpointConfig(
         if (!REPO_RE.matches(projectRepo)) {
             errors["projectRepo"] = "Repository name must contain only letters, digits, '.', '-' and '_'."
         }
-        if (!BRANCH_RE.matches(projectBranch)) {
+        if (!isValidBranchName(projectBranch)) {
             errors["projectBranch"] = "Branch name is not valid."
         }
         return errors
@@ -185,14 +185,28 @@ data class EndpointConfig(
             if (!value.startsWith("https://", ignoreCase = true)) return "Address must start with https://"
             val rest = value.removePrefix("https://").removeSuffix("/")
             if (rest.isEmpty()) return "Address is missing a host."
-            if (rest.contains('@')) return "Address must not contain credentials."
+            // `@` is only suspicious in the authority (userinfo). Mirrors such as
+            // jsDelivr legitimately carry `@branch` in the path.
+            val authority = rest.substringBefore('/')
+            if (authority.contains('@')) return "Address must not contain credentials."
             if (rest.contains(' ')) return "Address must not contain spaces."
-            if (rest.startsWith("http://")) return "Address must start with https://"
-            val host = rest.substringBefore('/')
-            if (host.isEmpty() || !host.contains('.')) return "Address is missing a valid host."
+            if (authority.isEmpty() || !authority.contains('.')) {
+                return "Address is missing a valid host."
+            }
             if (rest.contains('?')) return "Address must not contain a query string."
             if (rest.contains('#')) return "Address must not contain a fragment."
             return null
+        }
+
+        /** Same rules as a git branch: no `..`, no leading/trailing separators, no `.lock`. */
+        fun isValidBranchName(value: String): Boolean {
+            val branch = value.trim()
+            if (!BRANCH_RE.matches(branch)) return false
+            if (branch.startsWith("/") || branch.endsWith("/")) return false
+            if (branch.startsWith(".") || branch.endsWith(".")) return false
+            if (branch.contains("..") || branch.contains("//")) return false
+            if (branch.endsWith(".lock")) return false
+            return true
         }
     }
 }
