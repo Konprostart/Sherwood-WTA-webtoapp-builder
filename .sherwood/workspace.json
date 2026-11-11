@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "project": "Konprostart/Sherwood-WTA-webtoapp-builder",
+  "branch": "main",
+  "packageName": "com.sherwood.wta",
+  "buildWorkflow": "release.yml",
+  "appVersion": "2.8.2",
+  "generatedBy": "Sherwood Studio",
+  "notes": "GitHub is the only channel between this project and an external workspace. Edit on a branch, open a pull request, and use the Sherwood Studio inbox to review, merge and build."
+}

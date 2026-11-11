@@ -65,6 +65,8 @@ calls an author-owned build server.
 
 A workspace with GitHub access reads it, edits code on a branch, opens a pull
 request, and the Studio's inbox shows the branch/PR for review, merge and build.
+This repository itself carries one at `.sherwood/workspace.json` as a working
+example.
 
 ## Tests
 
