@@ -22,6 +22,17 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+// Room exports one schema file per @Database. Gradle may run the KSP tasks of
+// two variants at the same time; both then write the same `schemas/<db>/<version>.json`
+// and a reader can observe a truncated file ("Expected colon ':', but had EOF").
+// Serialize the gplay KSP task behind the standard one for each build type. The
+// APK jobs already build one variant per invocation for the same reason.
+listOf("Debug", "Release").forEach { buildType ->
+    tasks.matching { it.name == "kspGplay${buildType}Kotlin" }.configureEach {
+        mustRunAfter(tasks.matching { it.name == "kspStandard${buildType}Kotlin" })
+    }
+}
+
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) {
