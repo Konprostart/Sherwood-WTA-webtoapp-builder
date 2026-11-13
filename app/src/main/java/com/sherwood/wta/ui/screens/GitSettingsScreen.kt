@@ -73,6 +73,7 @@ fun GitSettingsScreen(
     val uriHandler = LocalUriHandler.current
 
     var hasToken by remember { mutableStateOf(false) }
+    var protection by remember { mutableStateOf(GitHubTokenStore.TokenProtection.NONE) }
     var savedMasked by remember { mutableStateOf<String?>(null) }
     var input by remember { mutableStateOf("") }
     var showToken by remember { mutableStateOf(false) }
@@ -89,6 +90,7 @@ fun GitSettingsScreen(
             val token = withContext(Dispatchers.IO) { store.currentToken() }
             hasToken = token != null
             savedMasked = token?.let { GitHubTokenFormat.masked(it) }
+            protection = withContext(Dispatchers.IO) { store.protection() }
         }
     }
 
@@ -148,6 +150,7 @@ fun GitSettingsScreen(
         scope.launch {
             withContext(Dispatchers.IO) { store.clearToken() }
             hasToken = false
+            protection = GitHubTokenStore.TokenProtection.NONE
             savedMasked = null
             input = ""
             invalid = false
@@ -197,6 +200,21 @@ fun GitSettingsScreen(
                                 )
                             }
                         }
+                    }
+
+                    if (hasToken) {
+                        WtaSectionDivider()
+                        WtaSettingRow(
+                            title = Strings.gitTokenProtection,
+                            subtitle = when (protection) {
+                                GitHubTokenStore.TokenProtection.APP_DERIVED_FALLBACK ->
+                                    Strings.gitTokenProtectionFallback
+                                else -> Strings.gitTokenProtectionKeystore
+                            },
+                            tone = if (protection == GitHubTokenStore.TokenProtection.APP_DERIVED_FALLBACK)
+                                com.sherwood.wta.ui.design.WtaRowTone.Danger
+                            else com.sherwood.wta.ui.design.WtaRowTone.Normal
+                        )
                     }
 
                     WtaSectionDivider()

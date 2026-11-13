@@ -5417,6 +5417,69 @@ object Strings {
     val studioSaved: String get() = StringsE.studioSaved
     val studioInvalidEndpoint: String get() = StringsE.studioInvalidEndpoint
 
+
+    // Studio: project signing, inspector and pull requests
+    val studioWorkspaceChannel: String get() = StringsE.studioWorkspaceChannel
+    val gitTokenProtection: String get() = StringsE.gitTokenProtection
+    val gitTokenProtectionKeystore: String get() = StringsE.gitTokenProtectionKeystore
+    val gitTokenProtectionFallback: String get() = StringsE.gitTokenProtectionFallback
+    val studioWorkspaceAiNote: String get() = StringsE.studioWorkspaceAiNote
+
+    val studioSigningIdentity: String get() = StringsE.studioSigningIdentity
+    val studioNoSigningIdentity: String get() = StringsE.studioNoSigningIdentity
+    val studioCreateIdentity: String get() = StringsE.studioCreateIdentity
+    val studioCreateIdentityWarning: String get() = StringsE.studioCreateIdentityWarning
+    val studioSignerMismatch: String get() = StringsE.studioSignerMismatch
+    val studioSignerMismatchWarning: String get() = StringsE.studioSignerMismatchWarning
+    val studioImportKeystore: String get() = StringsE.studioImportKeystore
+    val studioKeystorePassword: String get() = StringsE.studioKeystorePassword
+    val studioKeyAlias: String get() = StringsE.studioKeyAlias
+    val studioKeyPassword: String get() = StringsE.studioKeyPassword
+    val studioKeystoreReplaceWarning: String get() = StringsE.studioKeystoreReplaceWarning
+    val studioIdentityImported: String get() = StringsE.studioIdentityImported
+    val studioIdentityGenerated: String get() = StringsE.studioIdentityGenerated
+    val studioInspector: String get() = StringsE.studioInspector
+    val studioInspect: String get() = StringsE.studioInspect
+    val studioPackageName: String get() = StringsE.studioPackageName
+    val studioVersionLabel: String get() = StringsE.studioVersionLabel
+    val studioIntegrity: String get() = StringsE.studioIntegrity
+    val studioProvenance: String get() = StringsE.studioProvenance
+    val studioSignatureOk: String get() = StringsE.studioSignatureOk
+    val studioSignatureBad: String get() = StringsE.studioSignatureBad
+    val studioUnsigned: String get() = StringsE.studioUnsigned
+    val studioPackageUnknown: String get() = StringsE.studioPackageUnknown
+    val studioSelectArtifact: String get() = StringsE.studioSelectArtifact
+    val studioCreatePr: String get() = StringsE.studioCreatePr
+    val studioPrTitle: String get() = StringsE.studioPrTitle
+    val studioPrBody: String get() = StringsE.studioPrBody
+    val studioPrBase: String get() = StringsE.studioPrBase
+    val studioPrHead: String get() = StringsE.studioPrHead
+    val studioPrDraft: String get() = StringsE.studioPrDraft
+    val studioPrChecks: String get() = StringsE.studioPrChecks
+    val studioPrChecksPassed: String get() = StringsE.studioPrChecksPassed
+    val studioPrChecksUnknown: String get() = StringsE.studioPrChecksUnknown
+    val studioPrMergeable: String get() = StringsE.studioPrMergeable
+    val studioPrConflicting: String get() = StringsE.studioPrConflicting
+    val studioPrReview: String get() = StringsE.studioPrReview
+    val studioPrRequestChanges: String get() = StringsE.studioPrRequestChanges
+    val studioPrReviewSent: String get() = StringsE.studioPrReviewSent
+    val studioPrInlineComment: String get() = StringsE.studioPrInlineComment
+    val studioPrLineNumber: String get() = StringsE.studioPrLineNumber
+    val studioPrCommentableLines: String get() = StringsE.studioPrCommentableLines
+    val studioPrInlineCommentSent: String get() = StringsE.studioPrInlineCommentSent
+    val studioPrLineInvalid: String get() = StringsE.studioPrLineInvalid
+    fun studioPrCreated(value: Int): String = StringsE.studioPrCreated(value)
+    fun studioPrChecksPending(value: Int): String = StringsE.studioPrChecksPending(value)
+    fun studioPrChecksFailed(value: Int): String = StringsE.studioPrChecksFailed(value)
+    fun studioPrFiles(value: Int): String = StringsE.studioPrFiles(value)
+    fun studioRunNumber(value: Int): String = StringsE.studioRunNumber(value)
+    fun studioRunId(value: Long): String = StringsE.studioRunId(value)
+    fun studioFileSizeKb(value: Long): String = StringsE.studioFileSizeKb(value)
+    val studioLocalSource: String get() = StringsE.studioLocalSource
+
+    val studioSdkLevels: String get() = StringsE.studioSdkLevels
+    fun studioCommitLabel(sha: String): String = StringsE.studioCommitLabel(sha)
+
     val studioLicenses: String get() = StringsE.studioLicenses
     val studioLicenseNote: String get() = StringsE.studioLicenseNote
     val studioLicenseJgit: String get() = StringsE.studioLicenseJgit

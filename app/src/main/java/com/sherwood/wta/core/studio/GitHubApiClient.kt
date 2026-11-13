@@ -98,6 +98,72 @@ data class GitHubMergeResult(
     val message: String?
 )
 
+/** Aggregate CI state of one commit. */
+enum class ChecksState { UNKNOWN, PENDING, PASSING, FAILING }
+
+data class GitHubCheckRun(
+    val name: String,
+    val status: String,
+    val conclusion: String?,
+    val detailsUrl: String?
+)
+
+data class GitHubCheckSummary(
+    val state: ChecksState,
+    val total: Int,
+    val pending: Int,
+    val passing: Int,
+    val failing: Int,
+    val checks: List<GitHubCheckRun>,
+    val combinedState: String?
+)
+
+data class GitHubPullRequestDetails(
+    val pull: GitHubPullRequest,
+    val mergeable: Boolean?,
+    val mergeableState: String?,
+    val additions: Int,
+    val deletions: Int,
+    val changedFiles: Int,
+    val commitCount: Int,
+    val createdAt: String?,
+    val mergedAt: String?,
+    val closedAt: String?,
+    val headSha: String,
+    val baseSha: String?
+)
+
+data class GitHubPullRequestFile(
+    val filename: String,
+    val status: String,
+    val additions: Int,
+    val deletions: Int,
+    val changes: Int,
+    val previousFilename: String?,
+    /**
+     * Unified diff for this file, when GitHub includes one. It is omitted for binary
+     * files and for very large diffs, so no caller may assume it is present.
+     */
+    val patch: String? = null
+)
+
+data class GitHubPullRequestReview(
+    val id: Long,
+    val state: String,
+    val author: String,
+    val body: String?,
+    val submittedAt: String?
+)
+
+data class GitHubPullRequestReviewComment(
+    val id: Long,
+    val path: String,
+    val line: Int?,
+    val body: String,
+    val author: String,
+    val htmlUrl: String?
+)
+
 data class GitHubWorkflow(
     val id: Long,
     val name: String,
@@ -272,6 +338,234 @@ class GitHubApiClient(
                 sha = obj.string("sha"),
                 message = obj.string("message")
             )
+        }
+    }
+
+    /**
+     * Opens a pull request from [head] into [base].
+     *
+     * GitHub answers `422` for the common rejections — an open PR already exists for
+     * that branch, the head has no commits ahead of the base, a branch does not
+     * exist — and the JSON `message`/`errors` text is preserved by
+     * [failureFrom] so the UI can show GitHub's own explanation instead of a
+     * generic failure. A `403` means the token lacks pull-request permission; `401`
+     * means the token is invalid or expired.
+     */
+    suspend fun createPullRequest(
+        owner: String,
+        repo: String,
+        title: String,
+        head: String,
+        base: String,
+        body: String? = null,
+        draft: Boolean = false
+    ): GitHubResult<GitHubPullRequest> {
+        if (title.isBlank()) {
+            return GitHubResult.Failure(
+                GitHubFailureKind.UNPROCESSABLE,
+                message = "A pull request title is required"
+            )
+        }
+        if (head.isBlank() || base.isBlank()) {
+            return GitHubResult.Failure(
+                GitHubFailureKind.UNPROCESSABLE,
+                message = "Head and base branches are required"
+            )
+        }
+        if (head.equals(base, ignoreCase = true)) {
+            return GitHubResult.Failure(
+                GitHubFailureKind.UNPROCESSABLE,
+                message = "Head and base branches must differ"
+            )
+        }
+        val payload = JsonObject().apply {
+            addProperty("title", title.trim())
+            addProperty("head", head.trim())
+            addProperty("base", base.trim())
+            addProperty("draft", draft)
+            if (!body.isNullOrBlank()) addProperty("body", body)
+        }
+        return sendJson("POST", url("repos", owner, repo, "pulls"), payload.toString()) { json ->
+            parsePullRequest(json)
+        }
+    }
+
+    /** One pull request with mergeability, diff size and timestamps. */
+    suspend fun getPullRequest(
+        owner: String,
+        repo: String,
+        number: Int
+    ): GitHubResult<GitHubPullRequestDetails> =
+        getJson(url("repos", owner, repo, "pulls", number.toString())) { json ->
+            parsePullRequestDetails(json)
+        }
+
+    /** Changed files of a pull request (GitHub caps the list at 300 files per PR). */
+    suspend fun listPullRequestFiles(
+        owner: String,
+        repo: String,
+        number: Int
+    ): GitHubResult<List<GitHubPullRequestFile>> {
+        val builder = urlBuilder("repos", owner, repo, "pulls", number.toString(), "files")
+            .addQueryParameter("per_page", "100")
+        return getJson(builder.build().toString()) { json ->
+            json.asArrayOrNull()?.mapNotNull { it.asObjectOrNull()?.let(::parsePullRequestFile) }
+        }
+    }
+
+    /**
+     * CI state for one commit.
+     *
+     * Check-runs are the modern signal; the legacy combined commit status is only
+     * consulted when no check-run exists, so a repository that uses one or the
+     * other both report a state. When neither source has data the state is
+     * [ChecksState.UNKNOWN] — never "passed".
+     */
+    suspend fun getCommitChecks(
+        owner: String,
+        repo: String,
+        ref: String
+    ): GitHubResult<GitHubCheckSummary> {
+        val runsBuilder = urlBuilder("repos", owner, repo, "commits", ref, "check-runs")
+            .addQueryParameter("per_page", "100")
+        val runs = getJson(runsBuilder.build().toString()) { json ->
+            val obj = json.asObjectOrNull() ?: return@getJson null
+            obj.arr("check_runs")?.mapNotNull { element ->
+                val run = element.asObjectOrNull() ?: return@mapNotNull null
+                GitHubCheckRun(
+                    name = run.string("name").orEmpty(),
+                    status = run.string("status") ?: "queued",
+                    conclusion = run.string("conclusion"),
+                    detailsUrl = run.string("details_url") ?: run.string("html_url")
+                )
+            } ?: emptyList()
+        }
+        val runsValue = when (runs) {
+            is GitHubResult.Success -> runs.value
+            is GitHubResult.Failure -> {
+                if (runs.kind != GitHubFailureKind.NOT_FOUND) {
+                    return GitHubResult.Failure(runs.kind, runs.statusCode, runs.message)
+                }
+                emptyList()
+            }
+        }
+        if (runsValue.isNotEmpty()) {
+            return GitHubResult.Success(summarizeChecks(runsValue, combinedState = null))
+        }
+        val statusUrl = url("repos", owner, repo, "commits", ref, "status")
+        val combined = getJson(statusUrl) { json ->
+            val obj = json.asObjectOrNull() ?: return@getJson null
+            val state = obj.string("state") ?: return@getJson null
+            val contexts: List<GitHubCheckRun> = obj.arr("statuses")?.mapNotNull { element ->
+                val status = element.asObjectOrNull() ?: return@mapNotNull null
+                GitHubCheckRun(
+                    name = status.string("context").orEmpty(),
+                    status = "completed",
+                    conclusion = status.string("state"),
+                    detailsUrl = status.string("target_url")
+                )
+            } ?: emptyList()
+            GitHubCheckSummary(
+                state = checksStateOf(combinedState = state, checks = contexts),
+                total = contexts.size,
+                pending = contexts.count { !isCompleted(it.status) },
+                passing = contexts.count { isPassing(it.conclusion) },
+                failing = contexts.count { isFailing(it.conclusion) },
+                checks = contexts,
+                combinedState = state
+            )
+        }
+        return when (combined) {
+            is GitHubResult.Success -> combined
+            is GitHubResult.Failure ->
+                if (combined.kind == GitHubFailureKind.NOT_FOUND) {
+                    GitHubResult.Success(summarizeChecks(emptyList(), combinedState = null))
+                } else {
+                    GitHubResult.Failure(combined.kind, combined.statusCode, combined.message)
+                }
+        }
+    }
+
+    /**
+     * Submits a review. `COMMENT` and `REQUEST_CHANGES` are supported; an approval is
+     * deliberately not exposed — merging and approving are decisions the owner makes
+     * in GitHub's own UI, not something this app should do on their behalf.
+     */
+    suspend fun submitPullRequestReview(
+        owner: String,
+        repo: String,
+        number: Int,
+        body: String,
+        requestChanges: Boolean = false
+    ): GitHubResult<GitHubPullRequestReview> {
+        if (body.isBlank()) {
+            return GitHubResult.Failure(
+                GitHubFailureKind.UNPROCESSABLE,
+                message = "A review needs a comment"
+            )
+        }
+        val payload = JsonObject().apply {
+            addProperty("body", body)
+            addProperty("event", if (requestChanges) "REQUEST_CHANGES" else "COMMENT")
+        }
+        return sendJson(
+            "POST",
+            url("repos", owner, repo, "pulls", number.toString(), "reviews"),
+            payload.toString()
+        ) { json ->
+            val obj = json.asObjectOrNull() ?: return@sendJson null
+            GitHubPullRequestReview(
+                id = obj.long("id") ?: 0L,
+                state = obj.string("state").orEmpty(),
+                author = obj.obj("user")?.string("login").orEmpty(),
+                body = obj.string("body"),
+                submittedAt = obj.string("submitted_at")
+            )
+        }
+    }
+
+    /**
+     * Adds a review comment on one line of a changed file.
+     *
+     * GitHub requires the commit the line refers to and the *new-side* line number,
+     * so the caller passes the PR head SHA. `subject_type = file` was introduced for
+     * multi-line comments and is not used here; a single-line comment is accepted by
+     * every API version this client targets.
+     */
+    suspend fun addPullRequestReviewComment(
+        owner: String,
+        repo: String,
+        number: Int,
+        commitId: String,
+        path: String,
+        line: Int,
+        body: String
+    ): GitHubResult<GitHubPullRequestReviewComment> {
+        if (body.isBlank()) {
+            return GitHubResult.Failure(
+                GitHubFailureKind.UNPROCESSABLE,
+                message = "A review comment needs a body"
+            )
+        }
+        if (commitId.isBlank() || path.isBlank() || line <= 0) {
+            return GitHubResult.Failure(
+                GitHubFailureKind.UNPROCESSABLE,
+                message = "A review comment needs a commit, a path and a line"
+            )
+        }
+        val payload = JsonObject().apply {
+            addProperty("body", body)
+            addProperty("commit_id", commitId)
+            addProperty("path", path)
+            addProperty("line", line)
+            addProperty("side", "RIGHT")
+        }
+        return sendJson(
+            "POST",
+            url("repos", owner, repo, "pulls", number.toString(), "comments"),
+            payload.toString()
+        ) { json ->
+            parsePullRequestReviewComment(json)
         }
     }
 
@@ -684,6 +978,138 @@ class GitHubApiClient(
                 authorDate = commit?.obj("author")?.string("date"),
                 htmlUrl = obj.string("html_url")
             )
+        }
+
+        fun parsePullRequestDetails(json: JsonElement): GitHubPullRequestDetails? {
+            val pull = parsePullRequest(json) ?: return null
+            val obj = json.asObjectOrNull() ?: return null
+            return GitHubPullRequestDetails(
+                pull = pull,
+                // `mergeable` is null while GitHub is still computing it — the UI
+                // must show "unknown" rather than guess.
+                mergeable = obj.bool("mergeable"),
+                mergeableState = obj.string("mergeable_state"),
+                additions = obj.int("additions") ?: 0,
+                deletions = obj.int("deletions") ?: 0,
+                changedFiles = obj.int("changed_files") ?: 0,
+                commitCount = obj.int("commits") ?: 0,
+                createdAt = obj.string("created_at"),
+                mergedAt = obj.string("merged_at"),
+                closedAt = obj.string("closed_at"),
+                headSha = obj.obj("head")?.string("sha").orEmpty(),
+                baseSha = obj.obj("base")?.string("sha")
+            )
+        }
+
+        fun parsePullRequestFile(json: JsonElement): GitHubPullRequestFile? {
+            val obj = json.asObjectOrNull() ?: return null
+            val filename = obj.string("filename") ?: return null
+            return GitHubPullRequestFile(
+                filename = filename,
+                status = obj.string("status") ?: "modified",
+                additions = obj.int("additions") ?: 0,
+                deletions = obj.int("deletions") ?: 0,
+                changes = obj.int("changes") ?: 0,
+                previousFilename = obj.string("previous_filename"),
+                patch = obj.string("patch")
+            )
+        }
+
+        /**
+         * New-side line numbers a review comment may target, read from a unified-diff
+         * `patch`. Removed lines do not exist on the new side and are skipped, so every
+         * number returned is one GitHub accepts with `side = RIGHT`.
+         *
+         * Returns an empty list when GitHub omitted the patch (binary or oversized diff);
+         * callers then fall back to manual line entry instead of guessing.
+         */
+        fun commentableNewLines(patch: String?, limit: Int = 40): List<Int> {
+            if (patch.isNullOrBlank() || limit <= 0) return emptyList()
+            val result = ArrayList<Int>()
+            var newLine = 0
+            for (raw in patch.split('\n')) {
+                if (raw.startsWith("@@")) {
+                    // Hunk header: @@ -oldStart[,oldCount] +newStart[,newCount] @@
+                    val plus = raw.indexOf('+')
+                    if (plus < 0) continue
+                    newLine = raw.substring(plus + 1).takeWhile { it.isDigit() }.toIntOrNull() ?: 0
+                    continue
+                }
+                if (newLine <= 0) continue
+                when {
+                    raw.startsWith("+") -> {
+                        result.add(newLine)
+                        newLine++
+                    }
+                    raw.startsWith("-") -> Unit   // gone on the new side
+                    raw.startsWith("\\") -> Unit  // "\ No newline at end of file"
+                    else -> newLine++             // context line
+                }
+                if (result.size >= limit) break
+            }
+            return result
+        }
+
+        fun parsePullRequestReviewComment(json: JsonElement): GitHubPullRequestReviewComment? {
+            val obj = json.asObjectOrNull() ?: return null
+            val id = obj.long("id") ?: return null
+            return GitHubPullRequestReviewComment(
+                id = id,
+                path = obj.string("path").orEmpty(),
+                line = obj.int("line"),
+                body = obj.string("body").orEmpty(),
+                author = obj.obj("user")?.string("login").orEmpty(),
+                htmlUrl = obj.string("html_url")
+            )
+        }
+
+        /** `completed` is the only terminal check-run status. */
+        fun isCompleted(status: String): Boolean = status.equals("completed", ignoreCase = true)
+
+        fun isPassing(conclusion: String?): Boolean = when (conclusion?.lowercase()) {
+            "success", "neutral", "skipped" -> true
+            else -> false
+        }
+
+        fun isFailing(conclusion: String?): Boolean = when (conclusion?.lowercase()) {
+            "failure", "cancelled", "timed_out", "action_required", "startup_failure" -> true
+            else -> false
+        }
+
+        fun summarizeChecks(checks: List<GitHubCheckRun>, combinedState: String?): GitHubCheckSummary {
+            val total = checks.size
+            val pending = checks.count { !isCompleted(it.status) }
+            val failing = checks.count { isCompleted(it.status) && isFailing(it.conclusion) }
+            val passing = checks.count { isCompleted(it.status) && isPassing(it.conclusion) }
+            return GitHubCheckSummary(
+                state = checksStateOf(combinedState, checks),
+                total = total,
+                pending = pending,
+                passing = passing,
+                failing = failing,
+                checks = checks,
+                combinedState = combinedState
+            )
+        }
+
+        /**
+         * Failing wins over pending, pending over passing, and no signal at all stays
+         * [ChecksState.UNKNOWN]. Reporting UNKNOWN instead of PASSING is what keeps the
+         * UI from telling the user a build is green when GitHub has not said anything.
+         */
+        fun checksStateOf(combinedState: String?, checks: List<GitHubCheckRun>): ChecksState {
+            val combined = combinedState?.lowercase()
+            if (checks.any { isCompleted(it.status) && isFailing(it.conclusion) }) {
+                return ChecksState.FAILING
+            }
+            if (combined == "failure" || combined == "error") return ChecksState.FAILING
+            if (checks.any { !isCompleted(it.status) }) return ChecksState.PENDING
+            if (combined == "pending") return ChecksState.PENDING
+            if (checks.isNotEmpty() && checks.all { isCompleted(it.status) }) {
+                return ChecksState.PASSING
+            }
+            if (combined == "success") return ChecksState.PASSING
+            return ChecksState.UNKNOWN
         }
 
         fun parseWorkflow(json: JsonElement): GitHubWorkflow? {

@@ -11,18 +11,60 @@ Everything still ships as **one APK**. Studio is not a second app.
 | Area | Implementation | Notes |
 | --- | --- | --- |
 | GitHub account | `GitHubOAuthClient` | OAuth **Device Flow** with a user-owned public OAuth App client ID. No client secret exists in the APK. |
-| Token storage | existing `GitHubTokenStore` | Encrypted with Android Keystore, same store the repo bridge already uses. |
+| Token storage | existing `GitHubTokenStore` | Encrypted with Android Keystore, same store the repo bridge already uses. If the Keystore master key is unavailable the token falls back to a key derived from the package name and the APK signing certificate — that is obfuscation, not secret-key encryption, so Git settings shows which of the two is in use. |
 | Repositories | `GitHubApiClient.listRepositories` | Public and private (token scope `repo`). |
 | Branch, merge, history | `WorkspaceService` + `GitHubApiClient` | Branch create, checkout (clean working copy only), pull, merge, commit history. |
 | Commit / push | existing `RepoBridgeCommitUseCase` | Server-side Git Data API commit with the existing review and secret scanner. |
 | Diff | `UnifiedDiff` | Bounded local LCS; binary files report sizes only. |
-| Workspace inbox | `StudioInboxTab` | Watched repositories, open pull requests, branches; merge and open on GitHub. |
+| Workspace inbox | `StudioInboxTab` | Watched repositories, open pull requests, branches; per-PR details, changed files, CI check state, a review-comment box and a per-file line comment composer. Commentable line numbers are read from the diff hunk headers (`GitHubApiClient.commentableNewLines`), so only new-side lines GitHub accepts are offered; binary/large files without a `patch` fall back to manual entry. |
+| Pull requests | `GitHubApiClient.createPullRequest` | Open a PR from a branch (title, description, base, draft). Errors come from GitHub's own message. Review submission is `COMMENT` / `REQUEST_CHANGES` only — the app never approves or merges on its own. |
+| Inspector | `ArtifactInspector` + `StudioInspectorTab` | Integrity, signature, package identity and provenance for a vault artifact, each reported separately. |
 | Build Studio | `BuildStudio` | Workflow list, dispatch, run status, jobs, logs, artifacts. |
 | Artifact vault | `ArtifactVault` | APK/AAB files with SHA-256, version, source commit, run id, signature. |
-| Signing Studio | `SigningStudio` | Signs vault APKs (apksig) and AABs with the app's current identity; signed copies are new vault records. |
+| Signing Studio | `SigningStudio` + `ProjectSigningIdentity` | Signs vault APKs (apksig) and AABs with the **project's own** identity for the artifact's package. Imported keystore or the existing per-package key; a missing key must be created on purpose. |
 | Install | `ArtifactInstaller` | System installer via FileProvider with a read grant. |
 | Workspace link | `WorkspaceBridgeService` | Commits `.sherwood/workspace.json`; external tools read it over raw content. No Sherwood server. |
 | Endpoints | `EndpointConfig` | Every Studio address is HTTPS, validated, and overridable from Settings. |
+
+## Signing a vault artifact
+
+Signing is per project, never per app. `ProjectSigningIdentity` resolves the
+identity for the **artifact's own package name**:
+
+1. an imported keystore for that package (`filesDir/project_signing/`), else
+2. the existing per-package key the export pipeline already uses
+   (`PerAppSigningIdentity`, `filesDir/app_signing/`), else
+3. **nothing** — signing is refused.
+
+The old behaviour (signing every artifact with the host application's key) was
+removed: an APK signed with Sherwood's key can never be updated by the project's
+key, and an AAB signed with it permanently breaks the Play upload path.
+
+The confirmation dialog shows the package, the identity origin (imported or
+generated), the key alias, the fingerprint and the expiry date *before* signing,
+and it is the only place that authorises creating a new key or signing with a
+different key than the artifact already carries. Importing a keystore for a package
+that already has one replaces the imported copy, and the dialog says so before the
+user can confirm — otherwise one wrong import would permanently pin the package to
+the wrong key. Keystore passwords are encrypted with the Android Keystore master key
+and bound to the package name, and are never logged or written into a project
+export.
+
+## Inspector
+
+`ArtifactInspector` recomputes everything from the file on disk and keeps four
+claims separate: hash integrity, signature verification, package identity and
+provenance. A matching SHA-256 never implies a trusted signature, and a verified
+signature never implies a known origin. AABs are read from
+`base/manifest/AndroidManifest.xml` (protobuf) and their JAR signature is verified
+by draining every entry through `JarFile(verify = true)`.
+
+## Local Git
+
+The app still has no `.git`. The investigation, the rejected options and the
+integration seam for a real local engine are in
+[`studio-local-git.md`](studio-local-git.md). The API engine remains the only
+active backend.
 
 ## Why not JGit
 
@@ -76,6 +118,11 @@ example.
 - `UnifiedDiffTest` — add/remove/replace, context, large input fallback.
 - `StudioPureLogicTest` — branch names, path traversal, file-name sanitizing,
   SHA-256, manifest validation, third-party licence audit.
+- `GitHubPullRequestParsingTest` — PR details, files, review comments and the
+  check-state reducer (failing > pending > passing > unknown).
+- `WorkspacePathSafetyTest` — canonical-path containment (`..`, prefix-similar
+  siblings, symlink escape) plus a structural guard that no Studio source uses
+  `java.nio.file` behind `minSdk` 24.
 
-Artifact signing and installation need a device; they are exercised manually, not
-in unit tests.
+Artifact signing, keystore import and installation need a device; they are
+exercised manually, not in unit tests.

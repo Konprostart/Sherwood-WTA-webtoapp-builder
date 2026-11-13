@@ -405,11 +405,20 @@ class WorkspaceService(private val context: Context) {
         runCatching { if (file.isDirectory) file.deleteRecursively() else file.delete() }
     }
 
-    private fun isInside(parent: File, child: File): Boolean = runCatching {
-        val parentPath = parent.canonicalFile.toPath()
-        val childPath = child.canonicalFile.toPath()
-        childPath.startsWith(parentPath)
-    }.getOrDefault(false)
+    /**
+     * Path containment check that works on every supported API level.
+     *
+     * `java.io.File.toPath()` is API 26 while `minSdk` is 24: on Android 7.x the
+     * previous form threw `NoSuchMethodError`, `runCatching` swallowed it and
+     * `diff()` reported `InvalidPath` for every file. Comparing canonical *string*
+     * paths keeps the same guarantee — `canonicalFile` resolves `..` and symlinks,
+     * so traversal is still rejected — and matches the idiom used elsewhere in
+     * this code base (`DataBackupManager`, `AppSourcePackager`, `GitHubRepoFetcher`).
+     *
+     * `child == parent` is allowed and the separator suffix prevents a sibling
+     * such as `/data/pods2` from being treated as inside `/data/pods`.
+     */
+    private fun isInside(parent: File, child: File): Boolean = isInsidePath(parent, child)
 
     private fun isBinary(bytes: ByteArray?): Boolean {
         if (bytes == null) return false
@@ -444,6 +453,22 @@ class WorkspaceService(private val context: Context) {
             if (parts.any { it.isEmpty() || it == "." || it == ".." }) return null
             return parts.joinToString("/")
         }
+
+        /**
+         * Canonical-path containment check, API 24 safe.
+         *
+         * Deliberately uses `java.io.File.canonicalPath` and not `java.nio.file`
+         * (API 26). A path is inside its parent when it equals it or starts with
+         * the parent path plus a separator, so `…/pods2` is not inside `…/pods`.
+         * Both paths are canonicalised first, which collapses `..` segments and
+         * resolves symlinks — a traversal attempt cannot escape by string trickery.
+         * Any IO failure (unreadable parent, broken link) fails closed.
+         */
+        fun isInsidePath(parent: File, child: File): Boolean = runCatching {
+            val parentPath = parent.canonicalPath.trimEnd(File.separatorChar)
+            val childPath = child.canonicalPath
+            childPath == parentPath || childPath.startsWith(parentPath + File.separator)
+        }.getOrDefault(false)
     }
 }
 

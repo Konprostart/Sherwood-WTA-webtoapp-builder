@@ -76,7 +76,8 @@ fun StudioScreen(onBack: () -> Unit = {}) {
         Strings.studioTabRepos,
         Strings.studioTabInbox,
         Strings.studioTabBuilds,
-        Strings.studioTabVault
+        Strings.studioTabVault,
+        Strings.studioInspector
     )
     var selectedTab by rememberSaveable { mutableStateOf(0) }
 
@@ -108,7 +109,8 @@ fun StudioScreen(onBack: () -> Unit = {}) {
                 0 -> StudioReposTab(context, snackbarHostState)
                 1 -> StudioInboxTab(context, snackbarHostState)
                 2 -> StudioBuildsTab(context, snackbarHostState)
-                else -> StudioVaultTab(context, snackbarHostState)
+                3 -> StudioVaultTab(context, snackbarHostState)
+                else -> StudioInspectorTab(context, snackbarHostState)
             }
         }
     }
@@ -375,6 +377,20 @@ private fun StudioSettingsScreen(
                             vertical = WtaSpacing.ContentGap
                         )
                     ) {
+                        // State the integration boundary before the instructions, so
+                        // the contract is never mistaken for a live connection.
+                        Text(
+                            text = Strings.studioWorkspaceChannel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = Strings.studioWorkspaceAiNote,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
                         Text(instructions, style = MaterialTheme.typography.bodySmall)
                         Spacer(Modifier.height(8.dp))
                         WtaButton(

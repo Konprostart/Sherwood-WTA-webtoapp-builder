@@ -139,17 +139,26 @@ class WorkspaceBridgeService(private val context: Context) {
     }
 
     /**
-     * The instructions shown on the Workspace card. Written in English because it is
-     * a protocol document that the user pastes into another tool, but it explains the
-     * no-server contract in full: branch, commit, pull request, build.
+     * The instructions shown on the Workspace card.
+     *
+     * Written in English because it is a protocol document pasted into another tool,
+     * and deliberately **tool-agnostic**: the contract is "a repository, a manifest
+     * and pull requests", so a ChatGPT workspace, another assistant, an IDE or a
+     * person can all use it. It documents that there is no Sherwood server and no
+     * live connection, and that it does not replace the AI providers configured in
+     * this app.
      */
     fun instructions(ownerRepo: String): String = """
         # Sherwood Studio workspace contract
 
         Repository: $ownerRepo
 
-        Sherwood Studio talks to a workspace only through GitHub. There is no
-        Sherwood server, account or API key involved.
+        Sherwood Studio talks to an external workspace only through GitHub. There is
+        no Sherwood server, no account linking and no API key involved, and no live
+        connection exists: the repository is the entire channel. This is one optional
+        way to work on the project; the AI providers configured in the app itself are
+        separate and unaffected. Any tool with GitHub access can follow this contract
+        - a ChatGPT workspace, another assistant, an IDE, or a person.
 
         1. Read `.sherwood/workspace.json` from the branch you work on. It names the
            project, branch, package name and build workflow.

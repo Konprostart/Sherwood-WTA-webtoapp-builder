@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
 import java.io.File
 import java.io.FileOutputStream
@@ -26,10 +27,11 @@ data class ArtifactSource(
     val runNumber: Int? = null
 ) {
     val display: String
-        get() = when {
-            owner.isNotBlank() && repo.isNotBlank() -> "$owner/$repo"
-            runId != null -> "run #$runId"
-            else -> "local"
+        get() {
+            if (owner.isNotBlank() && repo.isNotBlank()) return "$owner/$repo"
+            runNumber?.let { return Strings.studioRunNumber(it) }
+            runId?.let { return Strings.studioRunId(it) }
+            return Strings.studioLocalSource
         }
 }
 
@@ -148,8 +150,8 @@ class ArtifactVault private constructor(private val context: Context) {
             val id = "${bytesHash.take(12)}-${System.currentTimeMillis()}"
             val target = uniqueTarget(safeName, id)
             source.copyTo(target, overwrite = false)
-            val apkInfo = if (kind == ArtifactKind.APK) readApkInfo(target) else null
-            val signature = if (kind == ArtifactKind.APK) readSignature(target) else null
+            val packageInfo = readPackageInfo(target, kind)
+            val signature = readSignature(target, kind)
             val record = VaultArtifact(
                 id = id,
                 fileName = target.name,
@@ -163,9 +165,9 @@ class ArtifactVault private constructor(private val context: Context) {
                 workflowName = artifactSource.workflowName,
                 runId = artifactSource.runId,
                 runNumber = artifactSource.runNumber,
-                packageName = apkInfo?.packageName,
-                versionName = apkInfo?.versionName,
-                versionCode = apkInfo?.versionCode,
+                packageName = packageInfo?.packageName,
+                versionName = packageInfo?.versionName,
+                versionCode = packageInfo?.versionCode,
                 signerSha256 = signature?.signerCertificates?.firstOrNull(),
                 signatureVerified = signature?.verified == true,
                 signatureScheme = signature?.scheme
@@ -192,14 +194,14 @@ class ArtifactVault private constructor(private val context: Context) {
         }
     }
 
-    /** Recomputes the SHA-256 and re-verifies the APK signature from disk. */
+    /** Recomputes the SHA-256 and re-verifies the APK/AAB signature from disk. */
     fun verify(artifact: VaultArtifact): VaultVerification {
         val file = fileFor(artifact)
         if (!file.isFile) {
             return VaultVerification(false, artifact.sha256, "", null)
         }
         val actual = runCatching { sha256(file) }.getOrElse { "" }
-        val signature = if (artifact.kindEnum == ArtifactKind.APK) readSignature(file) else null
+        val signature = readSignature(file, artifact.kindEnum)
         return VaultVerification(
             sha256Matches = actual.isNotEmpty() && actual == artifact.sha256,
             storedSha256 = artifact.sha256,
@@ -222,8 +224,33 @@ class ArtifactVault private constructor(private val context: Context) {
 
     fun readSignature(file: File): ArtifactSignature = signatureOf(file)
 
+    /** Signature status for a known artifact kind; an AAB is a JAR, not an APK. */
+    fun readSignature(file: File, kind: ArtifactKind): ArtifactSignature = when (kind) {
+        ArtifactKind.APK -> signatureOf(file)
+        ArtifactKind.AAB -> aabSignatureOf(file)
+        ArtifactKind.UNKNOWN -> ArtifactSignature(false, null, emptyList(), listOf("Unknown artifact kind"))
+    }
+
     /** APK manifest metadata without installing the package. */
     fun readApkInfo(file: File): ApkInfo? = apkInfoOf(context, file)
+
+    /**
+     * Package identity for either artifact kind: `PackageManager` for an APK, the
+     * protobuf manifest for an AAB. Returns null when the file cannot be parsed.
+     */
+    fun readPackageInfo(file: File, kind: ArtifactKind): ApkInfo? = when (kind) {
+        ArtifactKind.APK -> apkInfoOf(context, file)
+        ArtifactKind.AAB -> AabManifestInfo.read(file)?.let { info ->
+            ApkInfo(
+                packageName = info.packageName,
+                versionName = info.versionName,
+                versionCode = info.versionCode?.toInt(),
+                minSdk = info.minSdk,
+                targetSdk = info.targetSdk
+            )
+        }
+        ArtifactKind.UNKNOWN -> null
+    }
 
     private fun uniqueTarget(safeName: String, id: String): File {
         val base = safeName.substringBeforeLast('.', safeName)
@@ -356,6 +383,62 @@ class ArtifactVault private constructor(private val context: Context) {
                 targetSdk = info.applicationInfo?.targetSdkVersion
             )
         }.getOrNull()
+
+        /**
+         * Verifies an AAB's JAR (v1) signature.
+         *
+         * apksig only understands APKs, but a bundle is a signed JAR: opening it with
+         * `JarFile(verify = true)` and reading every entry recomputes each digest and
+         * throws when a single byte was altered, which is exactly the integrity claim
+         * the Inspector makes. Reading the entries is required — `JarFile` verifies
+         * lazily, so the certificates are only meaningful after the stream was drained.
+         */
+        fun aabSignatureOf(file: File): ArtifactSignature {
+            if (!file.isFile) {
+                return ArtifactSignature(false, null, emptyList(), listOf("File is missing"))
+            }
+            return try {
+                java.util.jar.JarFile(file, true).use { jar ->
+                    var certificates = emptyList<String>()
+                    var entryCount = 0
+                    val entries = jar.entries()
+                    while (entries.hasMoreElements()) {
+                        val entry = entries.nextElement()
+                        if (entry.isDirectory) continue
+                        // Draining the stream is what triggers the digest check.
+                        jar.getInputStream(entry).use { stream ->
+                            val buffer = ByteArray(64 * 1024)
+                            while (stream.read(buffer) > 0) Unit
+                        }
+                        if (certificates.isEmpty()) {
+                            certificates = entry.certificates.orEmpty()
+                                .mapNotNull { cert ->
+                                    runCatching {
+                                        MessageDigest.getInstance("SHA-256")
+                                            .digest(cert.encoded)
+                                            .toHex()
+                                    }.getOrNull()
+                                }
+                            if (certificates.isNotEmpty()) certificates = certificates.distinct()
+                        }
+                        entryCount++
+                    }
+                    if (entryCount == 0) {
+                        return ArtifactSignature(false, null, emptyList(), listOf("Archive is empty"))
+                    }
+                    ArtifactSignature(
+                        verified = certificates.isNotEmpty(),
+                        scheme = if (certificates.isNotEmpty()) "v1" else null,
+                        signerCertificates = certificates,
+                        errors = if (certificates.isEmpty()) listOf("Archive is not signed") else emptyList()
+                    )
+                }
+            } catch (e: SecurityException) {
+                ArtifactSignature(false, null, emptyList(), listOf("Signature check failed: ${e.message}"))
+            } catch (e: Exception) {
+                ArtifactSignature(false, null, emptyList(), listOf(e.javaClass.simpleName))
+            }
+        }
     }
 }
 

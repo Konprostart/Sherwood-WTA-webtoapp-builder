@@ -93,21 +93,29 @@ object PerAppSigningIdentity {
     }
 
     /**
-     * SHA-256 fingerprint of the identity that *would* sign this package, or null when none
-     * has been generated yet. Never creates a store — safe for display in the editor.
+     * Load the identity for [packageName] **without creating one**, or null when none
+     * exists yet. Safe for display and for "does this project already have a key?"
+     * checks; unlike [identityFor] it never generates a key pair and never rewrites
+     * the store.
      */
-    fun existingFingerprint(context: Context, packageName: String): String? {
+    fun existing(context: Context, packageName: String): Identity? {
         val storeFile = storeFileFor(context, packageName)
         if (!storeFile.exists()) return null
         val passwordFile = File(context.filesDir, CREDENTIAL_FILE)
         if (!passwordFile.exists()) return null
         return runCatching {
             load(storeFile, passwordFile.readText().trim().toCharArray(), packageName)
-                ?.certificate?.encoded
-                ?.let { MessageDigest.getInstance("SHA-256").digest(it) }
-                ?.joinToString(":") { "%02X".format(it) }
         }.getOrNull()
     }
+
+    /**
+     * SHA-256 fingerprint of the identity that *would* sign this package, or null when none
+     * has been generated yet. Never creates a store — safe for display in the editor.
+     */
+    fun existingFingerprint(context: Context, packageName: String): String? =
+        existing(context, packageName)?.certificate?.encoded
+            ?.let { MessageDigest.getInstance("SHA-256").digest(it) }
+            ?.joinToString(":") { "%02X".format(it) }
 
     /** Drop the identity for one package (e.g. "reset signing" affordances). */
     fun delete(context: Context, packageName: String): Boolean =

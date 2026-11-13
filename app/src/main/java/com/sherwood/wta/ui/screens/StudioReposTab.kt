@@ -45,6 +45,7 @@ import com.sherwood.wta.core.studio.GitHubResult
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.WorkspaceService
 import com.sherwood.wta.core.studio.WorkspaceStatus
+import com.sherwood.wta.ui.components.PremiumTextField
 import com.sherwood.wta.ui.design.WtaButton
 import com.sherwood.wta.ui.design.WtaButtonSize
 import com.sherwood.wta.ui.design.WtaButtonVariant
@@ -91,6 +92,14 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
     var diff by remember { mutableStateOf<FileDiff?>(null) }
     var diffError by remember { mutableStateOf<String?>(null) }
     var commitProject by remember { mutableStateOf<File?>(null) }
+
+    var showNewPr by remember { mutableStateOf(false) }
+    var prTitle by remember { mutableStateOf("") }
+    var prBodyText by remember { mutableStateOf("") }
+    var prDraft by remember { mutableStateOf(false) }
+    var prHead by remember { mutableStateOf("") }
+    var prBase by remember { mutableStateOf("") }
+    var prBusy by remember { mutableStateOf(false) }
 
     suspend fun loadRepositories() {
         val user = api.currentUser()
@@ -404,6 +413,22 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
                                         }
                                     }
                                 )
+                                // A pull request is how a Studio branch reaches the
+                                // rest of the world (including an external workspace):
+                                // without it the only path was a manual visit to GitHub.
+                                WtaButton(
+                                    text = Strings.studioCreatePr,
+                                    size = WtaButtonSize.Small,
+                                    variant = WtaButtonVariant.Outlined,
+                                    onClick = {
+                                        prHead = selectedBranch ?: repo.defaultBranch
+                                        prBase = repo.defaultBranch
+                                        prTitle = ""
+                                        prBodyText = ""
+                                        prDraft = false
+                                        showNewPr = true
+                                    }
+                                )
                             }
                             Row(
                                 modifier = Modifier
@@ -681,6 +706,99 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
                     diff = null
                     diffError = null
                 }) { Text(Strings.close) }
+            }
+        )
+    }
+
+    val repoForPr = selectedRepo
+    if (showNewPr && repoForPr != null) {
+        AlertDialog(
+            onDismissRequest = { if (!prBusy) showNewPr = false },
+            title = { Text(Strings.studioCreatePr) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "${repoForPr.fullName} · $prHead → $prBase",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    PremiumTextField(
+                        value = prTitle,
+                        onValueChange = { prTitle = it },
+                        label = { Text(Strings.studioPrTitle) },
+                        singleLine = true
+                    )
+                    PremiumTextField(
+                        value = prBodyText,
+                        onValueChange = { prBodyText = it },
+                        label = { Text(Strings.studioPrBody) },
+                        singleLine = false
+                    )
+                    PremiumTextField(
+                        value = prBase,
+                        onValueChange = { prBase = it },
+                        label = { Text(Strings.studioPrBase) },
+                        singleLine = true
+                    )
+                    PremiumTextField(
+                        value = prHead,
+                        onValueChange = { prHead = it },
+                        label = { Text(Strings.studioPrHead) },
+                        singleLine = true
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        WtaButton(
+                            text = Strings.studioPrDraft,
+                            size = WtaButtonSize.Small,
+                            variant = if (prDraft) WtaButtonVariant.Tonal
+                            else WtaButtonVariant.Outlined,
+                            onClick = { prDraft = !prDraft }
+                        )
+                        if (prBusy) StudioBusy(Strings.loading)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !prBusy && prTitle.isNotBlank() && prHead.isNotBlank() && prBase.isNotBlank(),
+                    onClick = {
+                        scope.launch {
+                            prBusy = true
+                            when (
+                                val result = api.createPullRequest(
+                                    owner = repoForPr.owner,
+                                    repo = repoForPr.name,
+                                    title = prTitle,
+                                    head = prHead.trim(),
+                                    base = prBase.trim(),
+                                    body = prBodyText.takeIf { it.isNotBlank() },
+                                    draft = prDraft
+                                )
+                            ) {
+                                is GitHubResult.Success -> {
+                                    showNewPr = false
+                                    snackbarHostState.showSnackbar(
+                                        Strings.studioPrCreated(result.value.number)
+                                    )
+                                }
+                                is GitHubResult.Failure -> snackbarHostState.showSnackbar(
+                                    result.message ?: Strings.studioConnectFailed
+                                )
+                            }
+                            prBusy = false
+                        }
+                    }
+                ) { Text(Strings.confirm) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNewPr = false }) { Text(Strings.cancel) }
             }
         )
     }

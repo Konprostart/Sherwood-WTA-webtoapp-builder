@@ -13,12 +13,28 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Signs a vault APK or AAB with the app's current signing identity.
+ * Signs a vault APK or AAB with the **project's own** signing identity.
  *
- * The identity is the same one the export pipeline uses: an imported custom PKCS12
- * when the user supplied one, otherwise the auto-generated per-install key. The
- * signed file is added to the vault as a new record pointing back at its source
- * SHA-256, so a user can always see which unsigned bytes a signature belongs to.
+ * This replaces the previous behaviour, which signed every artifact with the host
+ * application's identity (`identity = null` in [AabSigner] / [JarSigner]). That is a
+ * silent data loss: an APK signed with Sherwood's key can never be updated by the
+ * project's real key, and an AAB signed with it permanently breaks the Play upload
+ * path for that package.
+ *
+ * Rules enforced here:
+ *
+ *  - The package name must be known (APK manifest or AAB bundle manifest). No
+ *    package name means no identity can be selected, so signing is refused.
+ *  - The identity must be the one already associated with that package
+ *    ([ProjectSigningIdentity]). A missing identity is never generated implicitly:
+ *    [sign] takes `allowCreateIdentity`, which the UI only sets after the user
+ *    confirms that a new key cannot update an already-published app.
+ *  - An artifact that is already signed by a *different* certificate is refused
+ *    unless `allowIdentityChange` is set, and the caller must have shown the user
+ *    both fingerprints first.
+ *
+ * Signing produces a **new** vault record that points at the source's SHA-256, so
+ * the original bytes are never overwritten and provenance stays visible.
  */
 class SigningStudio(private val context: Context) {
 
@@ -26,17 +42,127 @@ class SigningStudio(private val context: Context) {
 
     private val jarSigner: JarSigner by lazy { JarSigner(context) }
 
-    fun signerSummary(): String? = runCatching { jarSigner.getCertificateInfo() }.getOrNull()
+    enum class BlockReason {
+        /** The artifact carries no readable package name. */
+        UNKNOWN_PACKAGE,
 
-    fun signerFingerprint(): String? = runCatching {
-        jarSigner.getCertificateFingerprints()?.sha256
-    }.getOrNull()
+        /** The file no longer exists in the vault. */
+        MISSING_FILE,
 
-    suspend fun sign(artifact: VaultArtifact): Result<VaultArtifact> = withContext(Dispatchers.IO) {
-        val input = vault.fileFor(artifact)
-        if (!input.isFile) {
+        /** The kind is neither APK nor AAB. */
+        UNSUPPORTED_KIND,
+
+        /** The project has no signing identity yet. */
+        NO_IDENTITY,
+
+        /** The artifact is already signed by a different certificate. */
+        IDENTITY_CONFLICT
+    }
+
+    /** Everything the UI needs to describe the operation before it runs. */
+    data class SigningPlan(
+        val packageName: String?,
+        val identity: ProjectSigningIdentity.Summary?,
+        val artifactSignerSha256: String?,
+        val blockReason: BlockReason?
+    ) {
+        val canSignDirectly: Boolean
+            get() = blockReason == null
+
+        /** True when the user must confirm creating the project identity first. */
+        val requiresIdentityCreation: Boolean
+            get() = blockReason == BlockReason.NO_IDENTITY
+
+        /** True when the user must confirm replacing a different signer. */
+        val requiresIdentityChangeConfirmation: Boolean
+            get() = blockReason == BlockReason.IDENTITY_CONFLICT
+    }
+
+    /**
+     * Inspects the artifact without touching keys. Reads the artifact's existing
+     * signature and the project identity for its package.
+     */
+    fun plan(artifact: VaultArtifact): SigningPlan {
+        val kind = artifact.kindEnum
+        if (kind == ArtifactKind.UNKNOWN) {
+            return SigningPlan(artifact.packageName, null, null, BlockReason.UNSUPPORTED_KIND)
+        }
+        val file = vault.fileFor(artifact)
+        if (!file.isFile) {
+            return SigningPlan(artifact.packageName, null, null, BlockReason.MISSING_FILE)
+        }
+        val packageName = artifact.packageName ?: vault.readPackageInfo(file, kind)?.packageName
+        if (packageName.isNullOrBlank()) {
+            return SigningPlan(null, null, null, BlockReason.UNKNOWN_PACKAGE)
+        }
+        val identity = ProjectSigningIdentity.summary(context, packageName)
+        val existingSignature = vault.readSignature(file, kind)
+        val artifactSigner = existingSignature.signerCertificates.firstOrNull()
+            ?.takeIf { existingSignature.verified }
+        val conflict = identity != null && artifactSigner != null &&
+            !artifactSigner.equals(identity.sha256, ignoreCase = true)
+        val reason = when {
+            identity == null -> BlockReason.NO_IDENTITY
+            conflict -> BlockReason.IDENTITY_CONFLICT
+            else -> null
+        }
+        return SigningPlan(
+            packageName = packageName,
+            identity = identity,
+            artifactSignerSha256 = artifactSigner,
+            blockReason = reason
+        )
+    }
+
+    /**
+     * Signs [artifact] with the project identity and imports the result into the vault.
+     *
+     * @param allowCreateIdentity generate a project identity when none exists (the UI
+     *   must have shown that a new key cannot update an already-published app).
+     * @param allowIdentityChange proceed even though the artifact is signed by a
+     *   different certificate.
+     */
+    suspend fun sign(
+        artifact: VaultArtifact,
+        allowCreateIdentity: Boolean = false,
+        allowIdentityChange: Boolean = false
+    ): Result<VaultArtifact> = withContext(Dispatchers.IO) {
+        val initial = plan(artifact)
+        val packageName = initial.packageName
+            ?: return@withContext Result.failure(
+                IllegalStateException("Cannot determine the package name of ${artifact.fileName}")
+            )
+        if (initial.blockReason == BlockReason.UNSUPPORTED_KIND) {
+            return@withContext Result.failure(IllegalStateException("Only APK and AAB files can be signed"))
+        }
+        if (initial.blockReason == BlockReason.MISSING_FILE) {
             return@withContext Result.failure(IllegalStateException("Artifact file is missing"))
         }
+
+        val identity = if (initial.identity == null) {
+            if (!allowCreateIdentity) {
+                return@withContext Result.failure(
+                    IllegalStateException("No signing identity exists for $packageName")
+                )
+            }
+            runCatching { ProjectSigningIdentity.create(context, packageName) }
+                .getOrElse { return@withContext Result.failure(it) }
+        } else {
+            initial.identity
+        }
+
+        if (initial.blockReason == BlockReason.IDENTITY_CONFLICT && !allowIdentityChange) {
+            return@withContext Result.failure(
+                IllegalStateException("Artifact is signed by a different certificate")
+            )
+        }
+
+        val signingIdentity = ProjectSigningIdentity.identity(context, packageName)
+            ?: return@withContext Result.failure(
+                IllegalStateException("Signing identity for $packageName could not be loaded")
+            )
+
+        val input = vault.fileFor(artifact)
         val suffix = if (artifact.kindEnum == ArtifactKind.AAB) ".aab" else ".apk"
         val base = artifact.fileName.substringBeforeLast('.')
         val output = File(context.cacheDir, "$base-signed$suffix")
@@ -45,15 +171,16 @@ class SigningStudio(private val context: Context) {
         try {
             val signed = when (artifact.kindEnum) {
                 ArtifactKind.APK -> {
-                    val info = vault.readApkInfo(input)
+                    val info = vault.readPackageInfo(input, ArtifactKind.APK)
                     jarSigner.sign(
                         input,
                         output,
                         targetSdk = info?.targetSdk ?: 35,
+                        identity = signingIdentity,
                         minSdk = (info?.minSdk ?: 24).coerceAtLeast(23)
                     )
                 }
-                ArtifactKind.AAB -> AabSigner(context).sign(input, output)
+                ArtifactKind.AAB -> AabSigner(context).sign(input, output, signingIdentity)
                 ArtifactKind.UNKNOWN -> false
             }
             if (!signed || !output.isFile || output.length() == 0L) {
@@ -73,14 +200,35 @@ class SigningStudio(private val context: Context) {
                     runNumber = artifact.runNumber
                 )
             )
-            val result = imported.map { record ->
-                val updated = record.copy(
-                    signedFromSha256 = artifact.sha256,
-                    versionName = record.versionName ?: artifact.versionName,
-                    versionCode = record.versionCode ?: artifact.versionCode
-                )
-                vault.replace(updated)
-                updated
+            // The imported record's signature fields were measured from the bytes that
+            // were just written (`ArtifactVault.importFile` re-reads the file). Copying
+            // the signer's return value into the record instead would let an artifact
+            // that failed verification enter the vault marked "verified", which is the
+            // one claim the Inspector exists to make trustworthy.
+            val result = imported.flatMap { record ->
+                val measuredSigner = record.signerSha256
+                if (!record.signatureVerified || measuredSigner == null) {
+                    vault.delete(record)
+                    Result.failure(
+                        IllegalStateException("The signed file failed signature verification")
+                    )
+                } else if (!measuredSigner.equals(identity.sha256, ignoreCase = true)) {
+                    vault.delete(record)
+                    Result.failure(
+                        IllegalStateException(
+                            "The signed file carries an unexpected signer certificate"
+                        )
+                    )
+                } else {
+                    val updated = record.copy(
+                        signedFromSha256 = artifact.sha256,
+                        versionName = record.versionName ?: artifact.versionName,
+                        versionCode = record.versionCode ?: artifact.versionCode,
+                        packageName = record.packageName ?: packageName
+                    )
+                    vault.replace(updated)
+                    Result.success(updated)
+                }
             }
             output.delete()
             result

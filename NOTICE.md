@@ -57,11 +57,27 @@ technical.
 
 ## Upstream provenance
 
-This repository is an independent fork. The original WebToApp upstream is not
-identified with a confirmed licence in this repository's history, so no claim is
-made that upstream code is covered by a specific licence. Only code authored for
-this fork and components listed above are represented here. Do not copy code from
-projects whose licence is unclear.
+This repository descends from the WebToApp Builder project and preserves its full
+history (root commits `36728b1d` and `6a646e35`, author `shiaho`; the README at
+that point pointed at `github.com/shiahonb777/web-to-app`, which GitHub now
+redirects to `github.com/shiaho777/web-to-app`). GitHub's repository metadata does
+not record the fork relation (`fork: false`, no parent), so provenance is
+established from the commit history rather than from the API.
+
+Licensing state of the upstream code, as recorded in this history:
+
+- `LICENSE` in the root commit is **The Unlicense** (public-domain dedication), and
+  the same file is still at the repository root.
+- The upstream `README.md` carried an **MIT** badge at the same time. That
+  contradiction exists in the upstream repository itself; it is recorded here
+  rather than resolved, because only the copyright holder can settle which one was
+  intended.
+
+Both readings are permissive and neither imposes an obligation beyond keeping the
+notice. Downstream consumers can therefore treat the upstream code as released
+under the `LICENSE` file in this repository, while being aware of the badge
+mismatch when auditing. This is a factual description of the files, not a legal
+opinion.
 
 ## Secrets
 
@@ -78,13 +94,23 @@ projects whose licence is unclear.
 # Standard signed APK (release keystore from local.properties or env)
 ./gradlew :app:assembleStandardRelease
 
-# Google Play AAB
-./gradlew :app:bundleGplayRelease
+# Google Play flavor APK and bundle
+./gradlew :app:assembleGplayRelease :app:bundleGplayRelease
 
 # Unsigned F-Droid APK
 ./gradlew :app:assembleStandardRelease -Pfdroid=true
 ```
 
 Release tags (`v*`) are built by `.github/workflows/release.yml`. The tag must
-match `versionName`; artifacts are `Sherwood-WTA-<version>.apk` and
-`Sherwood-WTA-<version>-gplay.aab`.
+match `versionName`. A release publishes three artifacts plus a checksum manifest
+directly on the GitHub Release page:
+
+- `Sherwood-WTA-<version>.apk` — standard flavor
+- `Sherwood-WTA-<version>-gplay.apk` — Google Play flavor
+- `Sherwood-WTA-<version>-gplay.aab` — Android App Bundle for Play upload
+- `SHA256SUMS.txt` — SHA-256 of exactly those three files
+
+Both APKs are checked against the pinned release certificate before anything is
+published, the bundle's JAR signature is verified, and the release is created as a
+draft so a partially uploaded release is never visible. Workflow artifacts are
+additional copies, not a substitute for the release assets.

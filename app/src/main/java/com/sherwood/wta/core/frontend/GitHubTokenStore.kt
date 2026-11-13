@@ -96,6 +96,30 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
 
     fun hasToken(): Boolean = prefs.contains(KEY_TOKEN)
 
+    /**
+     * How the stored token is protected at rest.
+     *
+     * [TokenProtection.NONE] — no token stored.
+     * [TokenProtection.ANDROID_KEYSTORE] — AES-GCM with a key the Android Keystore
+     *   owns; the key material cannot be extracted from the device.
+     * [TokenProtection.APP_DERIVED_FALLBACK] — the Keystore master key was
+     *   unavailable, so the key is derived from the package name plus the APK
+     *   signing certificate. That certificate is public (anyone holding the APK can
+     *   read it), so this is obfuscation, not secret-key encryption: it still
+     *   protects against accidental plaintext exposure in a backup or cloud sync,
+     *   but not against an attacker who reads the app's private storage.
+     *
+     * The UI surfaces this so a degraded device is never silently presented as
+     * hardware-protected. Nothing here weakens the storage path.
+     */
+    enum class TokenProtection { NONE, ANDROID_KEYSTORE, APP_DERIVED_FALLBACK }
+
+    fun protection(): TokenProtection {
+        val stored = prefs.getString(KEY_TOKEN, null) ?: return TokenProtection.NONE
+        return if (stored.startsWith(FALLBACK_PREFIX)) TokenProtection.APP_DERIVED_FALLBACK
+        else TokenProtection.ANDROID_KEYSTORE
+    }
+
     private fun encrypt(plaintext: String): String {
         val masterKey = EnhancedCrypto.getOrCreateMasterKey(context)
         if (masterKey != null) {
@@ -121,12 +145,12 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
             ASSOCIATED_DATA
         )
         container.close()
-        return "FALLBACK:" + Base64.encodeToString(ciphertext, Base64.NO_WRAP)
+        return FALLBACK_PREFIX + Base64.encodeToString(ciphertext, Base64.NO_WRAP)
     }
 
     private fun decrypt(encoded: String): String {
         val masterKey = EnhancedCrypto.getOrCreateMasterKey(context)
-        if (masterKey != null && !encoded.startsWith("FALLBACK:")) {
+        if (masterKey != null && !encoded.startsWith(FALLBACK_PREFIX)) {
             val ciphertext = Base64.decode(encoded, Base64.NO_WRAP)
             val plaintext = EnhancedCrypto.decrypt(ciphertext, masterKey, ASSOCIATED_DATA)
             return String(plaintext, StandardCharsets.UTF_8)
@@ -136,7 +160,7 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
             context.packageManager.getPackageInfo(context.packageName, 0).signatures?.firstOrNull()?.toByteArray() ?: ByteArray(0)
         )
         val key = container.getKey()
-        val payload = encoded.removePrefix("FALLBACK:")
+        val payload = encoded.removePrefix(FALLBACK_PREFIX)
         val ciphertext = Base64.decode(payload, Base64.NO_WRAP)
         val plaintext = EnhancedCrypto.decrypt(ciphertext, key, ASSOCIATED_DATA)
         container.close()
@@ -148,6 +172,9 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
 
         internal const val PREFS = "sherwood_git"
         internal const val KEY_TOKEN = "github_pat"
+
+        /** Marks a token encrypted with the app-derived key instead of the Keystore. */
+        internal const val FALLBACK_PREFIX = "FALLBACK:"
 
         private val ASSOCIATED_DATA =
             "sherwood-wta/github-pat/v1".toByteArray(StandardCharsets.UTF_8)

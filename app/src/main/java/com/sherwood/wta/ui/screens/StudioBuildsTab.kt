@@ -430,7 +430,7 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    "${artifact.name} · ${artifact.sizeInBytes / 1024} KB",
+                                    "${artifact.name} · ${Strings.studioFileSizeKb(artifact.sizeInBytes / 1024)}",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                 WtaButton(
