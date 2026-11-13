@@ -205,7 +205,9 @@ class SigningStudio(private val context: Context) {
             // the signer's return value into the record instead would let an artifact
             // that failed verification enter the vault marked "verified", which is the
             // one claim the Inspector exists to make trustworthy.
-            val result = imported.flatMap { record ->
+            // `Result` has no `flatMap`; `fold` keeps the failure branch explicit so a
+            // failed import propagates instead of being silently dropped.
+            val result = imported.fold(onSuccess = { record ->
                 val measuredSigner = record.signerSha256
                 if (!record.signatureVerified || measuredSigner == null) {
                     vault.delete(record)
@@ -229,7 +231,7 @@ class SigningStudio(private val context: Context) {
                     vault.replace(updated)
                     Result.success(updated)
                 }
-            }
+            }, onFailure = { error -> Result.failure(error) })
             output.delete()
             result
         } catch (e: Exception) {
