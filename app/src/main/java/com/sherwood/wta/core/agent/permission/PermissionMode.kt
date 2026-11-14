@@ -9,7 +9,14 @@ data class PermissionRequest(
     val toolName: String,
     val activity: String?,
 
-    val argsPreview: Map<String, String>
+    val argsPreview: Map<String, String>,
+
+    /**
+     * False for a tool that must be approved on every call (see
+     * `Tool.requiresFreshApproval`): the dialog hides "Always allow" and the decision is
+     * never remembered, so a push to a remote is never pre-authorized.
+     */
+    val allowAlways: Boolean = true
 )
 
 sealed class PermissionResponse {

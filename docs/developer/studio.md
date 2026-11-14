@@ -24,7 +24,7 @@ Everything still ships as **one APK**. Studio is not a second app.
 | Signing Studio | `SigningStudio` + `ProjectSigningIdentity` | Signs vault APKs (apksig) and AABs with the **project's own** identity for the artifact's package. Imported keystore or the existing per-package key; a missing key must be created on purpose. |
 | Install | `ArtifactInstaller` | System installer via FileProvider with a read grant. |
 | Workspace link | `WorkspaceBridgeService` | Commits `.sherwood/workspace.json`; external tools read it over raw content. No Sherwood server. |
-| Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubImportRepository` | The in-app agent can read the connection and copy a repository into its own session folder. It cannot commit, push, merge or open a pull request — see [Agent access](#agent-access). |
+| Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubImportRepository` / `GitHubOpenPullRequest` | The in-app agent can read the connection, copy a repository into its own session folder, and send the edited files back as a new branch plus a pull request with a fresh approval tap. It never merges — see [Agent access](#agent-access). |
 | Endpoints | `EndpointConfig` | Every Studio address is HTTPS, validated, and overridable from Settings. |
 
 ## Signing a vault artifact
@@ -113,7 +113,7 @@ example.
 
 ## Agent access
 
-The in-app agent has three GitHub tools, registered in
+The in-app agent has four GitHub tools, registered in
 `ToolRegistryFactory.baseTools()`. They reuse the credential Studio already
 owns — `GitHubTokenStore`, filled by Settings → Git access (personal access
 token) or by the OAuth device flow — so there is no second token path and no
@@ -124,13 +124,35 @@ credential inside the agent loop.
 | `GitHubStatus` | yes | Connection state, authenticated login, the repository Studio is pointed at, and the working copies already imported. |
 | `GitHubListRepositories` | yes | Repositories the token can see (name, visibility, default branch, last push). |
 | `GitHubImportRepository` | no (permission prompt) | Copies a repository's files into the agent's own session folder, so `Read`/`Write`/`Edit`/`Glob`/`Grep` work on them. Reuses an existing Studio working copy when one matches the branch; folder `.git` is skipped, and the copy is capped at 2000 files, 32 MB total and 4 MB per file. |
+| `GitHubOpenPullRequest` | no (fresh prompt on **every** call) | Copies the edited files into a Studio working copy, creates a **new** branch from the imported base commit, commits there through `RepoBridgeCommitUseCase` (review + secret scanner), and opens a pull request. Returns the PR URL. |
 
-**What the agent cannot do, by design:** commit, push, merge, open or comment on
-a pull request, dispatch a workflow, or change a branch. Those calls live in
-`WorkspaceService` and `GitHubApiClient` and are reached only from Studio's own
-screens, where the user taps them. Agent writes are confined to the session
-sandbox (`ProjectFileManager.resolveSafe`), which is a different tree from the
-Studio working copies under `filesDir/github_imports/`.
+`GitHubOpenPullRequest` (`GitHubPublishTool.kt`) enforces four rules in code,
+not by prompting the model:
+
+1. **New branch every time.** `newBranchProblem` refuses `main`/`master`, the
+   imported base branch, any existing remote branch and any name outside
+   `type/slug` with an allowed prefix. The working copy's `repo_bridge.json`
+   is rewritten to the new branch *before* the commit plan is read, so
+   `updateRef` can only advance that branch.
+2. **Pull request only.** The push and `POST /pulls` happen in one invocation;
+   there is no path that advances a branch without opening a PR, and no merge
+   API call anywhere in the agent tools.
+3. **A tap per push.** The tool returns `requiresFreshApproval() = true`, so
+   `PermissionChecker` never honours a remembered grant and the dialog hides
+   "Always allow".
+4. **No force-push.** `updateRef` is always called with `force = false` and the
+   expected base commit. A moved branch fails as a conflict.
+
+The base branch must still point at the commit recorded at import time — the
+tool refuses otherwise, so a publish can never revert commits that landed after
+the import. A branch created for a push that then fails is deleted again only
+while it still points at the base commit; a branch that received the commit is
+left in place and the error names it.
+
+**What the agent cannot do, by design:** merge, approve or comment on a pull
+request, dispatch a workflow, delete a branch, or force-update a ref. Those
+calls live in `WorkspaceService` and `GitHubApiClient` and are reached only
+from Studio's own screens, where the user taps them.
 
 ## Tests
 
@@ -148,6 +170,10 @@ Studio working copies under `filesDir/github_imports/`.
 - `GitHubToolsTest` — agent GitHub tools: repository identifier parsing, the
   import copy guard rails (`.git`, oversized files, symlink escape) and their
   registration and read-only flags.
+- `GitHubPublishTest` — the publish guard rails: branch derivation and the
+  refusals for base/protected/unprefixed names, the session copy (metadata,
+  `.git`, `.changes`, symlink escape), registration as a write tool, and the
+  approval gate (a remembered "Always allow" never applies to a push).
 
 Artifact signing, keystore import and installation need a device; they are
 exercised manually, not in unit tests.

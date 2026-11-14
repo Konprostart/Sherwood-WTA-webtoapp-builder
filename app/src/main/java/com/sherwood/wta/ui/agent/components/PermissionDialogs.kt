@@ -61,12 +61,16 @@ fun PermissionDialog(
                 horizontalArrangement = Arrangement.spacedBy(WtaSpacing.Tiny),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                WtaButton(
-                    onClick = { onResponse(PermissionResponse.AlwaysAllow) },
-                    text = Strings.agentPermissionAlways,
-                    variant = WtaButtonVariant.Text,
-                    size = WtaButtonSize.Small
-                )
+                // A tool that pushes to a remote asks every time on purpose: offering
+                // "Always allow" would let one tap pre-authorize every later push.
+                if (request.allowAlways) {
+                    WtaButton(
+                        onClick = { onResponse(PermissionResponse.AlwaysAllow) },
+                        text = Strings.agentPermissionAlways,
+                        variant = WtaButtonVariant.Text,
+                        size = WtaButtonSize.Small
+                    )
+                }
                 WtaButton(
                     onClick = { onResponse(PermissionResponse.Allow) },
                     text = Strings.agentPermissionAllow,

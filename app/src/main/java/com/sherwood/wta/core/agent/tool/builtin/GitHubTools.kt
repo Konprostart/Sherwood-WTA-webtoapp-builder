@@ -23,10 +23,11 @@ import java.io.File
  * Settings → Git access (personal access token) or by Studio's OAuth device flow — so
  * there is no second token path and no credential handling inside the agent loop.
  *
- * The boundary is narrow on purpose: these tools **read** GitHub and **write only into
- * the agent session sandbox**. Nothing here commits, pushes, merges, opens a pull
- * request or moves a branch. Those stay user-tapped actions on Studio's own screens
- * (`WorkspaceService` / `GitHubApiClient`), and the agent has no path to them.
+ * Boundary: these tools **read** GitHub and **write only into the agent session
+ * sandbox**. The one exception is [GitHubOpenPullRequestTool] in
+ * `GitHubPublishTool.kt`, which is the single path that sends changes to GitHub; it is
+ * bounded to a new branch, a pull request and a fresh user approval on every call, and
+ * it never merges or force-pushes. Nothing here merges, comments or dispatches a workflow.
  */
 
 /** Session-sandbox limits for an imported repository, so a huge repo cannot fill the disk. */
@@ -101,6 +102,28 @@ internal fun parseOwnerRepo(raw: String?): Pair<String, String>? {
     return owner to repo
 }
 
+/** Reads a string argument without throwing on a JSON null or a non-string value. */
+internal fun argString(args: JsonObject, key: String): String? {
+    val element = args.get(key) ?: return null
+    if (!element.isJsonPrimitive) return null
+    return runCatching { element.asString }.getOrNull()
+}
+
+/**
+ * Folder name inside the session sandbox. It becomes a path segment, so it must be a
+ * plain relative name: no separators, no traversal segment, not the root itself.
+ */
+internal fun sessionFolderName(raw: String?, fallback: String): String =
+    raw?.trim()?.trim('/')
+        ?.takeIf { candidate ->
+            candidate.isNotEmpty() &&
+                candidate != "." &&
+                candidate != ".." &&
+                !candidate.contains("..") &&
+                !candidate.contains('/') &&
+                !candidate.contains('\\')
+        } ?: fallback
+
 class GitHubStatusTool : Tool {
     override val name = "GitHubStatus"
     override val description = """
@@ -147,6 +170,10 @@ class GitHubStatusTool : Tool {
                 appendLine(
                     "Next: GitHubImportRepository copies a repository into this session " +
                         "folder, after which Read/Write/Edit/ListFiles/Glob/Grep work on its files."
+                )
+                appendLine(
+                    "GitHubOpenPullRequest then sends those edits as a NEW branch plus a " +
+                        "pull request, with a fresh approval tap on every call."
                 )
             }.trimEnd()
         )
@@ -210,8 +237,9 @@ class GitHubImportRepositoryTool : Tool {
         can read and edit them. Defaults to the repository and branch Studio is pointed at
         (see GitHubStatus).
         Local only: this downloads files into the app's session storage. It does NOT
-        commit, push, open a pull request or change the remote branch — the user does that
-        from Studio's Repositories tab.
+        commit, push, open a pull request or change the remote branch. When the edits are
+        ready, send them with GitHubOpenPullRequest (new branch + pull request) or from
+        Studio's Repositories tab.
         Re-running replaces previously imported files of the same folder. Large
         repositories are capped (2000 files / 32 MB, 4 MB per file).
     """.trimIndent()
@@ -234,25 +262,17 @@ class GitHubImportRepositoryTool : Tool {
         if (!connection.hasToken) return ToolResult.ok(NOT_CONNECTED)
         connection.failure?.let { return ToolResult.error(it) }
 
-        val requested = args.get("repository")?.asString?.takeIf { it.isNotBlank() }
+        val requested = argString(args, "repository")?.takeIf { it.isNotBlank() }
         val parsed = parseOwnerRepo(requested ?: connection.repository)
             ?: return ToolResult.error(
                 "GitHubImportRepository: '${requested ?: connection.repository}' is not " +
                     "an owner/repo identifier. Pass the repository explicitly."
             )
         val (owner, repo) = parsed
-        val branch = args.get("branch")?.asString?.takeIf { it.isNotBlank() } ?: connection.branch
+        val branch = argString(args, "branch")?.takeIf { it.isNotBlank() } ?: connection.branch
         // The folder becomes a path segment inside the session sandbox, so it must be a
         // plain relative name: no separators, no traversal segment, not the root itself.
-        val folder = args.get("folder")?.asString?.trim()?.trim('/')
-            ?.takeIf { candidate ->
-                candidate.isNotEmpty() &&
-                    candidate != "." &&
-                    candidate != ".." &&
-                    !candidate.contains("..") &&
-                    !candidate.contains('/') &&
-                    !candidate.contains('\\')
-            } ?: repo
+        val folder = sessionFolderName(argString(args, "folder"), repo)
 
         val workspace = WorkspaceService(ctx.androidContext)
         val outcome = withContext(Dispatchers.IO) { importSource(workspace, owner, repo, branch) }
@@ -285,8 +305,9 @@ class GitHubImportRepositoryTool : Tool {
                 stats.samplePaths.take(20).forEach { appendLine("  $folder/$it") }
                 if (stats.samplePaths.size > 20) appendLine("  …")
                 appendLine(
-                    "Read and edit them with the file tools. Changes stay local — commit and " +
-                        "push from Studio → Repositories when the user asks for it."
+                    "Read and edit them with the file tools. When the change is complete, " +
+                        "call GitHubOpenPullRequest to push it to a new branch and open a " +
+                        "pull request (the user approves each push)."
                 )
             }.trimEnd()
         )

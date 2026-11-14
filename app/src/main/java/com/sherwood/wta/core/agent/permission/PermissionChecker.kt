@@ -86,7 +86,10 @@ class PermissionChecker(
 
     private suspend fun checkDefault(tool: Tool, args: JsonObject, ctx: ToolContext): PermissionDecision {
         if (tool.isReadOnly()) return PermissionDecision.Allow
-        if (tool.name in alwaysAllow) return PermissionDecision.Allow
+        // A tool that pushes to a remote is approved per call: a remembered grant (only
+        // possible from an older build) is ignored and "Always allow" is not offered.
+        val freshApprovalRequired = tool.requiresFreshApproval()
+        if (!freshApprovalRequired && tool.name in alwaysAllow) return PermissionDecision.Allow
         val req = PermissionRequest(
             toolCallId = "perm-${System.nanoTime()}",
             toolName = tool.name,
@@ -94,15 +97,18 @@ class PermissionChecker(
             // and can throw on JSON null / wrong types — the permission prompt must not
             // be able to kill the run.
             activity = runCatching { tool.activityDescription(args) }.getOrNull(),
-            argsPreview = previewArgs(args)
+            argsPreview = previewArgs(args),
+            allowAlways = !freshApprovalRequired
         )
-        return when (prompter.request(req)) {
-            is PermissionResponse.Allow -> PermissionDecision.Allow
+        return when (val response = prompter.request(req)) {
+            is PermissionResponse.Deny -> PermissionDecision.Deny
+            // Only produced while `allowAlways` was true; never remembered for a
+            // fresh-approval tool even if a stale UI response arrives.
             is PermissionResponse.AlwaysAllow -> {
-                alwaysAllow += tool.name
+                if (!freshApprovalRequired) alwaysAllow += tool.name
                 PermissionDecision.Allow
             }
-            is PermissionResponse.Deny -> PermissionDecision.Deny
+            is PermissionResponse.Allow -> PermissionDecision.Allow
         }
     }
 

@@ -264,6 +264,23 @@ class GitDataApiClient(
         }
     }
 
+    /**
+     * Deletes `refs/heads/{branch}`.
+     *
+     * Only used to undo a branch a failed publish created a moment earlier: the caller
+     * must first confirm the ref still points at the base commit, so a branch that
+     * received a commit is never removed by this path. GitHub answers `204` with an
+     * empty body, which the shared `request` helper would read as a parse failure, so
+     * the parser here returns `true` unconditionally.
+     */
+    suspend fun deleteRef(
+        owner: String,
+        repo: String,
+        branch: String
+    ): GitDataResult<Boolean> = withContext(Dispatchers.IO) {
+        request("DELETE", apiUrl("repos", owner, repo, "git", "refs", "heads", branch), null) { true }
+    }
+
     private fun <T> request(
         method: String,
         url: String,
