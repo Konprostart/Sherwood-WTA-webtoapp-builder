@@ -34,7 +34,7 @@ private const val MAX_IMPORT_FILES = 2_000
 private const val MAX_IMPORT_FILE_BYTES = 4L * 1024 * 1024
 private const val MAX_IMPORT_TOTAL_BYTES = 32L * 1024 * 1024
 
-private const val NOT_CONNECTED = """
+private val NOT_CONNECTED = """
 GitHub is not connected: no token is stored on this device.
 Connect it in Settings → Git access → "GitHub personal access token" (recommended: a
 fine-grained token limited to the one repository), or connect through Studio →
