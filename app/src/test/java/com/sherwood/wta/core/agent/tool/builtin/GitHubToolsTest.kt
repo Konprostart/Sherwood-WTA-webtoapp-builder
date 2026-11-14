@@ -28,14 +28,21 @@ class GitHubToolsTest {
         assertThat(parseOwnerRepo("Konprostart/Sherwood-WTA-webtoapp-builder"))
             .isEqualTo("Konprostart" to "Sherwood-WTA-webtoapp-builder")
         assertThat(parseOwnerRepo("  owner/repo.git  ")).isEqualTo("owner" to "repo")
-        assertThat(parseOwnerRepo("a_b.c/d-e.f")).isEqualTo("a_b.c" to "d-e.f")
+        assertThat(parseOwnerRepo("a-b/c-d_e.f")).isEqualTo("a-b" to "c-d_e.f")
+        // A leading dot is a real repository name on GitHub, not a traversal attempt.
+        assertThat(parseOwnerRepo("owner/.github")).isEqualTo("owner" to ".github")
     }
 
     @Test
     fun `owner repo parser rejects anything that is not owner slash repo`() {
         val rejected = listOf(
             null, "", "   ", "repo", "owner/repo/extra", "/repo", "owner/",
-            "owner/re po", "owner/re:po", "../repo", "owner/..", "own er/repo"
+            "owner/re po", "own er/repo", "owner/re:po", "own:er/repo",
+            // Traversal segments must never survive parsing: the repository name
+            // becomes a folder inside the session sandbox.
+            "../repo", "owner/..", "owner/.", "./repo",
+            // GitHub account names cannot contain `_`, `.` or a trailing hyphen.
+            "own_er/repo", "own.er/repo", "owner-/repo"
         )
         rejected.forEach { value ->
             assertThat(parseOwnerRepo(value)).isNull()

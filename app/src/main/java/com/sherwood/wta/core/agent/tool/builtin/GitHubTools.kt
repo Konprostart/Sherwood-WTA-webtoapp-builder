@@ -78,6 +78,15 @@ internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection
     }
 }
 
+/**
+ * GitHub account names are alphanumeric with single hyphens and may neither start nor end
+ * with one; repository names also allow `_` and `.` (`.github` is a real repository).
+ * `.` and `..` are refused explicitly: the parsed name becomes a folder inside the session
+ * sandbox, so a traversal segment must never be accepted as a repository.
+ */
+private val OWNER_PATTERN = Regex("[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")
+private val REPO_PATTERN = Regex("[A-Za-z0-9_.-]{1,100}")
+
 /** Accepts `owner/repo` (optionally `.git`) and rejects anything that is not one. */
 internal fun parseOwnerRepo(raw: String?): Pair<String, String>? {
     val value = raw?.trim().orEmpty()
@@ -86,8 +95,9 @@ internal fun parseOwnerRepo(raw: String?): Pair<String, String>? {
     if (parts.size != 2) return null
     val owner = parts[0].trim()
     val repo = parts[1].trim().removeSuffix(".git")
-    val allowed = Regex("[A-Za-z0-9_.-]{1,100}")
-    if (!owner.matches(allowed) || !repo.matches(allowed)) return null
+    if (!OWNER_PATTERN.matches(owner)) return null
+    if (!REPO_PATTERN.matches(repo)) return null
+    if (repo == "." || repo == "..") return null
     return owner to repo
 }
 
@@ -232,8 +242,17 @@ class GitHubImportRepositoryTool : Tool {
             )
         val (owner, repo) = parsed
         val branch = args.get("branch")?.asString?.takeIf { it.isNotBlank() } ?: connection.branch
+        // The folder becomes a path segment inside the session sandbox, so it must be a
+        // plain relative name: no separators, no traversal segment, not the root itself.
         val folder = args.get("folder")?.asString?.trim()?.trim('/')
-            ?.takeIf { it.isNotEmpty() && !it.contains("..") } ?: repo
+            ?.takeIf { candidate ->
+                candidate.isNotEmpty() &&
+                    candidate != "." &&
+                    candidate != ".." &&
+                    !candidate.contains("..") &&
+                    !candidate.contains('/') &&
+                    !candidate.contains('\\')
+            } ?: repo
 
         val workspace = WorkspaceService(ctx.androidContext)
         val outcome = withContext(Dispatchers.IO) { importSource(workspace, owner, repo, branch) }
