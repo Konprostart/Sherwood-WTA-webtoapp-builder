@@ -246,41 +246,43 @@ class GitHubPublishTest {
     // ----------------------------------------------------------- approval gate
 
     @Test
-    fun `a fresh-approval tool prompts again after always allow`() = runBlocking {
-        val prompter = PermissionPrompter()
-        val checker = PermissionChecker(prompter)
-        val prompts = AtomicInteger()
-        val allowAlwaysFlags = Collections.synchronizedList(mutableListOf<Boolean>())
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val ctx = toolContext(context, prompter)
+    fun `a fresh-approval tool prompts again after always allow`() {
+        runBlocking {
+            val prompter = PermissionPrompter()
+            val checker = PermissionChecker(prompter)
+            val prompts = AtomicInteger()
+            val allowAlwaysFlags = Collections.synchronizedList(mutableListOf<Boolean>())
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val ctx = toolContext(context, prompter)
 
-        val job = launch(Dispatchers.Default) {
-            prompter.requests.collect { request ->
-                allowAlwaysFlags += request.allowAlways
-                val seen = prompts.incrementAndGet()
-                prompter.respond(
-                    request.toolCallId,
-                    if (seen == 1) PermissionResponse.AlwaysAllow else PermissionResponse.Allow
-                )
+            val job = launch(Dispatchers.Default) {
+                prompter.requests.collect { request ->
+                    allowAlwaysFlags += request.allowAlways
+                    val seen = prompts.incrementAndGet()
+                    prompter.respond(
+                        request.toolCallId,
+                        if (seen == 1) PermissionResponse.AlwaysAllow else PermissionResponse.Allow
+                    )
+                }
             }
-        }
-        try {
-            val tool = FakeTool("FreshWrite", freshApproval = true)
-            assertThat(checker.check(tool, JsonObject(), ctx))
-                .isEqualTo(PermissionDecision.Allow)
-            assertThat(checker.check(tool, JsonObject(), ctx))
-                .isEqualTo(PermissionDecision.Allow)
-            // Two prompts: the AlwaysAllow answered the first call but was not remembered,
-            // and the dialog never offered the button in the first place.
-            assertThat(prompts.get()).isEqualTo(2)
-            assertThat(allowAlwaysFlags).containsExactly(false, false)
-        } finally {
-            job.cancel()
+            try {
+                val tool = FakeTool("FreshWrite", freshApproval = true)
+                assertThat(checker.check(tool, JsonObject(), ctx))
+                    .isEqualTo(PermissionDecision.Allow)
+                assertThat(checker.check(tool, JsonObject(), ctx))
+                    .isEqualTo(PermissionDecision.Allow)
+                // Two prompts: the AlwaysAllow answered the first call but was not
+                // remembered, and the dialog never offered the button in the first place.
+                assertThat(prompts.get()).isEqualTo(2)
+                assertThat(allowAlwaysFlags).containsExactly(false, false)
+            } finally {
+                job.cancel()
+            }
         }
     }
 
     @Test
-    fun `auto approve does not pre-authorize a push but keeps covering ordinary writes`() =
+    fun `auto approve does not pre-authorize a push but keeps covering ordinary writes`() {
         runBlocking {
             val prompter = PermissionPrompter()
             val checker = PermissionChecker(prompter)
@@ -309,42 +311,47 @@ class GitHubPublishTest {
                 job.cancel()
             }
         }
+    }
 
     @Test
-    fun `an ordinary write tool still remembers always allow`() = runBlocking {
-        val prompter = PermissionPrompter()
-        val checker = PermissionChecker(prompter)
-        val prompts = AtomicInteger()
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val ctx = toolContext(context, prompter)
+    fun `an ordinary write tool still remembers always allow`() {
+        runBlocking {
+            val prompter = PermissionPrompter()
+            val checker = PermissionChecker(prompter)
+            val prompts = AtomicInteger()
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val ctx = toolContext(context, prompter)
 
-        val job = launch(Dispatchers.Default) {
-            prompter.requests.collect { request ->
-                prompts.incrementAndGet()
-                prompter.respond(request.toolCallId, PermissionResponse.AlwaysAllow)
+            val job = launch(Dispatchers.Default) {
+                prompter.requests.collect { request ->
+                    prompts.incrementAndGet()
+                    prompter.respond(request.toolCallId, PermissionResponse.AlwaysAllow)
+                }
             }
-        }
-        try {
-            val tool = FakeTool("OrdinaryWrite", freshApproval = false)
-            assertThat(checker.check(tool, JsonObject(), ctx))
-                .isEqualTo(PermissionDecision.Allow)
-            assertThat(checker.check(tool, JsonObject(), ctx))
-                .isEqualTo(PermissionDecision.Allow)
-            assertThat(prompts.get()).isEqualTo(1)
-        } finally {
-            job.cancel()
+            try {
+                val tool = FakeTool("OrdinaryWrite", freshApproval = false)
+                assertThat(checker.check(tool, JsonObject(), ctx))
+                    .isEqualTo(PermissionDecision.Allow)
+                assertThat(checker.check(tool, JsonObject(), ctx))
+                    .isEqualTo(PermissionDecision.Allow)
+                assertThat(prompts.get()).isEqualTo(1)
+            } finally {
+                job.cancel()
+            }
         }
     }
 
     @Test
-    fun `publish refuses to run without a stored token and touches no network`() = runBlocking {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val result = GitHubOpenPullRequestTool().execute(
-            JsonObject(),
-            toolContext(context, PermissionPrompter())
-        )
-        assertThat(result.isError).isFalse()
-        assertThat(result.text).contains("not connected")
+    fun `publish refuses to run without a stored token and touches no network`() {
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val result = GitHubOpenPullRequestTool().execute(
+                JsonObject(),
+                toolContext(context, PermissionPrompter())
+            )
+            assertThat(result.isError).isFalse()
+            assertThat(result.text).contains("not connected")
+        }
     }
 
     // ----------------------------------------------------------------- helpers
