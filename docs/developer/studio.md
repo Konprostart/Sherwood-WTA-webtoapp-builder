@@ -145,9 +145,11 @@ not by prompting the model:
 
 The base branch must still point at the commit recorded at import time — the
 tool refuses otherwise, so a publish can never revert commits that landed after
-the import. A branch created for a push that then fails is deleted again only
-while it still points at the base commit; a branch that received the commit is
-left in place and the error names it.
+the import. A file over 10 MB, or a folder beyond 2000 files / 64 MB, aborts the
+publish instead of shipping a partial change: a skipped file would silently be
+missing from the pull request. A branch created for a push that then fails is
+deleted again only while it still points at the base commit; a branch that
+received the commit is left in place and the error names it.
 
 **What the agent cannot do, by design:** merge, approve or comment on a pull
 request, dispatch a workflow, delete a branch, or force-update a ref. Those

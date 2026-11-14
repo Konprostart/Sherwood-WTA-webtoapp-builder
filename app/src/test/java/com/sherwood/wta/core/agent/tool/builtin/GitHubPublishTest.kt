@@ -167,6 +167,47 @@ class GitHubPublishTest {
         }
     }
 
+    @Test
+    fun `copy flags a file that is too large to upload instead of dropping it`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val source = tempDir(context, "publish-large-source")
+        val target = tempDir(context, "publish-large-target")
+        try {
+            File(source, "big.bin").writeBytes(ByteArray(10 * 1024 * 1024 + 1))
+            File(source, "small.txt").writeText("ok")
+
+            val stats = copySessionTree(source, target)
+
+            // The publish aborts on this count: a skipped file would be missing from the PR.
+            assertThat(stats.skippedLarge).isEqualTo(1)
+            assertThat(stats.files).isEqualTo(1)
+            assertThat(File(target, "big.bin").exists()).isFalse()
+        } finally {
+            source.deleteRecursively()
+            target.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `copy stops at the file cap and flags truncation`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val source = tempDir(context, "publish-cap-source")
+        val target = tempDir(context, "publish-cap-target")
+        try {
+            repeat(MAX_PUBLISH_FILES + 1) { index ->
+                File(source, "f$index.txt").writeText("x")
+            }
+
+            val stats = copySessionTree(source, target)
+
+            assertThat(stats.truncated).isTrue()
+            assertThat(stats.files).isEqualTo(MAX_PUBLISH_FILES)
+        } finally {
+            source.deleteRecursively()
+            target.deleteRecursively()
+        }
+    }
+
     // ------------------------------------------------------------- registration
 
     @Test

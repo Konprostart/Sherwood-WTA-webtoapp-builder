@@ -51,7 +51,7 @@ import java.io.File
  */
 
 /** Bounded so one publish cannot upload an arbitrarily large tree. */
-private const val MAX_PUBLISH_FILES = 2_000
+internal const val MAX_PUBLISH_FILES = 2_000
 
 /** Matches [RepoBridgeCommitUseCase.MAX_FILE_BYTES]: a bigger file could never be pushed. */
 private const val MAX_PUBLISH_FILE_BYTES = 10L * 1024 * 1024
@@ -506,9 +506,27 @@ class GitHubOpenPullRequestTool : Tool {
                     "file permissions, then retry."
             )
         }
+        if (stats.skippedLarge > 0) {
+            // Such a file cannot be uploaded at all, so the pull request would silently
+            // miss it; refuse instead of publishing an incomplete change set.
+            return ToolResult.error(
+                "GitHubOpenPullRequest: ${stats.skippedLarge} file(s) in '$folder' are larger " +
+                    "than 10 MB, which a push cannot upload. Nothing was pushed — split or " +
+                    "shrink the file."
+            )
+        }
         if (stats.files == 0) {
             return ToolResult.error(
                 "GitHubOpenPullRequest: '$folder' has no readable files to push."
+            )
+        }
+        if (stats.truncated) {
+            // Publishing a capped copy would silently leave the other edits out of the
+            // pull request, so the whole publish fails instead.
+            return ToolResult.error(
+                "GitHubOpenPullRequest: '$folder' holds more than one publish can send " +
+                    "(${MAX_PUBLISH_FILES} files / ${MAX_PUBLISH_TOTAL_BYTES / (1024 * 1024)} MB). " +
+                    "Nothing was pushed — reduce the change set and retry."
             )
         }
 
@@ -638,12 +656,6 @@ class GitHubOpenPullRequestTool : Tool {
         val shown = (changes.added + changes.modified).take(20)
         shown.forEach { appendLine("  $it") }
         if (changes.total > shown.size) appendLine("  … ${changes.total - shown.size} more")
-        if (stats.skippedLarge > 0) {
-            appendLine("Skipped ${stats.skippedLarge} file(s) larger than 10 MB.")
-        }
-        if (stats.truncated) {
-            appendLine("Stopped at the publish cap — the rest of the folder was not uploaded.")
-        }
         if (changes.deleted.isNotEmpty()) {
             // copySessionTree never deletes, so this only happens if the remote base has
             // files the working copy lacks (a subfolder/partial import). Refuse to hide it.
