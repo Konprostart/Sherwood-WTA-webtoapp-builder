@@ -252,7 +252,7 @@ class GitHubPublishTest {
         val prompts = AtomicInteger()
         val allowAlwaysFlags = Collections.synchronizedList(mutableListOf<Boolean>())
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val toolContext = toolContext(context, prompter)
+        val ctx = toolContext(context, prompter)
 
         val job = launch(Dispatchers.Default) {
             prompter.requests.collect { request ->
@@ -266,9 +266,9 @@ class GitHubPublishTest {
         }
         try {
             val tool = FakeTool("FreshWrite", freshApproval = true)
-            assertThat(checker.check(tool, JsonObject(), toolContext))
+            assertThat(checker.check(tool, JsonObject(), ctx))
                 .isEqualTo(PermissionDecision.Allow)
-            assertThat(checker.check(tool, JsonObject(), toolContext))
+            assertThat(checker.check(tool, JsonObject(), ctx))
                 .isEqualTo(PermissionDecision.Allow)
             // Two prompts: the AlwaysAllow answered the first call but was not remembered,
             // and the dialog never offered the button in the first place.
@@ -287,7 +287,7 @@ class GitHubPublishTest {
             checker.setMode(PermissionMode.AutoApprove)
             val prompts = AtomicInteger()
             val context = ApplicationProvider.getApplicationContext<Context>()
-            val toolContext = toolContext(context, prompter)
+            val ctx = toolContext(context, prompter)
 
             val job = launch(Dispatchers.Default) {
                 prompter.requests.collect { request ->
@@ -296,12 +296,12 @@ class GitHubPublishTest {
                 }
             }
             try {
-                assertThat(checker.check(FakeTool("OrdinaryWrite", false), JsonObject(), toolContext))
+                assertThat(checker.check(FakeTool("OrdinaryWrite", false), JsonObject(), ctx))
                     .isEqualTo(PermissionDecision.Allow)
                 // Auto-approve still means what it says for a normal write tool.
                 assertThat(prompts.get()).isEqualTo(0)
 
-                assertThat(checker.check(FakeTool("FreshWrite", true), JsonObject(), toolContext))
+                assertThat(checker.check(FakeTool("FreshWrite", true), JsonObject(), ctx))
                     .isEqualTo(PermissionDecision.Allow)
                 // Rule 3 survives the setting: the push asked anyway.
                 assertThat(prompts.get()).isEqualTo(1)
@@ -316,7 +316,7 @@ class GitHubPublishTest {
         val checker = PermissionChecker(prompter)
         val prompts = AtomicInteger()
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val toolContext = toolContext(context, prompter)
+        val ctx = toolContext(context, prompter)
 
         val job = launch(Dispatchers.Default) {
             prompter.requests.collect { request ->
@@ -326,9 +326,9 @@ class GitHubPublishTest {
         }
         try {
             val tool = FakeTool("OrdinaryWrite", freshApproval = false)
-            assertThat(checker.check(tool, JsonObject(), toolContext))
+            assertThat(checker.check(tool, JsonObject(), ctx))
                 .isEqualTo(PermissionDecision.Allow)
-            assertThat(checker.check(tool, JsonObject(), toolContext))
+            assertThat(checker.check(tool, JsonObject(), ctx))
                 .isEqualTo(PermissionDecision.Allow)
             assertThat(prompts.get()).isEqualTo(1)
         } finally {
