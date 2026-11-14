@@ -8,6 +8,7 @@ import com.google.gson.JsonObject
 import com.sherwood.wta.core.agent.files.ProjectFileManager
 import com.sherwood.wta.core.agent.permission.PermissionChecker
 import com.sherwood.wta.core.agent.permission.PermissionDecision
+import com.sherwood.wta.core.agent.permission.PermissionMode
 import com.sherwood.wta.core.agent.permission.PermissionPrompter
 import com.sherwood.wta.core.agent.permission.PermissionResponse
 import com.sherwood.wta.core.agent.plan.PlanManager
@@ -277,6 +278,37 @@ class GitHubPublishTest {
             job.cancel()
         }
     }
+
+    @Test
+    fun `auto approve does not pre-authorize a push but keeps covering ordinary writes`() =
+        runBlocking {
+            val prompter = PermissionPrompter()
+            val checker = PermissionChecker(prompter)
+            checker.setMode(PermissionMode.AutoApprove)
+            val prompts = AtomicInteger()
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val toolContext = toolContext(context, prompter)
+
+            val job = launch(Dispatchers.Default) {
+                prompter.requests.collect { request ->
+                    prompts.incrementAndGet()
+                    prompter.respond(request.toolCallId, PermissionResponse.Allow)
+                }
+            }
+            try {
+                assertThat(checker.check(FakeTool("OrdinaryWrite", false), JsonObject(), toolContext))
+                    .isEqualTo(PermissionDecision.Allow)
+                // Auto-approve still means what it says for a normal write tool.
+                assertThat(prompts.get()).isEqualTo(0)
+
+                assertThat(checker.check(FakeTool("FreshWrite", true), JsonObject(), toolContext))
+                    .isEqualTo(PermissionDecision.Allow)
+                // Rule 3 survives the setting: the push asked anyway.
+                assertThat(prompts.get()).isEqualTo(1)
+            } finally {
+                job.cancel()
+            }
+        }
 
     @Test
     fun `an ordinary write tool still remembers always allow`() = runBlocking {

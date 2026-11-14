@@ -20,7 +20,7 @@ Beyond generating web apps, plugins, userscripts, MV3 Chrome extensions, and loc
 ## Features
 
 - **Sessions** — each conversation has its own title and history.
-- **Up to 64 built-in tools** — grouped by domain (files, apps, config templates, lifecycle, ports/engine, hosts/runtime, stats/modifier/import, build env/Play, modules, GitHub, imagery, plan mode). That is 59 base tools, 2 plan-mode tools, and 3 imagery tools. The imagery tools only load with an image-capable model. Read-only tools run without confirmation; write tools ask for permission first. `ExportConfigTemplate` is read-only; `ImportConfigTemplate` asks first. `GitHubOpenPullRequest` never offers "Always allow" — every push is approved on its own.
+- **Up to 64 built-in tools** — grouped by domain (files, apps, config templates, lifecycle, ports/engine, hosts/runtime, stats/modifier/import, build env/Play, modules, GitHub, imagery, plan mode). That is 59 base tools, 2 plan-mode tools, and 3 imagery tools. The imagery tools only load with an image-capable model. Read-only tools run without confirmation; write tools ask for permission first. `ExportConfigTemplate` is read-only; `ImportConfigTemplate` asks first. `GitHubOpenPullRequest` never offers "Always allow" and auto-approve does not skip it — every push is approved on its own.
 - **Plan mode** — proposes a plan and waits for your approval before applying changes (shown with a plan-mode badge).
 - **Resilience** — automatic retry with backoff on 429/5xx responses.
 

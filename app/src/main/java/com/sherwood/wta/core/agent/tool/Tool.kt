@@ -17,8 +17,9 @@ interface Tool {
      * Tools whose side effect is irreversible on a remote system.
      *
      * The permission gate treats them as one-shot: "Always allow" is neither offered
-     * in the prompt nor honoured for them, so every invocation needs a fresh tap.
-     * Default false — every other tool keeps the existing behaviour.
+     * in the prompt nor honoured for them, and Auto-approve does not skip the prompt
+     * either, so every invocation needs a fresh tap. Default false — every other tool
+     * keeps the existing behaviour.
      */
     fun requiresFreshApproval(): Boolean = false
 

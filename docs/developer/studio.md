@@ -138,8 +138,8 @@ not by prompting the model:
    there is no path that advances a branch without opening a PR, and no merge
    API call anywhere in the agent tools.
 3. **A tap per push.** The tool returns `requiresFreshApproval() = true`, so
-   `PermissionChecker` never honours a remembered grant and the dialog hides
-   "Always allow".
+   `PermissionChecker` never honours a remembered grant, the dialog hides
+   "Always allow", and Auto-approve mode still asks for this tool.
 4. **No force-push.** `updateRef` is always called with `force = false` and the
    expected base commit. A moved branch fails as a conflict.
 

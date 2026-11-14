@@ -55,7 +55,15 @@ class PermissionChecker(
 
     suspend fun check(tool: Tool, args: JsonObject, ctx: ToolContext): PermissionDecision {
         return when (mode) {
-            PermissionMode.AutoApprove -> PermissionDecision.Allow
+            // Auto-approve covers routine work, never a push to a remote: a tool that
+            // requires a fresh approval is asked here too. Plan/Dream keep their own
+            // rules, which always deny a write outside the plan file.
+            PermissionMode.AutoApprove ->
+                if (tool.requiresFreshApproval() && !tool.isReadOnly()) {
+                    checkDefault(tool, args, ctx)
+                } else {
+                    PermissionDecision.Allow
+                }
             PermissionMode.Plan -> checkPlan(tool, args, ctx)
             PermissionMode.Dream -> checkDream(tool, args, ctx)
             PermissionMode.Default -> checkDefault(tool, args, ctx)
