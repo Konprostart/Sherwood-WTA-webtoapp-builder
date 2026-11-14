@@ -788,7 +788,10 @@ fun AppNavigation() {
             }
 
             composable(Routes.STUDIO) {
-                StudioScreen(onBack = { navController.popBackStackSafely() })
+                StudioScreen(
+                    onBack = { navController.popBackStackSafely() },
+                    onOpenGitSettings = { navController.navigate(Routes.GIT_SETTINGS) }
+                )
             }
 
             composable(Routes.PLUGINS) {

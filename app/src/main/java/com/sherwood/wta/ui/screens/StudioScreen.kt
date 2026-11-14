@@ -52,6 +52,8 @@ import com.sherwood.wta.ui.design.WtaSettingRow
 import com.sherwood.wta.ui.design.WtaSpacing
 import com.sherwood.wta.ui.design.WtaTab
 import com.sherwood.wta.ui.design.WtaTabRow
+import com.sherwood.wta.ui.theme.LocalShowDescriptions
+import com.sherwood.wta.ui.theme.ifDescriptionsShown
 import kotlinx.coroutines.launch
 
 /**
@@ -59,7 +61,7 @@ import kotlinx.coroutines.launch
  * the local APK/AAB vault, all in the existing single app.
  */
 @Composable
-fun StudioScreen(onBack: () -> Unit = {}) {
+fun StudioScreen(onBack: () -> Unit = {}, onOpenGitSettings: () -> Unit = {}) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -67,7 +69,8 @@ fun StudioScreen(onBack: () -> Unit = {}) {
     if (showSettings) {
         StudioSettingsScreen(
             onBack = { showSettings = false },
-            snackbarHostState = snackbarHostState
+            snackbarHostState = snackbarHostState,
+            onOpenGitSettings = onOpenGitSettings
         )
         return
     }
@@ -106,7 +109,7 @@ fun StudioScreen(onBack: () -> Unit = {}) {
                 )
             )
             when (selectedTab) {
-                0 -> StudioReposTab(context, snackbarHostState)
+                0 -> StudioReposTab(context, snackbarHostState, onOpenGitSettings)
                 1 -> StudioInboxTab(context, snackbarHostState)
                 2 -> StudioBuildsTab(context, snackbarHostState)
                 3 -> StudioVaultTab(context, snackbarHostState)
@@ -165,7 +168,8 @@ private val ENDPOINT_FIELDS = listOf(
 @Composable
 private fun StudioSettingsScreen(
     onBack: () -> Unit,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    onOpenGitSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val store = remember { EndpointSettingsStore.getInstance(context) }
@@ -274,14 +278,54 @@ private fun StudioSettingsScreen(
                             onValueChange = { oauthClientId = it.trim() },
                             label = { Text(Strings.studioClientId) },
                             singleLine = true,
+                            isError = oauthClientId.isBlank(),
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(6.dp))
-                        Text(
-                            Strings.studioClientIdHint,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // The empty state is the one that breaks Connect, so name it.
+                        // The neutral hint is helper copy and follows the About switch.
+                        if (oauthClientId.isBlank()) {
+                            Text(
+                                Strings.studioClientIdMissing,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else if (LocalShowDescriptions.current) {
+                            Text(
+                                Strings.studioClientIdHint,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Token-based access is an equal alternative to the OAuth App, and the
+            // screen that owns it lives outside Studio. Link it rather than hiding it.
+            WtaSection(title = Strings.gitSettingsTitle) {
+                WtaSettingCard {
+                    WtaSettingRow(
+                        title = Strings.gitTokenTitle,
+                        subtitle = Strings.studioTokenAlternate.ifDescriptionsShown(),
+                        onClick = onOpenGitSettings
+                    )
+                    WtaSectionDivider()
+                    // State the agent boundary where the connection is configured, so the
+                    // chat's GitHub access is never mistaken for a push channel.
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = WtaSpacing.RowHorizontal,
+                            vertical = WtaSpacing.ContentGap
                         )
+                    ) {
+                        if (LocalShowDescriptions.current) {
+                            Text(
+                                Strings.studioAgentGitNote,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

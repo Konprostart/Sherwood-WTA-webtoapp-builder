@@ -50,16 +50,23 @@ import com.sherwood.wta.ui.design.WtaButton
 import com.sherwood.wta.ui.design.WtaButtonSize
 import com.sherwood.wta.ui.design.WtaButtonVariant
 import com.sherwood.wta.ui.design.WtaSection
+import com.sherwood.wta.ui.design.WtaSectionDivider
 import com.sherwood.wta.ui.design.WtaSettingCard
 import com.sherwood.wta.ui.design.WtaSettingRow
 import com.sherwood.wta.ui.design.WtaSpacing
+import com.sherwood.wta.ui.theme.LocalShowDescriptions
+import com.sherwood.wta.ui.theme.ifDescriptionsShown
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
-internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostState) {
+internal fun StudioReposTab(
+    context: Context,
+    snackbarHostState: SnackbarHostState,
+    onOpenGitSettings: () -> Unit = {}
+) {
     val scope = rememberCoroutineScope()
     val endpoints = remember { EndpointSettingsStore.current(context) }
     val api = remember { GitHubApiClient(context, endpoints) }
@@ -143,8 +150,10 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
 
     fun startDeviceFlow() {
         val clientId = studioSettings.oauthClientId
+        // The device flow has no fallback: without a Client ID GitHub cannot issue a
+        // device code. Say exactly what is missing instead of repeating the hint.
         if (!GitHubOAuthClient.isValidClientId(clientId)) {
-            oauthError = Strings.studioClientIdHint
+            oauthError = Strings.studioClientIdMissing
             return
         }
         oauthError = null
@@ -215,13 +224,30 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
                             subtitle = Strings.studioAccountDesc
                         )
                     } else {
+                        val clientIdValid =
+                            GitHubOAuthClient.isValidClientId(studioSettings.oauthClientId)
                         Column(
                             modifier = Modifier.padding(
                                 horizontal = WtaSpacing.RowHorizontal,
                                 vertical = WtaSpacing.ContentGap
                             )
                         ) {
-                            Text(Strings.studioClientIdHint, style = MaterialTheme.typography.bodySmall)
+                            // State first, then the action: the Connect button cannot
+                            // work without a Client ID, so say that before it is tapped
+                            // instead of after.
+                            if (!clientIdValid) {
+                                Text(
+                                    Strings.studioClientIdMissing,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else if (LocalShowDescriptions.current) {
+                                Text(
+                                    Strings.studioClientIdHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             Spacer(Modifier.height(8.dp))
                             WtaButton(
                                 onClick = { startDeviceFlow() },
@@ -235,6 +261,15 @@ internal fun StudioReposTab(context: Context, snackbarHostState: SnackbarHostSta
                                 )
                             }
                         }
+                        // The token path is an equal alternative, not a hidden one:
+                        // the same store backs both, so a saved token connects Studio
+                        // without any OAuth App at all.
+                        WtaSectionDivider()
+                        WtaSettingRow(
+                            title = Strings.gitTokenTitle,
+                            subtitle = Strings.studioTokenAlternate.ifDescriptionsShown(),
+                            onClick = onOpenGitSettings
+                        )
                     }
                 }
             }

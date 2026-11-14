@@ -24,6 +24,7 @@ Everything still ships as **one APK**. Studio is not a second app.
 | Signing Studio | `SigningStudio` + `ProjectSigningIdentity` | Signs vault APKs (apksig) and AABs with the **project's own** identity for the artifact's package. Imported keystore or the existing per-package key; a missing key must be created on purpose. |
 | Install | `ArtifactInstaller` | System installer via FileProvider with a read grant. |
 | Workspace link | `WorkspaceBridgeService` | Commits `.sherwood/workspace.json`; external tools read it over raw content. No Sherwood server. |
+| Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubImportRepository` | The in-app agent can read the connection and copy a repository into its own session folder. It cannot commit, push, merge or open a pull request — see [Agent access](#agent-access). |
 | Endpoints | `EndpointConfig` | Every Studio address is HTTPS, validated, and overridable from Settings. |
 
 ## Signing a vault artifact
@@ -110,6 +111,27 @@ request, and the Studio's inbox shows the branch/PR for review, merge and build.
 This repository itself carries one at `.sherwood/workspace.json` as a working
 example.
 
+## Agent access
+
+The in-app agent has three GitHub tools, registered in
+`ToolRegistryFactory.baseTools()`. They reuse the credential Studio already
+owns — `GitHubTokenStore`, filled by Settings → Git access (personal access
+token) or by the OAuth device flow — so there is no second token path and no
+credential inside the agent loop.
+
+| Tool | Read-only | Effect |
+| --- | --- | --- |
+| `GitHubStatus` | yes | Connection state, authenticated login, the repository Studio is pointed at, and the working copies already imported. |
+| `GitHubListRepositories` | yes | Repositories the token can see (name, visibility, default branch, last push). |
+| `GitHubImportRepository` | no (permission prompt) | Copies a repository's files into the agent's own session folder, so `Read`/`Write`/`Edit`/`Glob`/`Grep` work on them. Reuses an existing Studio working copy when one matches the branch; folder `.git` is skipped, and the copy is capped at 2000 files, 32 MB total and 4 MB per file. |
+
+**What the agent cannot do, by design:** commit, push, merge, open or comment on
+a pull request, dispatch a workflow, or change a branch. Those calls live in
+`WorkspaceService` and `GitHubApiClient` and are reached only from Studio's own
+screens, where the user taps them. Agent writes are confined to the session
+sandbox (`ProjectFileManager.resolveSafe`), which is a different tree from the
+Studio working copies under `filesDir/github_imports/`.
+
 ## Tests
 
 - `EndpointConfigTest` — HTTPS validation, overrides, stored differences.
@@ -123,6 +145,9 @@ example.
 - `WorkspacePathSafetyTest` — canonical-path containment (`..`, prefix-similar
   siblings, symlink escape) plus a structural guard that no Studio source uses
   `java.nio.file` behind `minSdk` 24.
+- `GitHubToolsTest` — agent GitHub tools: repository identifier parsing, the
+  import copy guard rails (`.git`, oversized files, symlink escape) and their
+  registration and read-only flags.
 
 Artifact signing, keystore import and installation need a device; they are
 exercised manually, not in unit tests.

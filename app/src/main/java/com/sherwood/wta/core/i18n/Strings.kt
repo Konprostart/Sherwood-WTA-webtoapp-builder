@@ -5361,6 +5361,9 @@ object Strings {
     val studioAccountDesc: String get() = StringsE.studioAccountDesc
     val studioClientId: String get() = StringsE.studioClientId
     val studioClientIdHint: String get() = StringsE.studioClientIdHint
+    val studioClientIdMissing: String get() = StringsE.studioClientIdMissing
+    val studioTokenAlternate: String get() = StringsE.studioTokenAlternate
+    val studioAgentGitNote: String get() = StringsE.studioAgentGitNote
     val studioConnect: String get() = StringsE.studioConnect
     val studioWaiting: String get() = StringsE.studioWaiting
     fun studioUserCode(code: String): String = StringsE.studioUserCode(code)

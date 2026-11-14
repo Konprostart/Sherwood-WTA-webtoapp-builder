@@ -17824,6 +17824,48 @@ object StringsE {
         AppLanguage.KOREAN -> "Device Flow가 활성화된 본인 OAuth 앱의 공개 Client ID. client secret은 필요 없습니다."
     }
 
+    /** Actionable state message: the OAuth device flow cannot run without a Client ID. */
+    val studioClientIdMissing: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "尚未保存 OAuth App Client ID。请在 Studio 设置中填写并点保存，或改用个人访问令牌连接。"
+        AppLanguage.ENGLISH -> "No OAuth App Client ID is saved. Add it in Studio settings and tap Save — or connect with a personal access token instead."
+        AppLanguage.ARABIC -> "لم يتم حفظ معرّف عميل OAuth App. أضفه في إعدادات Studio ثم اضغط حفظ — أو اتصل برمز وصول شخصي بدلاً من ذلك."
+        AppLanguage.PORTUGUESE -> "Nenhum Client ID do OAuth App está salvo. Adicione-o nas configurações do Studio e toque em Salvar — ou conecte com um token de acesso pessoal."
+        AppLanguage.SPANISH -> "No hay ningún Client ID de OAuth App guardado. Añádelo en los ajustes de Studio y pulsa Guardar, o conéctate con un token de acceso personal."
+        AppLanguage.FRENCH -> "Aucun Client ID d'OAuth App n'est enregistré. Ajoutez-le dans les paramètres Studio puis touchez Enregistrer — ou connectez-vous avec un jeton d'accès personnel."
+        AppLanguage.GERMAN -> "Es ist keine OAuth-App-Client-ID gespeichert. Trage sie in den Studio-Einstellungen ein und tippe auf Speichern — oder verbinde dich stattdessen mit einem persönlichen Zugriffstoken."
+        AppLanguage.RUSSIAN -> "Client ID OAuth-приложения не сохранён. Укажите его в настройках Studio и нажмите «Сохранить» — или подключитесь с помощью личного токена доступа."
+        AppLanguage.JAPANESE -> "OAuth アプリの Client ID が保存されていません。Studio の設定で入力して保存するか、パーソナルアクセストークンで接続してください。"
+        AppLanguage.KOREAN -> "OAuth 앱 Client ID가 저장되어 있지 않습니다. Studio 설정에서 입력하고 저장하거나 개인 액세스 토큰으로 연결하세요."
+    }
+
+    /** Explains that the token saved under Git access is picked up automatically. */
+    val studioTokenAlternate: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在 Git 访问中保存的个人访问令牌会被自动使用，无需 Client ID。"
+        AppLanguage.ENGLISH -> "A personal access token saved under Git access is used automatically; no Client ID is needed."
+        AppLanguage.ARABIC -> "يُستخدم رمز الوصول الشخصي المحفوظ في وصول Git تلقائيًا، دون الحاجة إلى Client ID."
+        AppLanguage.PORTUGUESE -> "Um token de acesso pessoal salvo em Acesso ao Git é usado automaticamente; não é necessário Client ID."
+        AppLanguage.SPANISH -> "Un token de acceso personal guardado en Acceso a Git se usa automáticamente; no se necesita Client ID."
+        AppLanguage.FRENCH -> "Un jeton d'accès personnel enregistré dans Accès Git est utilisé automatiquement ; aucun Client ID n'est nécessaire."
+        AppLanguage.GERMAN -> "Ein unter Git-Zugriff gespeichertes persönliches Zugriffstoken wird automatisch verwendet; eine Client-ID ist nicht nötig."
+        AppLanguage.RUSSIAN -> "Личный токен доступа, сохранённый в «Доступ к Git», используется автоматически; Client ID не нужен."
+        AppLanguage.JAPANESE -> "Git アクセスで保存したパーソナルアクセストークンは自動的に使われます。Client ID は不要です。"
+        AppLanguage.KOREAN -> "Git 액세스에 저장한 개인 액세스 토큰이 자동으로 사용됩니다. Client ID는 필요하지 않습니다."
+    }
+
+    /** States what the chat agent may and may not do with the connected repository. */
+    val studioAgentGitNote: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "聊天中的智能体可以读取此连接，并把仓库文件复制到当前对话中编辑；它不会提交、推送、合并或创建拉取请求。"
+        AppLanguage.ENGLISH -> "The agent in a chat can read this connection and copy a repository into that chat to edit. It never commits, pushes, merges or opens a pull request — those stay in the Repositories tab."
+        AppLanguage.ARABIC -> "يمكن للوكيل في الدردشة قراءة هذا الاتصال ونسخ مستودع إلى الدردشة لتحريره. لا يقوم أبدًا بالcommit أو push أو الدمج أو إنشاء طلب سحب — تبقى هذه في تبويب المستودعات."
+        AppLanguage.PORTUGUESE -> "O agente de um chat pode ler esta conexão e copiar um repositório para o chat para editá-lo. Ele nunca faz commit, push, merge nem abre pull request — isso continua na aba Repositórios."
+        AppLanguage.SPANISH -> "El agente de un chat puede leer esta conexión y copiar un repositorio al chat para editarlo. Nunca hace commit, push, merge ni abre una pull request: eso sigue en la pestaña Repositorios."
+        AppLanguage.FRENCH -> "L'agent d'un chat peut lire cette connexion et copier un dépôt dans le chat pour le modifier. Il ne commit jamais, ne pousse jamais, ne fusionne jamais et n'ouvre jamais de pull request — cela reste dans l'onglet Dépôts."
+        AppLanguage.GERMAN -> "Der Agent in einem Chat kann diese Verbindung lesen und ein Repository zum Bearbeiten in den Chat kopieren. Er committet, pusht, merged und öffnet niemals einen Pull Request — das bleibt im Tab Repositorys."
+        AppLanguage.RUSSIAN -> "Агент в чате может прочитать это подключение и скопировать репозиторий в чат для редактирования. Он никогда не делает commit, push, merge и не открывает pull request — это остаётся на вкладке «Репозитории»."
+        AppLanguage.JAPANESE -> "チャットのエージェントはこの接続を読み取り、リポジトリをチャットにコピーして編集できます。commit・push・マージ・プルリクエスト作成は行いません。それらはリポジトリタブで行います。"
+        AppLanguage.KOREAN -> "채팅의 에이전트는 이 연결을 읽고 저장소를 채팅으로 복사해 편집할 수 있습니다. commit, push, merge, 풀 리퀘스트 생성은 하지 않으며 해당 작업은 저장소 탭에서 합니다."
+    }
+
     val studioConnect: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "连接 GitHub"
         AppLanguage.ENGLISH -> "Connect GitHub"
