@@ -214,6 +214,31 @@ data class GitHubArtifact(
     val workflowRunId: Long?
 )
 
+data class GitHubReleaseAsset(
+    val id: Long,
+    val name: String,
+    val sizeInBytes: Long,
+    val contentType: String?,
+    /** REST API URL; download it with an `application/octet-stream` Accept header. */
+    val apiDownloadUrl: String,
+    val state: String?
+) {
+    /** Only `uploaded` assets are downloadable; anything else is left over from a failed upload. */
+    val isDownloadable: Boolean
+        get() = state == null || state == "uploaded"
+}
+
+data class GitHubRelease(
+    val id: Long,
+    val tagName: String,
+    val name: String?,
+    val draft: Boolean,
+    val prerelease: Boolean,
+    val publishedAt: String?,
+    val htmlUrl: String?,
+    val assets: List<GitHubReleaseAsset>
+)
+
 data class GitHubFileContent(
     val path: String,
     val name: String,
@@ -725,6 +750,35 @@ class GitHubApiClient(
             downloadBytes(artifact.archiveDownloadUrl)
         }
 
+    // ----------------------------------------------------------------- releases
+
+    /**
+     * Recent releases, newest first. Drafts are included when the token can see them
+     * (the owner's token can); a release's assets are what `gh release upload`
+     * publishes, e.g. the signed APK/AAB of a tag build.
+     */
+    suspend fun listReleases(
+        owner: String,
+        repo: String,
+        perPage: Int = 20
+    ): GitHubResult<List<GitHubRelease>> =
+        getJson(url("repos", owner, repo, "releases") + "?per_page=${perPage.coerceIn(1, 100)}") { json ->
+            json.asArrayOrNull()?.mapNotNull { it.asObjectOrNull()?.let(::parseRelease) }
+        }
+
+    /**
+     * Downloads one release asset.
+     *
+     * The asset's REST URL only yields the binary when asked for
+     * `application/octet-stream`; the default JSON Accept header returns metadata
+     * instead. GitHub answers with a redirect to a signed storage URL, which the
+     * redirect client follows.
+     */
+    suspend fun downloadReleaseAsset(asset: GitHubReleaseAsset): GitHubResult<ByteArray> =
+        withContext(Dispatchers.IO) {
+            downloadBytes(asset.apiDownloadUrl, BINARY_ACCEPT)
+        }
+
     // ------------------------------------------------------------------ helpers
 
     private suspend fun <T> getJson(url: String, parse: (JsonElement) -> T?): GitHubResult<T> =
@@ -750,7 +804,7 @@ class GitHubApiClient(
             .url(url)
             .method(method, body.toRequestBody(JSON_MEDIA_TYPE))
             .header("Authorization", "Bearer $token")
-            .header("Accept", "application/vnd.github+json")
+            .header("Accept", JSON_ACCEPT)
             .header("X-GitHub-Api-Version", API_VERSION)
             .build()
         try {
@@ -795,7 +849,7 @@ class GitHubApiClient(
         val token = tokenOrNull()
         val builder = Request.Builder()
             .url(url)
-            .header("Accept", "application/vnd.github+json")
+            .header("Accept", JSON_ACCEPT)
             .header("X-GitHub-Api-Version", API_VERSION)
         if (token != null) builder.header("Authorization", "Bearer $token")
         if (body != null) {
@@ -835,11 +889,14 @@ class GitHubApiClient(
     private fun downloadText(url: String): GitHubResult<String> =
         downloadBytes(url).map { String(it, Charsets.UTF_8) }
 
-    private fun downloadBytes(url: String): GitHubResult<ByteArray> {
+    private fun downloadBytes(
+        url: String,
+        accept: String = JSON_ACCEPT
+    ): GitHubResult<ByteArray> {
         val token = tokenOrNull()
         val builder = Request.Builder()
             .url(url)
-            .header("Accept", "application/vnd.github+json")
+            .header("Accept", accept)
             .header("X-GitHub-Api-Version", API_VERSION)
         if (token != null) builder.header("Authorization", "Bearer $token")
         return try {
@@ -913,6 +970,8 @@ class GitHubApiClient(
         private const val TAG = "GitHubApi"
         private const val API_VERSION = "2022-11-28"
         private const val MAX_ERROR_MESSAGE = 500
+        private const val JSON_ACCEPT = "application/vnd.github+json"
+        private const val BINARY_ACCEPT = "application/octet-stream"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
         // --------------------------------------------------------- pure parsers
@@ -1178,6 +1237,44 @@ class GitHubApiClient(
                 archiveDownloadUrl = url,
                 createdAt = obj.string("created_at"),
                 workflowRunId = obj.obj("workflow_run")?.long("id")
+            )
+        }
+
+        fun parseReleaseAsset(json: JsonElement): GitHubReleaseAsset? {
+            val obj = json.asObjectOrNull() ?: return null
+            val id = obj.long("id") ?: return null
+            val name = obj.string("name") ?: return null
+            // `url` is the REST endpoint that returns the binary for an
+            // application/octet-stream request; `browser_download_url` is a plain
+            // public link that does not carry a token and is unusable for private
+            // repositories, so the API URL is the one stored.
+            val apiUrl = obj.string("url") ?: return null
+            return GitHubReleaseAsset(
+                id = id,
+                name = name,
+                sizeInBytes = obj.long("size") ?: 0L,
+                contentType = obj.string("content_type"),
+                apiDownloadUrl = apiUrl,
+                state = obj.string("state")
+            )
+        }
+
+        fun parseRelease(json: JsonElement): GitHubRelease? {
+            val obj = json.asObjectOrNull() ?: return null
+            val id = obj.long("id") ?: return null
+            val tag = obj.string("tag_name") ?: return null
+            val assets = obj.arr("assets")?.mapNotNull { element ->
+                element.asObjectOrNull()?.let { parseReleaseAsset(it) }
+            }.orEmpty()
+            return GitHubRelease(
+                id = id,
+                tagName = tag,
+                name = obj.string("name"),
+                draft = obj.bool("draft") ?: false,
+                prerelease = obj.bool("prerelease") ?: false,
+                publishedAt = obj.string("published_at"),
+                htmlUrl = obj.string("html_url"),
+                assets = assets
             )
         }
 

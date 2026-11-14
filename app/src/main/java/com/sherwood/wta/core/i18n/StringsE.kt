@@ -18347,6 +18347,333 @@ object StringsE {
         AppLanguage.KOREAN -> "작업"
     }
 
+    // Studio: branch build, releases and artifact export
+
+    val studioImportedBranches: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已导入的分支"
+        AppLanguage.ENGLISH -> "Imported branches"
+        AppLanguage.ARABIC -> "الفروع المستوردة"
+        AppLanguage.PORTUGUESE -> "Branches importadas"
+        AppLanguage.SPANISH -> "Ramas importadas"
+        AppLanguage.FRENCH -> "Branches importées"
+        AppLanguage.GERMAN -> "Importierte Branches"
+        AppLanguage.RUSSIAN -> "Импортированные ветки"
+        AppLanguage.JAPANESE -> "インポート済みブランチ"
+        AppLanguage.KOREAN -> "가져온 브랜치"
+    }
+
+    val studioImportedBranchesEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此仓库没有已导入的分支。请先在“仓库”中导入。"
+        AppLanguage.ENGLISH -> "No imported branch for this repository. Import it from Repositories first."
+        AppLanguage.ARABIC -> "لا يوجد فرع مستورد لهذا المستودع. استورده من المستودعات أولاً."
+        AppLanguage.PORTUGUESE -> "Nenhuma branch importada deste repositório. Importe em Repositórios primeiro."
+        AppLanguage.SPANISH -> "No hay ninguna rama importada de este repositorio. Impórtala desde Repositorios primero."
+        AppLanguage.FRENCH -> "Aucune branche importée pour ce dépôt. Importez-la depuis Dépôts d'abord."
+        AppLanguage.GERMAN -> "Kein importierter Branch für dieses Repository. Importiere ihn zuerst unter Repositories."
+        AppLanguage.RUSSIAN -> "Для этого репозитория нет импортированной ветки. Сначала импортируйте её в разделе «Репозитории»."
+        AppLanguage.JAPANESE -> "このリポジトリにインポート済みのブランチはありません。先に「リポジトリ」からインポートしてください。"
+        AppLanguage.KOREAN -> "이 저장소에 가져온 브랜치가 없습니다. 먼저 리포지토리에서 가져오세요."
+    }
+
+    val studioBuildThisBranch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建此分支"
+        AppLanguage.ENGLISH -> "Build this branch"
+        AppLanguage.ARABIC -> "بناء هذا الفرع"
+        AppLanguage.PORTUGUESE -> "Compilar esta branch"
+        AppLanguage.SPANISH -> "Compilar esta rama"
+        AppLanguage.FRENCH -> "Compiler cette branche"
+        AppLanguage.GERMAN -> "Diesen Branch bauen"
+        AppLanguage.RUSSIAN -> "Собрать эту ветку"
+        AppLanguage.JAPANESE -> "このブランチをビルド"
+        AppLanguage.KOREAN -> "이 브랜치 빌드"
+    }
+
+    val studioBuildWorkflow: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "要运行的工作流"
+        AppLanguage.ENGLISH -> "Workflow to run"
+        AppLanguage.ARABIC -> "سير العمل المراد تشغيله"
+        AppLanguage.PORTUGUESE -> "Workflow a executar"
+        AppLanguage.SPANISH -> "Flujo a ejecutar"
+        AppLanguage.FRENCH -> "Workflow à lancer"
+        AppLanguage.GERMAN -> "Auszuführender Workflow"
+        AppLanguage.RUSSIAN -> "Запускаемый workflow"
+        AppLanguage.JAPANESE -> "実行するワークフロー"
+        AppLanguage.KOREAN -> "실행할 워크플로"
+    }
+
+    val studioBuildPhaseDispatching: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在启动工作流…"
+        AppLanguage.ENGLISH -> "Starting the workflow…"
+        AppLanguage.ARABIC -> "جارٍ بدء سير العمل…"
+        AppLanguage.PORTUGUESE -> "Iniciando o workflow…"
+        AppLanguage.SPANISH -> "Iniciando el flujo…"
+        AppLanguage.FRENCH -> "Démarrage du workflow…"
+        AppLanguage.GERMAN -> "Workflow wird gestartet…"
+        AppLanguage.RUSSIAN -> "Запуск workflow…"
+        AppLanguage.JAPANESE -> "ワークフローを開始しています…"
+        AppLanguage.KOREAN -> "워크플로를 시작하는 중…"
+    }
+
+    val studioBuildPhaseWaiting: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在等待运行开始…"
+        AppLanguage.ENGLISH -> "Waiting for the run to start…"
+        AppLanguage.ARABIC -> "في انتظار بدء التشغيل…"
+        AppLanguage.PORTUGUESE -> "Aguardando o início da execução…"
+        AppLanguage.SPANISH -> "Esperando a que empiece la ejecución…"
+        AppLanguage.FRENCH -> "En attente du démarrage de l'exécution…"
+        AppLanguage.GERMAN -> "Warte auf den Start des Laufs…"
+        AppLanguage.RUSSIAN -> "Ожидание запуска…"
+        AppLanguage.JAPANESE -> "実行の開始を待っています…"
+        AppLanguage.KOREAN -> "실행 시작을 기다리는 중…"
+    }
+
+    val studioBuildPhaseRunning: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在构建…"
+        AppLanguage.ENGLISH -> "Building…"
+        AppLanguage.ARABIC -> "جارٍ البناء…"
+        AppLanguage.PORTUGUESE -> "Compilando…"
+        AppLanguage.SPANISH -> "Compilando…"
+        AppLanguage.FRENCH -> "Compilation…"
+        AppLanguage.GERMAN -> "Wird gebaut…"
+        AppLanguage.RUSSIAN -> "Идёт сборка…"
+        AppLanguage.JAPANESE -> "ビルド中…"
+        AppLanguage.KOREAN -> "빌드 중…"
+    }
+
+    val studioBuildPhaseDownloading: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在下载产物到保险库…"
+        AppLanguage.ENGLISH -> "Downloading artifacts to the vault…"
+        AppLanguage.ARABIC -> "جارٍ تنزيل المنتجات إلى الخزنة…"
+        AppLanguage.PORTUGUESE -> "Baixando artefatos para o cofre…"
+        AppLanguage.SPANISH -> "Descargando artefactos a la bóveda…"
+        AppLanguage.FRENCH -> "Téléchargement des artefacts dans le coffre…"
+        AppLanguage.GERMAN -> "Artefakte werden in den Tresor geladen…"
+        AppLanguage.RUSSIAN -> "Загрузка артефактов в хранилище…"
+        AppLanguage.JAPANESE -> "成果物を保管庫にダウンロード中…"
+        AppLanguage.KOREAN -> "아티팩트를 보관함으로 다운로드하는 중…"
+    }
+
+    val studioBuildPhaseFinished: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已完成"
+        AppLanguage.ENGLISH -> "Finished"
+        AppLanguage.ARABIC -> "انتهى"
+        AppLanguage.PORTUGUESE -> "Concluído"
+        AppLanguage.SPANISH -> "Finalizado"
+        AppLanguage.FRENCH -> "Terminé"
+        AppLanguage.GERMAN -> "Abgeschlossen"
+        AppLanguage.RUSSIAN -> "Завершено"
+        AppLanguage.JAPANESE -> "完了"
+        AppLanguage.KOREAN -> "완료"
+    }
+
+    fun studioBuildFailed(conclusion: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "工作流结束，结果：${conclusion}"
+        AppLanguage.ENGLISH -> "The workflow finished with: ${conclusion}"
+        AppLanguage.ARABIC -> "انتهى سير العمل بالنتيجة: ${conclusion}"
+        AppLanguage.PORTUGUESE -> "O workflow terminou com: ${conclusion}"
+        AppLanguage.SPANISH -> "El flujo terminó con: ${conclusion}"
+        AppLanguage.FRENCH -> "Le workflow s'est terminé avec : ${conclusion}"
+        AppLanguage.GERMAN -> "Der Workflow endete mit: ${conclusion}"
+        AppLanguage.RUSSIAN -> "Workflow завершился с результатом: ${conclusion}"
+        AppLanguage.JAPANESE -> "ワークフローは次で終了しました: ${conclusion}"
+        AppLanguage.KOREAN -> "워크플로가 다음으로 종료되었습니다: ${conclusion}"
+    }
+
+    val studioBuildTimeout: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建未在限定时间内完成。它可能仍在 GitHub 上运行。"
+        AppLanguage.ENGLISH -> "The build did not finish in time. It may still be running on GitHub."
+        AppLanguage.ARABIC -> "لم ينتهِ البناء في الوقت المحدد. قد يكون لا يزال قيد التشغيل على GitHub."
+        AppLanguage.PORTUGUESE -> "A compilação não terminou a tempo. Ela pode continuar em execução no GitHub."
+        AppLanguage.SPANISH -> "La compilación no terminó a tiempo. Puede seguir ejecutándose en GitHub."
+        AppLanguage.FRENCH -> "La compilation ne s'est pas terminée à temps. Elle est peut-être toujours en cours sur GitHub."
+        AppLanguage.GERMAN -> "Der Build wurde nicht rechtzeitig fertig. Er läuft möglicherweise noch auf GitHub."
+        AppLanguage.RUSSIAN -> "Сборка не завершилась вовремя. Возможно, она всё ещё выполняется на GitHub."
+        AppLanguage.JAPANESE -> "ビルドが時間内に終わりませんでした。GitHub 上でまだ実行中の可能性があります。"
+        AppLanguage.KOREAN -> "빌드가 제시간에 끝나지 않았습니다. GitHub에서 아직 실행 중일 수 있습니다."
+    }
+
+    fun studioBuildArtifactsFailed(detail: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建成功，但产物保存失败：${detail}"
+        AppLanguage.ENGLISH -> "The build succeeded, but its artifacts could not be saved: ${detail}"
+        AppLanguage.ARABIC -> "نجح البناء، لكن تعذر حفظ المنتجات: ${detail}"
+        AppLanguage.PORTUGUESE -> "A compilação foi bem-sucedida, mas não foi possível salvar os artefatos: ${detail}"
+        AppLanguage.SPANISH -> "La compilación se completó, pero no se pudieron guardar los artefactos: ${detail}"
+        AppLanguage.FRENCH -> "La compilation a réussi, mais les artefacts n'ont pas pu être enregistrés : ${detail}"
+        AppLanguage.GERMAN -> "Der Build war erfolgreich, aber die Artefakte konnten nicht gespeichert werden: ${detail}"
+        AppLanguage.RUSSIAN -> "Сборка прошла успешно, но артефакты не удалось сохранить: ${detail}"
+        AppLanguage.JAPANESE -> "ビルドは成功しましたが、成果物を保存できませんでした: ${detail}"
+        AppLanguage.KOREAN -> "빌드는 성공했지만 아티팩트를 저장하지 못했습니다: ${detail}"
+    }
+
+    val studioReleases: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "发布"
+        AppLanguage.ENGLISH -> "Releases"
+        AppLanguage.ARABIC -> "الإصدارات"
+        AppLanguage.PORTUGUESE -> "Releases"
+        AppLanguage.SPANISH -> "Lanzamientos"
+        AppLanguage.FRENCH -> "Versions"
+        AppLanguage.GERMAN -> "Releases"
+        AppLanguage.RUSSIAN -> "Релизы"
+        AppLanguage.JAPANESE -> "リリース"
+        AppLanguage.KOREAN -> "릴리스"
+    }
+
+    val studioNoReleases: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此仓库没有发布。"
+        AppLanguage.ENGLISH -> "No releases in this repository."
+        AppLanguage.ARABIC -> "لا توجد إصدارات في هذا المستودع."
+        AppLanguage.PORTUGUESE -> "Nenhum release neste repositório."
+        AppLanguage.SPANISH -> "No hay lanzamientos en este repositorio."
+        AppLanguage.FRENCH -> "Aucune version dans ce dépôt."
+        AppLanguage.GERMAN -> "Keine Releases in diesem Repository."
+        AppLanguage.RUSSIAN -> "В этом репозитории нет релизов."
+        AppLanguage.JAPANESE -> "このリポジトリにはリリースがありません。"
+        AppLanguage.KOREAN -> "이 저장소에 릴리스가 없습니다."
+    }
+
+    val studioReleaseNoAssets: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此发布没有 APK 或 AAB 资源。"
+        AppLanguage.ENGLISH -> "No APK or AAB assets in this release."
+        AppLanguage.ARABIC -> "لا توجد أصول APK أو AAB في هذا الإصدار."
+        AppLanguage.PORTUGUESE -> "Nenhum asset APK ou AAB neste release."
+        AppLanguage.SPANISH -> "No hay recursos APK ni AAB en este lanzamiento."
+        AppLanguage.FRENCH -> "Aucun fichier APK ou AAB dans cette version."
+        AppLanguage.GERMAN -> "Keine APK- oder AAB-Assets in diesem Release."
+        AppLanguage.RUSSIAN -> "В этом релизе нет APK- или AAB-файлов."
+        AppLanguage.JAPANESE -> "このリリースには APK も AAB もありません。"
+        AppLanguage.KOREAN -> "이 릴리스에는 APK나 AAB 자산이 없습니다."
+    }
+
+    val studioReleaseDraft: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "草稿"
+        AppLanguage.ENGLISH -> "Draft"
+        AppLanguage.ARABIC -> "مسودة"
+        AppLanguage.PORTUGUESE -> "Rascunho"
+        AppLanguage.SPANISH -> "Borrador"
+        AppLanguage.FRENCH -> "Brouillon"
+        AppLanguage.GERMAN -> "Entwurf"
+        AppLanguage.RUSSIAN -> "Черновик"
+        AppLanguage.JAPANESE -> "下書き"
+        AppLanguage.KOREAN -> "초안"
+    }
+
+    val studioReleasePrerelease: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "预发布"
+        AppLanguage.ENGLISH -> "Pre-release"
+        AppLanguage.ARABIC -> "إصدار أولي"
+        AppLanguage.PORTUGUESE -> "Pré-lançamento"
+        AppLanguage.SPANISH -> "Prelanzamiento"
+        AppLanguage.FRENCH -> "Pré-version"
+        AppLanguage.GERMAN -> "Vorabversion"
+        AppLanguage.RUSSIAN -> "Предрелиз"
+        AppLanguage.JAPANESE -> "プレリリース"
+        AppLanguage.KOREAN -> "사전 릴리스"
+    }
+
+    fun studioReleaseTag(tag: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "发布 ${tag}"
+        AppLanguage.ENGLISH -> "Release ${tag}"
+        AppLanguage.ARABIC -> "الإصدار ${tag}"
+        AppLanguage.PORTUGUESE -> "Release ${tag}"
+        AppLanguage.SPANISH -> "Lanzamiento ${tag}"
+        AppLanguage.FRENCH -> "Version ${tag}"
+        AppLanguage.GERMAN -> "Release ${tag}"
+        AppLanguage.RUSSIAN -> "Релиз ${tag}"
+        AppLanguage.JAPANESE -> "リリース ${tag}"
+        AppLanguage.KOREAN -> "릴리스 ${tag}"
+    }
+
+    val studioExport: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "导出"
+        AppLanguage.ENGLISH -> "Export"
+        AppLanguage.ARABIC -> "تصدير"
+        AppLanguage.PORTUGUESE -> "Exportar"
+        AppLanguage.SPANISH -> "Exportar"
+        AppLanguage.FRENCH -> "Exporter"
+        AppLanguage.GERMAN -> "Exportieren"
+        AppLanguage.RUSSIAN -> "Экспорт"
+        AppLanguage.JAPANESE -> "エクスポート"
+        AppLanguage.KOREAN -> "내보내기"
+    }
+
+    val studioExportShare: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "分享"
+        AppLanguage.ENGLISH -> "Share"
+        AppLanguage.ARABIC -> "مشاركة"
+        AppLanguage.PORTUGUESE -> "Compartilhar"
+        AppLanguage.SPANISH -> "Compartir"
+        AppLanguage.FRENCH -> "Partager"
+        AppLanguage.GERMAN -> "Teilen"
+        AppLanguage.RUSSIAN -> "Поделиться"
+        AppLanguage.JAPANESE -> "共有"
+        AppLanguage.KOREAN -> "공유"
+    }
+
+    val studioExportSave: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "保存到下载目录"
+        AppLanguage.ENGLISH -> "Save to Downloads"
+        AppLanguage.ARABIC -> "حفظ في التنزيلات"
+        AppLanguage.PORTUGUESE -> "Salvar em Downloads"
+        AppLanguage.SPANISH -> "Guardar en Descargas"
+        AppLanguage.FRENCH -> "Enregistrer dans Téléchargements"
+        AppLanguage.GERMAN -> "In Downloads speichern"
+        AppLanguage.RUSSIAN -> "Сохранить в «Загрузки»"
+        AppLanguage.JAPANESE -> "ダウンロードに保存"
+        AppLanguage.KOREAN -> "다운로드에 저장"
+    }
+
+    val studioExportHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "APK 可安装到此设备；AAB 用于 Google Play 管理中心。"
+        AppLanguage.ENGLISH -> "APKs install on this device; AABs are for Google Play Console."
+        AppLanguage.ARABIC -> "ملفات APK تُثبَّت على هذا الجهاز؛ أما AAB فمخصصة لـ Google Play Console."
+        AppLanguage.PORTUGUESE -> "APKs instalam neste dispositivo; AABs são para o Google Play Console."
+        AppLanguage.SPANISH -> "Los APK se instalan en este dispositivo; los AAB son para Google Play Console."
+        AppLanguage.FRENCH -> "Les APK s'installent sur cet appareil ; les AAB sont destinés à Google Play Console."
+        AppLanguage.GERMAN -> "APKs lassen sich auf diesem Gerät installieren; AABs sind für die Google Play Console."
+        AppLanguage.RUSSIAN -> "APK устанавливаются на это устройство; AAB предназначены для Google Play Console."
+        AppLanguage.JAPANESE -> "APK はこの端末にインストールできます。AAB は Google Play Console 用です。"
+        AppLanguage.KOREAN -> "APK는 이 기기에 설치할 수 있고, AAB는 Google Play Console용입니다."
+    }
+
+    fun studioExportSaved(name: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已保存：${name}"
+        AppLanguage.ENGLISH -> "Saved: ${name}"
+        AppLanguage.ARABIC -> "تم الحفظ: ${name}"
+        AppLanguage.PORTUGUESE -> "Salvo: ${name}"
+        AppLanguage.SPANISH -> "Guardado: ${name}"
+        AppLanguage.FRENCH -> "Enregistré : ${name}"
+        AppLanguage.GERMAN -> "Gespeichert: ${name}"
+        AppLanguage.RUSSIAN -> "Сохранено: ${name}"
+        AppLanguage.JAPANESE -> "保存しました: ${name}"
+        AppLanguage.KOREAN -> "저장됨: ${name}"
+    }
+
+    val studioExportFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法保存文件"
+        AppLanguage.ENGLISH -> "Could not save the file"
+        AppLanguage.ARABIC -> "تعذر حفظ الملف"
+        AppLanguage.PORTUGUESE -> "Não foi possível salvar o arquivo"
+        AppLanguage.SPANISH -> "No se pudo guardar el archivo"
+        AppLanguage.FRENCH -> "Impossible d'enregistrer le fichier"
+        AppLanguage.GERMAN -> "Datei konnte nicht gespeichert werden"
+        AppLanguage.RUSSIAN -> "Не удалось сохранить файл"
+        AppLanguage.JAPANESE -> "ファイルを保存できませんでした"
+        AppLanguage.KOREAN -> "파일을 저장할 수 없습니다"
+    }
+
+    val studioExportShareFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法分享文件"
+        AppLanguage.ENGLISH -> "Could not share the file"
+        AppLanguage.ARABIC -> "تعذر مشاركة الملف"
+        AppLanguage.PORTUGUESE -> "Não foi possível compartilhar o arquivo"
+        AppLanguage.SPANISH -> "No se pudo compartir el archivo"
+        AppLanguage.FRENCH -> "Impossible de partager le fichier"
+        AppLanguage.GERMAN -> "Datei konnte nicht geteilt werden"
+        AppLanguage.RUSSIAN -> "Не удалось поделиться файлом"
+        AppLanguage.JAPANESE -> "ファイルを共有できませんでした"
+        AppLanguage.KOREAN -> "파일을 공유할 수 없습니다"
+    }
+
     val studioVaultEmpty: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "保险库为空。从构建中下载一个产物。"
         AppLanguage.ENGLISH -> "The vault is empty. Download an artifact from a build."

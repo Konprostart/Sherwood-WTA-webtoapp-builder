@@ -19,9 +19,10 @@ Everything still ships as **one APK**. Studio is not a second app.
 | Workspace inbox | `StudioInboxTab` | Watched repositories, open pull requests, branches; per-PR details, changed files, CI check state, a review-comment box and a per-file line comment composer. Commentable line numbers are read from the diff hunk headers (`GitHubApiClient.commentableNewLines`), so only new-side lines GitHub accepts are offered; binary/large files without a `patch` fall back to manual entry. |
 | Pull requests | `GitHubApiClient.createPullRequest` | Open a PR from a branch (title, description, base, draft). Errors come from GitHub's own message. Review submission is `COMMENT` / `REQUEST_CHANGES` only — the app never approves or merges on its own. |
 | Inspector | `ArtifactInspector` + `StudioInspectorTab` | Integrity, signature, package identity and provenance for a vault artifact, each reported separately. |
-| Build Studio | `BuildStudio` | Workflow list, dispatch, run status, jobs, logs, artifacts. |
-| Artifact vault | `ArtifactVault` | APK/AAB files with SHA-256, version, source commit, run id, signature. |
+| Build Studio | `BuildStudio` | Workflow list, dispatch, run status, jobs, logs, artifacts, **build this branch** (dispatch → wait → import) and **releases** as an artifact source. |
+| Artifact vault | `ArtifactVault` | APK/AAB files with SHA-256, version, source commit, release tag, run id, signature. |
 | Signing Studio | `SigningStudio` + `ProjectSigningIdentity` | Signs vault APKs (apksig) and AABs with the **project's own** identity for the artifact's package. Imported keystore or the existing per-package key; a missing key must be created on purpose. |
+| Export | `ArtifactExport` | Share a vault file as a `FileProvider` content URI, or copy it into a document the user picks in the system picker (`Save to Downloads`). AABs are Play upload bundles, APKs are installable. |
 | Install | `ArtifactInstaller` | System installer via FileProvider with a read grant. |
 | Workspace link | `WorkspaceBridgeService` | Commits `.sherwood/workspace.json`; external tools read it over raw content. No Sherwood server. |
 | Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubImportRepository` / `GitHubOpenPullRequest` | The in-app agent can read the connection, copy a repository into its own session folder, and send the edited files back as a new branch plus a pull request with a fresh approval tap. It never merges — see [Agent access](#agent-access). |
@@ -88,6 +89,51 @@ without a local `.git`.
 
 Building itself always happens in the repository's own workflows — the app never
 calls an author-owned build server.
+
+### Build this branch
+
+`BuildStudio.buildBranch` closes the loop for a working copy the Studio already
+imported: dispatch the selected workflow on the imported branch, wait for the run,
+then import its artifacts. Because `workflow_dispatch` answers 204 with no run id,
+the run is identified as *a run that did not exist before the dispatch and belongs
+to the dispatched workflow* (`selectDispatchedRun`); nothing else is accepted, so a
+concurrent run started by somebody else cannot be mistaken for ours.
+
+Artifacts are imported only when the run concluded `success`:
+
+- a failed run may still upload a partial bundle, and giving that the same vault
+  provenance as a real build would be misleading;
+- the failed run itself is returned, so the UI can name the conclusion and link to
+  the run page.
+
+Polling is bounded (45 min default) and cancelling the dialog stops the polling,
+not the run: the job keeps going on GitHub and can be reopened from Runs.
+
+### Releases as a source
+
+Not every repository uploads artifacts — many publish the same files as **release
+assets** (`gh release upload`, which is what this repository's `release.yml`
+does). `BuildStudio.releases` lists them and `downloadReleaseAsset` imports the
+`.apk`/`.aab` assets into the vault with the tag recorded as `releaseTag`.
+
+The API URL (`/releases/assets/{id}`) is stored rather than the browser URL,
+because only the API URL can be authenticated for a private repository, and it is
+downloaded with an `application/octet-stream` Accept header — the default JSON
+Accept returns metadata instead of the binary.
+
+## Exporting from the vault
+
+`ArtifactExport` is the only way a vault file leaves the app:
+
+- **Share** — `ACTION_SEND` with a `FileProvider` content URI and a read grant. The
+  file never gets a world-readable path.
+- **Save to Downloads** — the bytes are streamed into the document the user picked
+  with `ActivityResultContracts.CreateDocument`, so an AAB can be uploaded to the
+  Play Console from the phone and an APK can be installed by tapping it in Files.
+
+The saved name is the artifact's real name (`ArtifactExport.exportName` strips the
+vault's `-<id>` suffix), and the picker's MIME type is per kind — an APK is saved as
+`application/vnd.android.package-archive` so Android still offers to install it.
 
 ## Workspace contract
 
@@ -176,6 +222,9 @@ from Studio's own screens, where the user taps them.
   refusals for base/protected/unprefixed names, the session copy (metadata,
   `.git`, `.changes`, symlink escape), registration as a write tool, and the
   approval gate (a remembered "Always allow" never applies to a push).
+- `StudioBuildSourcesTest` — release and release-asset parsing (the API download
+  URL is required, non-`uploaded` assets are refused), the dispatched-run
+  selection rule, and the vault export name / MIME type.
 
 Artifact signing, keystore import and installation need a device; they are
 exercised manually, not in unit tests.

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.sherwood.wta.core.i18n.Strings
+import com.sherwood.wta.core.studio.ArtifactExport
 import com.sherwood.wta.core.studio.ArtifactInstaller
 import com.sherwood.wta.core.studio.ArtifactKind
 import com.sherwood.wta.core.studio.ArtifactVault
@@ -47,6 +50,7 @@ import com.sherwood.wta.ui.design.WtaSectionDivider
 import com.sherwood.wta.ui.design.WtaSettingCard
 import com.sherwood.wta.ui.design.WtaSettingRow
 import com.sherwood.wta.ui.design.WtaSpacing
+import com.sherwood.wta.ui.theme.LocalShowDescriptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,9 +67,49 @@ internal fun StudioVaultTab(context: Context, snackbarHostState: SnackbarHostSta
     var busy by remember { mutableStateOf(false) }
     var pendingSign by remember { mutableStateOf<PendingSign?>(null) }
     var importingFor by remember { mutableStateOf<String?>(null) }
+    var exporting by remember { mutableStateOf<VaultArtifact?>(null) }
+    var savingArtifact by remember { mutableStateOf<VaultArtifact?>(null) }
 
     fun reload() {
         artifacts = vault.list()
+    }
+
+    /**
+     * Copies the pending artifact into the document the user picked. [savingArtifact]
+     * is set immediately before the picker is launched, because the launcher callback
+     * runs after the dialog closed and the selection is no longer in state.
+     */
+    fun finishExport(uri: Uri?) {
+        val artifact = savingArtifact
+        savingArtifact = null
+        if (artifact == null || uri == null) return
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                ArtifactExport.copyTo(context, vault.fileFor(artifact), uri)
+            }
+            result
+                .onSuccess {
+                    snackbarHostState.showSnackbar(
+                        Strings.studioExportSaved(ArtifactExport.exportName(artifact))
+                    )
+                }
+                .onFailure {
+                    snackbarHostState.showSnackbar(Strings.studioExportFailed)
+                }
+        }
+    }
+
+    val saveApk = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ArtifactExport.APK_MIME)
+    ) { uri -> finishExport(uri) }
+    val saveBundle = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ArtifactExport.BUNDLE_MIME)
+    ) { uri -> finishExport(uri) }
+
+    fun launchSave(artifact: VaultArtifact) {
+        savingArtifact = artifact
+        val name = ArtifactExport.exportName(artifact)
+        if (artifact.kindEnum == ArtifactKind.APK) saveApk.launch(name) else saveBundle.launch(name)
     }
 
     LaunchedEffect(Unit) { reload() }
@@ -172,6 +216,10 @@ internal fun StudioVaultTab(context: Context, snackbarHostState: SnackbarHostSta
                         subtitle = artifact.runNumber?.let { Strings.studioRunNumber(it) }
                     )
                 }
+                artifact.releaseTag?.let { tag ->
+                    WtaSectionDivider()
+                    WtaSettingRow(title = Strings.studioReleaseTag(tag))
+                }
                 artifact.signedFromSha256?.let { from ->
                     WtaSectionDivider()
                     WtaSettingRow(title = Strings.studioSignedFrom(from.take(12)))
@@ -187,6 +235,7 @@ internal fun StudioVaultTab(context: Context, snackbarHostState: SnackbarHostSta
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
                         .padding(horizontal = WtaSpacing.RowHorizontal, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -229,6 +278,12 @@ internal fun StudioVaultTab(context: Context, snackbarHostState: SnackbarHostSta
                             }
                         )
                     }
+                    WtaButton(
+                        text = Strings.studioExport,
+                        size = WtaButtonSize.Small,
+                        variant = WtaButtonVariant.Outlined,
+                        onClick = { exporting = artifact }
+                    )
                     WtaButton(
                         text = Strings.delete,
                         size = WtaButtonSize.Small,
@@ -287,6 +342,60 @@ internal fun StudioVaultTab(context: Context, snackbarHostState: SnackbarHostSta
             },
             onError = { message ->
                 scope.launch { snackbarHostState.showSnackbar(message) }
+            }
+        )
+    }
+
+    val exportTarget = exporting
+    if (exportTarget != null) {
+        val file = vault.fileFor(exportTarget)
+        AlertDialog(
+            onDismissRequest = { exporting = null },
+            title = { Text(Strings.studioExport) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = ArtifactExport.exportName(exportTarget),
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = Strings.studioFileSizeKb(exportTarget.sizeBytes / 1024),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (LocalShowDescriptions.current) {
+                        Text(
+                            text = Strings.studioExportHint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        exporting = null
+                        launchSave(exportTarget)
+                    }
+                ) { Text(Strings.studioExportSave) }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(
+                        onClick = {
+                            exporting = null
+                            ArtifactExport.share(context, exportTarget, file)
+                                .onFailure {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            Strings.studioExportShareFailed
+                                        )
+                                    }
+                                }
+                        }
+                    ) { Text(Strings.studioExportShare) }
+                    TextButton(onClick = { exporting = null }) { Text(Strings.cancel) }
+                }
             }
         )
     }

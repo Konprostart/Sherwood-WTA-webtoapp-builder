@@ -5401,6 +5401,33 @@ object Strings {
     fun studioArtifactsSaved(count: Int): String = StringsE.studioArtifactsSaved(count)
     val studioNoArtifacts: String get() = StringsE.studioNoArtifacts
     val studioJobs: String get() = StringsE.studioJobs
+
+    // Studio: branch build, releases and artifact export
+    val studioImportedBranches: String get() = StringsE.studioImportedBranches
+    val studioImportedBranchesEmpty: String get() = StringsE.studioImportedBranchesEmpty
+    val studioBuildThisBranch: String get() = StringsE.studioBuildThisBranch
+    val studioBuildWorkflow: String get() = StringsE.studioBuildWorkflow
+    val studioBuildPhaseDispatching: String get() = StringsE.studioBuildPhaseDispatching
+    val studioBuildPhaseWaiting: String get() = StringsE.studioBuildPhaseWaiting
+    val studioBuildPhaseRunning: String get() = StringsE.studioBuildPhaseRunning
+    val studioBuildPhaseDownloading: String get() = StringsE.studioBuildPhaseDownloading
+    val studioBuildPhaseFinished: String get() = StringsE.studioBuildPhaseFinished
+    fun studioBuildFailed(conclusion: String): String = StringsE.studioBuildFailed(conclusion)
+    val studioBuildTimeout: String get() = StringsE.studioBuildTimeout
+    fun studioBuildArtifactsFailed(detail: String): String = StringsE.studioBuildArtifactsFailed(detail)
+    val studioReleases: String get() = StringsE.studioReleases
+    val studioNoReleases: String get() = StringsE.studioNoReleases
+    val studioReleaseNoAssets: String get() = StringsE.studioReleaseNoAssets
+    val studioReleaseDraft: String get() = StringsE.studioReleaseDraft
+    val studioReleasePrerelease: String get() = StringsE.studioReleasePrerelease
+    fun studioReleaseTag(tag: String): String = StringsE.studioReleaseTag(tag)
+    val studioExport: String get() = StringsE.studioExport
+    val studioExportShare: String get() = StringsE.studioExportShare
+    val studioExportSave: String get() = StringsE.studioExportSave
+    val studioExportHint: String get() = StringsE.studioExportHint
+    fun studioExportSaved(name: String): String = StringsE.studioExportSaved(name)
+    val studioExportFailed: String get() = StringsE.studioExportFailed
+    val studioExportShareFailed: String get() = StringsE.studioExportShareFailed
     val studioVaultEmpty: String get() = StringsE.studioVaultEmpty
     val studioVerify: String get() = StringsE.studioVerify
     val studioVerified: String get() = StringsE.studioVerified

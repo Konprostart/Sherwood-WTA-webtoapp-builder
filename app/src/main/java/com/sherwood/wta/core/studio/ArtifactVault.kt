@@ -24,7 +24,9 @@ data class ArtifactSource(
     val commitSha: String? = null,
     val workflowName: String? = null,
     val runId: Long? = null,
-    val runNumber: Int? = null
+    val runNumber: Int? = null,
+    /** Set when the file came from a published release instead of an Actions artifact. */
+    val releaseTag: String? = null
 ) {
     val display: String
         get() {
@@ -49,6 +51,7 @@ data class VaultArtifact(
     val workflowName: String? = null,
     val runId: Long? = null,
     val runNumber: Int? = null,
+    val releaseTag: String? = null,
     val packageName: String? = null,
     val versionName: String? = null,
     val versionCode: Int? = null,
@@ -165,6 +168,7 @@ class ArtifactVault private constructor(private val context: Context) {
                 workflowName = artifactSource.workflowName,
                 runId = artifactSource.runId,
                 runNumber = artifactSource.runNumber,
+                releaseTag = artifactSource.releaseTag,
                 packageName = packageInfo?.packageName,
                 versionName = packageInfo?.versionName,
                 versionCode = packageInfo?.versionCode,
