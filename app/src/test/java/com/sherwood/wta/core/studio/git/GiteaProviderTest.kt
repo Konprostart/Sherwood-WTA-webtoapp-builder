@@ -332,7 +332,10 @@ class GiteaProviderTest {
         val provider = GiteaProvider(
             id = GitProviderId.GITEA,
             baseUrl = server.url("/").toString().trimEnd('/'),
-            tokenProvider = { TOKEN }
+            tokenProvider = { TOKEN },
+            httpClient = OkHttpClient(),
+            // MockWebServer speaks plain HTTP on localhost; production keeps HTTPS.
+            urlGuard = {}
         )
         val ref = GitRepoRef.parse("o/r")!!
 
@@ -364,7 +367,10 @@ class GiteaProviderTest {
         val provider = GiteaProvider(
             id = GitProviderId.GITEA,
             baseUrl = server.url("/").toString().trimEnd('/'),
-            tokenProvider = { TOKEN }
+            tokenProvider = { TOKEN },
+            httpClient = OkHttpClient(),
+            // MockWebServer speaks plain HTTP on localhost; production keeps HTTPS.
+            urlGuard = {}
         )
         val info = provider.serverInfo() as GitResult.Success<GitServerInfo>
 
@@ -381,7 +387,10 @@ class GiteaProviderTest {
         val provider = GiteaProvider(
             id = GitProviderId.FORGEJO,
             baseUrl = server.url("/").toString().trimEnd('/'),
-            tokenProvider = { TOKEN }
+            tokenProvider = { TOKEN },
+            httpClient = OkHttpClient(),
+            // MockWebServer speaks plain HTTP on localhost; production keeps HTTPS.
+            urlGuard = {}
         )
         val info = provider.serverInfo() as GitResult.Success<GitServerInfo>
 

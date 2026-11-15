@@ -22,7 +22,7 @@ data class RepoBridgeMetadata(
     @SerializedName("schemaVersion")
     val schemaVersion: Int = SCHEMA_VERSION,
     @SerializedName("provider")
-    val provider: String = PROVIDER_GITHUB,
+    val provider: String? = null,
     @SerializedName("host")
     val host: String,
     @SerializedName("owner")
@@ -46,10 +46,18 @@ data class RepoBridgeMetadata(
     val importedAtEpochMs: Long = System.currentTimeMillis()
 ) {
 
-    /** The platform this copy belongs to. An unknown value is rejected by [isValid]. */
+    /**
+     * The platform this copy belongs to. A record without the field predates
+     * multi-provider support, so it can only be GitHub; an unknown value is rejected by
+     * [isValid] rather than silently read as GitHub.
+     */
     val providerId: GitProviderId
-        get() = GitProviderId.entries.firstOrNull { it.storageId == provider }
+        get() = GitProviderId.entries.firstOrNull { it.storageId == resolvedProvider }
             ?: GitProviderId.GITHUB
+
+    /** The stored provider, or GitHub for a schema-1 record. */
+    val resolvedProvider: String
+        get() = provider ?: PROVIDER_GITHUB
 
     /** Web base URL of the server, used to rebuild the provider for this copy. */
     val serverUrl: String
@@ -58,7 +66,7 @@ data class RepoBridgeMetadata(
     fun isValid(): Boolean {
         // Schema 1 is still readable: it is migrated on open rather than rejected.
         if (schemaVersion != SCHEMA_VERSION && schemaVersion != LEGACY_SCHEMA_VERSION) return false
-        if (!PROVIDERS.contains(provider)) return false
+        if (!PROVIDERS.contains(resolvedProvider)) return false
         if (!HOST_RE.matches(host)) return false
         if (owner.isBlank() || repo.isBlank() || ref.isBlank()) return false
         if (owner.any { it.isWhitespace() } || repo.any { it.isWhitespace() }) return false
@@ -119,14 +127,15 @@ class RepoBridgeMetadataStore(private val gson: Gson = Gson()) {
         require(metadata.isValid()) { "Repository metadata is invalid" }
 
         // A legacy record is upgraded on write; a caller must never persist schema 1.
-        val current = if (metadata.schemaVersion == RepoBridgeMetadata.SCHEMA_VERSION) {
-            metadata
-        } else {
-            metadata.copy(
-                schemaVersion = RepoBridgeMetadata.SCHEMA_VERSION,
-                provider = RepoBridgeMetadata.PROVIDER_GITHUB
-            )
-        }
+        val current = metadata.copy(
+            // A legacy record is upgraded on write; a caller must never persist schema 1.
+            schemaVersion = RepoBridgeMetadata.SCHEMA_VERSION,
+            provider = if (metadata.schemaVersion == RepoBridgeMetadata.SCHEMA_VERSION) {
+                metadata.resolvedProvider
+            } else {
+                RepoBridgeMetadata.PROVIDER_GITHUB
+            }
+        )
 
         val target = metadataFile(projectDir)
         val temp = File(projectDir, "$FILE_NAME.tmp")
@@ -155,7 +164,7 @@ class RepoBridgeMetadataStore(private val gson: Gson = Gson()) {
         // Schema 1 predates multi-provider support, so it can only be GitHub.
         val upgraded = parsed.copy(
             schemaVersion = RepoBridgeMetadata.SCHEMA_VERSION,
-            provider = RepoBridgeMetadata.PROVIDER_GITHUB
+            provider = parsed.resolvedProvider
         )
         // Best effort: an unwritable directory still yields a usable in-memory record.
         runCatching { write(projectDir, upgraded) }

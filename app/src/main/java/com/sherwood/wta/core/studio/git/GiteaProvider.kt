@@ -1,6 +1,9 @@
 package com.sherwood.wta.core.studio.git
 
+import com.sherwood.wta.core.frontend.GitHubUrlPolicy
 import com.sherwood.wta.core.frontend.GitTokenProvider
+import com.sherwood.wta.core.network.NetworkModule
+import okhttp3.OkHttpClient
 import java.io.File
 
 /**
@@ -24,12 +27,19 @@ import java.io.File
 internal class GiteaProvider(
     override val id: GitProviderId,
     baseUrl: String,
-    tokenProvider: GitTokenProvider
+    tokenProvider: GitTokenProvider,
+    httpClient: OkHttpClient = NetworkModule.downloadClient,
+    urlGuard: (String) -> Unit = { GitHubUrlPolicy.requireHttps(it) }
 ) : GitProvider {
 
     override val baseUrl: String = baseUrl.trimEnd('/')
 
-    private val api = GiteaApiClient(baseUrl = this.baseUrl, tokenProvider = tokenProvider)
+    private val api = GiteaApiClient(
+        baseUrl = this.baseUrl,
+        tokenProvider = tokenProvider,
+        httpClient = httpClient,
+        urlGuard = urlGuard
+    )
 
     override val capabilities: GitCapabilities = CAPABILITIES
 
