@@ -1,7 +1,6 @@
 package com.sherwood.wta.core.studio
 
 import android.content.Context
-import com.sherwood.wta.core.frontend.GitHubRepoFetcher
 import com.sherwood.wta.core.frontend.RepoBridgeChangeSet
 import com.sherwood.wta.core.frontend.RepoBridgeCommitFailureKind
 import com.sherwood.wta.core.frontend.RepoBridgeCommitUseCase
@@ -21,6 +20,8 @@ import com.sherwood.wta.core.studio.git.GitProviderRegistry
 import com.sherwood.wta.core.studio.git.GitProviderUnavailableReason
 import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitResult
+import com.sherwood.wta.core.studio.git.RepoImportStorage
+import com.sherwood.wta.core.studio.git.RepoImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -81,55 +82,53 @@ data class FileDiff(
  * clean working copy first (no local changes that would be silently overwritten)
  * and both keep a backup until the copy completes.
  *
- * Import still runs through [GitHubRepoFetcher]: the working copy's on-disk provenance
- * (`repo_bridge.json`) is written by the importer, and generalising that — including the
- * provider field and its v1→v2 migration — is the next step, not this one. The branch
- * operations above already go through the provider interface.
+ * Import goes through [RepoImporter], which asks the working copy's provider for the
+ * source archive instead of knowing one host. The on-disk provenance
+ * (`repo_bridge.json`) records that provider and its host, so a copy imported from one
+ * server keeps using it after the active provider setting changes.
  */
 class WorkspaceService(private val context: Context) {
 
-    private val fetcher = GitHubRepoFetcher(context)
+    private val importer = RepoImporter(context)
     private val metadataStore = RepoBridgeMetadataStore()
 
     fun metadata(projectDir: File): RepoBridgeMetadata? = metadataStore.read(projectDir)
 
     /**
-     * Every imported working copy of [owner]/[repo]. The importer writes each copy to
-     * `filesDir/github_imports/<repo>_<timestamp>`, so scanning that one directory is
-     * enough and stays independent of the app database.
+     * Every imported working copy of [owner]/[repo]. Imports go to
+     * `filesDir/git_imports/<repo>_<timestamp>`; copies written by releases before
+     * multi-provider support stay in `github_imports` and are still found there.
      */
-    fun importedProjects(owner: String, repo: String): List<File> {
-        val root = File(context.filesDir, IMPORT_ROOT)
-        val children = root.listFiles() ?: return emptyList()
-        return children.filter { it.isDirectory }
-            .mapNotNull { dir ->
-                val metadata = metadataStore.read(dir) ?: return@mapNotNull null
-                if (metadata.owner.equals(owner, ignoreCase = true) &&
+    fun importedProjects(owner: String, repo: String): List<File> =
+        allImportedProjects()
+            .filter { (_, metadata) ->
+                metadata.owner.equals(owner, ignoreCase = true) &&
                     metadata.repo.equals(repo, ignoreCase = true)
-                ) {
-                    dir
-                } else {
-                    null
-                }
             }
-            .sortedByDescending { it.lastModified() }
-    }
+            .map { it.first }
 
-    fun allImportedProjects(): List<Pair<File, RepoBridgeMetadata>> {
-        val root = File(context.filesDir, IMPORT_ROOT)
-        return root.listFiles().orEmpty()
-            .filter { it.isDirectory }
+    fun allImportedProjects(): List<Pair<File, RepoBridgeMetadata>> =
+        RepoImportStorage.roots(context.filesDir)
+            .flatMap { root -> root.listFiles().orEmpty().filter { it.isDirectory } }
             .mapNotNull { dir -> metadataStore.read(dir)?.let { dir to it } }
             .sortedByDescending { it.first.lastModified() }
-    }
 
     suspend fun status(projectDir: File): Result<WorkspaceStatus> = withContext(Dispatchers.IO) {
-        metadataStore.read(projectDir)
+        val metadata = metadataStore.read(projectDir)
             ?: return@withContext Result.failure(
                 IllegalStateException("Project is not linked to a git host")
             )
+        // Diffing against the base commit needs the host's git-object API. A provider
+        // without a writer cannot serve that, and a GitHub writer pointed at a Gitea
+        // server would ask the wrong host — refuse instead of guessing.
+        val located = locateMetadata(metadata)
+        if (located is Located.Failure) return@withContext Result.failure(located.error)
+        val writer = (located as Located.Ok).provider.commitWriter()
+            ?: return@withContext Result.failure(
+                WorkspaceException.UnsupportedProvider(metadata.providerId)
+            )
         try {
-            when (val prepared = RepoBridgeCommitUseCase(context, projectDir).prepare()) {
+            when (val prepared = RepoBridgeCommitUseCase(context, projectDir, writer).prepare()) {
                 is RepoBridgePrepareResult.Ready -> Result.success(
                     WorkspaceStatus(
                         owner = prepared.owner,
@@ -227,7 +226,7 @@ class WorkspaceService(private val context: Context) {
             ?: return@withContext Result.failure(
                 IllegalStateException("Project is not linked to a git host")
             )
-        val located = locate(metadata.owner, metadata.repo)
+        val located = locateMetadata(metadata)
         if (located is Located.Failure) return@withContext Result.failure(located.error)
         val ok = located as Located.Ok
         when (val branch = ok.provider.branch(ok.ref, metadata.ref)) {
@@ -252,7 +251,7 @@ class WorkspaceService(private val context: Context) {
         branch: String? = null,
         subPath: String? = null
     ): Result<com.sherwood.wta.core.frontend.GitHubFetchResult> = withContext(Dispatchers.IO) {
-        fetcher.fetch("$owner/$repo", explicitBranch = branch, explicitSubPath = subPath)
+        importer.import(owner, repo, branch, subPath)
     }
 
     /** Pull = move the working copy to the remote head of the branch it already tracks. */
@@ -290,10 +289,14 @@ class WorkspaceService(private val context: Context) {
                 )
             }
 
-            val fetched = fetcher.fetch(
-                input = "${metadata.owner}/${metadata.repo}",
-                explicitBranch = branch,
-                explicitSubPath = metadata.subPath
+            val located = locateMetadata(metadata)
+            if (located is Located.Failure) return@withContext Result.failure(located.error)
+            val fetched = importer.import(
+                provider = (located as Located.Ok).provider,
+                owner = metadata.owner,
+                repo = metadata.repo,
+                branch = branch,
+                subPath = metadata.subPath
             ).getOrElse { return@withContext Result.failure(it) }
 
             val sourceDir = File(fetched.localPath)
@@ -340,7 +343,7 @@ class WorkspaceService(private val context: Context) {
             if (!isInside(projectDir, localFile)) {
                 return@withContext Result.failure(WorkspaceException.InvalidPath)
             }
-            val located = locate(metadata.owner, metadata.repo)
+            val located = locateMetadata(metadata)
             if (located is Located.Failure) return@withContext Result.failure(located.error)
             val ok = located as Located.Ok
             val remotePath = listOfNotNull(metadata.subPath, localRelative).joinToString("/")
@@ -393,6 +396,32 @@ class WorkspaceService(private val context: Context) {
         val candidate = GitRepoRef.of(owner, repo)
             ?: return Located.Failure(WorkspaceException.InvalidRepository("$owner/$repo"))
         return when (val lookup = GitProviderRegistry.active(context)) {
+            is GitProviderLookup.Available -> Located.Ok(lookup.provider, candidate)
+            is GitProviderLookup.Unavailable -> Located.Failure(
+                WorkspaceException.UnavailableProvider(lookup.id, lookup.reason)
+            )
+        }
+    }
+
+    /**
+     * The provider that owns a working copy, from its recorded provenance.
+     *
+     * This is not the active provider. A copy imported from `git.example.com` must keep
+     * talking to that server after the user switches the Studio to GitHub; otherwise a
+     * refresh would silently read a different repository with the same name.
+     */
+    private fun locateMetadata(metadata: RepoBridgeMetadata): Located {
+        val candidate = GitRepoRef.of(metadata.owner, metadata.repo)
+            ?: return Located.Failure(
+                WorkspaceException.InvalidRepository("${metadata.owner}/${metadata.repo}")
+            )
+        return when (
+            val lookup = GitProviderRegistry.forProvenance(
+                context,
+                metadata.providerId,
+                metadata.host
+            )
+        ) {
             is GitProviderLookup.Available -> Located.Ok(lookup.provider, candidate)
             is GitProviderLookup.Unavailable -> Located.Failure(
                 WorkspaceException.UnavailableProvider(lookup.id, lookup.reason)
@@ -482,8 +511,6 @@ class WorkspaceService(private val context: Context) {
     companion object {
         private const val TAG = "WorkspaceService"
 
-        private const val IMPORT_ROOT = "github_imports"
-
         private val BRANCH_RE = Regex("^[A-Za-z0-9._/-]{1,200}$")
 
         fun isValidBranchName(name: String): Boolean {
@@ -542,6 +569,14 @@ sealed class WorkspaceException(message: String?) : Exception(message) {
 
     data class Provider(val kind: GitFailureKind, val detail: String?) :
         WorkspaceException(detail ?: kind.name)
+
+    /**
+     * The working copy's provider does not implement the operation this feature needs.
+     * Today that means change tracking and pushing on a read-only Gitea/Forgejo driver.
+     */
+    data class UnsupportedProvider(val id: GitProviderId) : WorkspaceException(
+        "${id.storageId} is read-only in this build for this operation"
+    )
 
     data class Commit(val kind: RepoBridgeCommitFailureKind, val detail: String?) :
         WorkspaceException(detail ?: kind.name)

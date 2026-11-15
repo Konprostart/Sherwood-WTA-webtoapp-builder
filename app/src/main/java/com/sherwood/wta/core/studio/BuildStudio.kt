@@ -161,7 +161,7 @@ class BuildStudio(private val context: Context) {
         }
 
         when (
-            val dispatched = provider.dispatch(repoRef, workflow.id.toString(), ref)
+            val dispatched = provider.dispatch(repoRef, workflow.id, ref)
         ) {
             is GitResult.Failure -> return@withProvider Result.failure(
                 WorkspaceException.Provider(dispatched.kind, dispatched.message)
@@ -181,7 +181,7 @@ class BuildStudio(private val context: Context) {
             delay(interval)
             val listed = provider.runs(repoRef, ref, 30)
             if (listed is GitResult.Success) {
-                run = selectDispatchedRun(listed.value, knownRunIds, workflow.id)
+                run = selectDispatchedRun(listed.value, knownRunIds, workflow)
             }
             interval = (interval + POLL_BACKOFF_MS).coerceAtMost(MAX_POLL_INTERVAL_MS)
         }
@@ -468,13 +468,24 @@ class BuildStudio(private val context: Context) {
          * is "a run that did not exist before the dispatch, belonging to the workflow
          * that was dispatched". Any other rule (newest run, newest by workflow) would
          * latch onto a run started by somebody else in the meantime.
+         *
+         * Matching uses the workflow id when the host reports one on the run and the
+         * workflow path otherwise: Gitea/Forgejo name the workflow file on the run and
+         * do not repeat an id, so an id-only rule would never match there.
          */
         fun selectDispatchedRun(
             candidates: List<GitPipelineRun>,
             knownRunIds: Set<Long>,
-            workflowId: Long
+            workflow: GitPipeline
         ): GitPipelineRun? = candidates.firstOrNull { candidate ->
-            candidate.id !in knownRunIds && candidate.workflowId == workflowId
+            candidate.id !in knownRunIds && belongsTo(candidate, workflow)
+        }
+
+        private fun belongsTo(run: GitPipelineRun, workflow: GitPipeline): Boolean {
+            if (run.workflowId.isNotBlank() && run.workflowId == workflow.id) return true
+            val runPath = run.workflowPath?.takeIf { it.isNotBlank() } ?: return false
+            val workflowPath = workflow.path.takeIf { it.isNotBlank() } ?: return false
+            return runPath == workflowPath
         }
     }
 }

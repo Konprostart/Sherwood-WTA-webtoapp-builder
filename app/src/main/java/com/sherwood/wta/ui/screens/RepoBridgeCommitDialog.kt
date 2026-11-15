@@ -398,6 +398,7 @@ private fun RepoBridgeCommitFailureKind.description(): String = when (this) {
     RepoBridgeCommitFailureKind.UNEXPECTED ->
         Strings.repoBridgeCommitErrorRemote
     RepoBridgeCommitFailureKind.NO_CHANGES -> Strings.repoBridgeCommitNoChanges
+    RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY -> Strings.studioProviderReadOnly
 }
 
 /** The changed files of [this] set, as a change set for the mass-deletion check. */

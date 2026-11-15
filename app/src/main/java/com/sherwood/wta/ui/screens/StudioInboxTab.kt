@@ -29,14 +29,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.studio.git.ChecksState
-import com.sherwood.wta.core.studio.EndpointSettingsStore
-import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.GitHubBranch
-import com.sherwood.wta.core.studio.GitHubCheckSummary
-import com.sherwood.wta.core.studio.GitHubPullRequest
-import com.sherwood.wta.core.studio.GitHubPullRequestDetails
-import com.sherwood.wta.core.studio.GitHubPullRequestFile
+import com.sherwood.wta.core.studio.git.GitDiffLines
+import com.sherwood.wta.core.studio.git.GitProvider
+import com.sherwood.wta.core.studio.git.GitProviderLookup
+import com.sherwood.wta.core.studio.git.GitProviderRegistry
+import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitResult
+import com.sherwood.wta.core.studio.git.GitStudio
+import com.sherwood.wta.core.studio.git.GitBranch
+import com.sherwood.wta.core.studio.git.GitCheckSummary
+import com.sherwood.wta.core.studio.git.GitChangeRequest
+import com.sherwood.wta.core.studio.git.GitChangeRequestDetails
+import com.sherwood.wta.core.studio.git.GitChangeRequestFile
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.ui.components.PremiumTextField
 import com.sherwood.wta.ui.design.WtaButton
@@ -52,16 +56,16 @@ import kotlinx.coroutines.launch
 
 private data class InboxEntry(
     val ownerRepo: String,
-    val pulls: List<GitHubPullRequest> = emptyList(),
-    val branches: List<GitHubBranch> = emptyList(),
+    val pulls: List<GitChangeRequest> = emptyList(),
+    val branches: List<GitBranch> = emptyList(),
     val error: String? = null
 )
 
 /** Everything fetched when a pull request is expanded. */
 private data class PrDetail(
-    val details: GitHubPullRequestDetails,
-    val files: List<GitHubPullRequestFile>,
-    val checks: GitHubCheckSummary
+    val details: GitChangeRequestDetails,
+    val files: List<GitChangeRequestFile>,
+    val checks: GitCheckSummary
 )
 
 private fun <T> GitResult<T>.valueOrNull(): T? = when (this) {
@@ -72,9 +76,14 @@ private fun <T> GitResult<T>.valueOrNull(): T? = when (this) {
 @Composable
 internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostState) {
     val scope = rememberCoroutineScope()
-    val endpoints = remember { EndpointSettingsStore.current(context) }
-    val api = remember { GitHubApiClient(context, endpoints) }
     val settings = remember { StudioSettingsStore.getInstance(context) }
+    // The active connection; the capability flags decide which controls exist.
+    val studio = remember { GitStudio.state(context) }
+    val provider = remember(studio.id, studio.baseUrl) {
+        (GitProviderRegistry.active(context) as? GitProviderLookup.Available)?.provider
+    }
+    val capabilities = studio.capabilities
+    val watchlist = remember(studio.id) { settings.watchlist(studio.id) }
     val uriHandler = LocalUriHandler.current
     var entries by remember { mutableStateOf<List<InboxEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
@@ -91,14 +100,15 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
 
     suspend fun load() {
         loading = true
-        entries = settings.watchlist().map { ownerRepo ->
+        val active = provider
+        entries = watchlist.map { ownerRepo ->
             val parts = ownerRepo.split('/', limit = 2)
-            if (parts.size != 2) {
-                return@map InboxEntry(ownerRepo, error = "Invalid repository name")
+            val repoRef = if (parts.size == 2) GitRepoRef.of(parts[0], parts[1]) else null
+            if (active == null || repoRef == null) {
+                return@map InboxEntry(ownerRepo, error = Strings.studioConnectFailed)
             }
-            val (owner, repo) = parts
-            val pulls = api.listPullRequests(owner, repo)
-            val branches = api.listBranches(owner, repo)
+            val pulls = active.changeRequests(repoRef, "open")
+            val branches = active.branches(repoRef)
             InboxEntry(
                 ownerRepo = ownerRepo,
                 pulls = pulls.valueOrNull().orEmpty(),
@@ -110,18 +120,21 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
         loading = false
     }
 
-    suspend fun loadDetail(owner: String, repo: String, pr: GitHubPullRequest) {
+    suspend fun loadDetail(owner: String, repo: String, pr: GitChangeRequest) {
         detailLoading = true
         detail = null
-        val details = api.getPullRequest(owner, repo, pr.number).valueOrNull()
-        if (details == null) {
+        val repoRef = GitRepoRef.of(owner, repo)
+        val active = provider
+        val details = if (repoRef == null || active == null) null
+        else active.changeRequest(repoRef, pr.number).valueOrNull()
+        if (details == null || repoRef == null || active == null) {
             detailLoading = false
             snackbarHostState.showSnackbar(Strings.studioConnectFailed)
             return
         }
-        val files = api.listPullRequestFiles(owner, repo, pr.number).valueOrNull().orEmpty()
-        val checks = api.getCommitChecks(owner, repo, details.headSha).valueOrNull()
-            ?: GitHubCheckSummary(
+        val files = active.changeRequestFiles(repoRef, pr.number).valueOrNull().orEmpty()
+        val checks = active.checks(repoRef, details.headSha).valueOrNull()
+            ?: GitCheckSummary(
                 state = ChecksState.UNKNOWN,
                 total = 0,
                 pending = 0,
@@ -144,7 +157,7 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
         ),
         verticalArrangement = Arrangement.spacedBy(WtaSpacing.SectionGap)
     ) {
-        if (settings.watchlist().isEmpty()) {
+        if (watchlist.isEmpty()) {
             item { StudioEmptyState(Strings.studioInboxEmpty) }
         }
         if (loading) {
@@ -188,33 +201,46 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                 },
                                 trailing = {
                                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        WtaButton(
-                                            text = Strings.studioMerge,
-                                            size = WtaButtonSize.Small,
-                                            onClick = {
-                                                if (parts.size != 2) return@WtaButton
-                                                scope.launch {
-                                                    when (
-                                                        val result = api.mergePullRequest(
-                                                            parts[0],
-                                                            parts[1],
-                                                            pr.number
-                                                        )
-                                                    ) {
-                                                        is GitResult.Success ->
+                                        // Merging is a write; a read-only driver does not
+                                        // offer the button at all.
+                                        if (capabilities?.mergeChangeRequests == true) {
+                                            WtaButton(
+                                                text = Strings.studioMerge,
+                                                size = WtaButtonSize.Small,
+                                                onClick = {
+                                                    if (parts.size != 2) return@WtaButton
+                                                    val repoRef = GitRepoRef.of(parts[0], parts[1])
+                                                    val active = provider
+                                                    if (repoRef == null || active == null) {
+                                                        scope.launch {
                                                             snackbarHostState.showSnackbar(
-                                                                Strings.studioMerged(pr.headRef)
+                                                                Strings.studioConnectFailed
                                                             )
-                                                        is GitResult.Failure ->
-                                                            snackbarHostState.showSnackbar(
-                                                                result.message
-                                                                    ?: Strings.studioConnectFailed
-                                                            )
+                                                        }
+                                                        return@WtaButton
                                                     }
-                                                    load()
+                                                    scope.launch {
+                                                        when (
+                                                            val result = active.mergeChangeRequest(
+                                                                repoRef,
+                                                                pr.number
+                                                            )
+                                                        ) {
+                                                            is GitResult.Success ->
+                                                                snackbarHostState.showSnackbar(
+                                                                    Strings.studioMerged(pr.headRef)
+                                                                )
+                                                            is GitResult.Failure ->
+                                                                snackbarHostState.showSnackbar(
+                                                                    result.message
+                                                                        ?: Strings.studioConnectFailed
+                                                                )
+                                                        }
+                                                        load()
+                                                    }
                                                 }
-                                            }
-                                        )
+                                            )
+                                        }
                                     }
                                 }
                             )
@@ -224,6 +250,7 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                 } else {
                                     detail?.let { loaded ->
                                         PrDetailSection(
+                                            capabilities = capabilities,
                                             detail = loaded,
                                             reviewText = reviewText,
                                             onReviewTextChange = { reviewText = it },
@@ -261,18 +288,25 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                                 } else {
                                                     scope.launch {
                                                         inlineBusy = true
-                                                        when (
-                                                            val result =
-                                                                api.addPullRequestReviewComment(
-                                                                    owner = parts[0],
-                                                                    repo = parts[1],
-                                                                    number = pr.number,
-                                                                    commitId = headSha,
-                                                                    path = path,
-                                                                    line = lineNumber,
-                                                                    body = inlineBody
-                                                                )
-                                                        ) {
+                                                        val repoRef = GitRepoRef.of(parts[0], parts[1])
+                                                        val active = provider
+                                                        val result = if (repoRef == null || active == null) {
+                                                            GitResult.Failure(
+                                                                com.sherwood.wta.core.studio.git
+                                                                    .GitFailureKind.UNSUPPORTED,
+                                                                message = Strings.studioReadOnlyAction
+                                                            )
+                                                        } else {
+                                                            active.addReviewComment(
+                                                                ref = repoRef,
+                                                                number = pr.number,
+                                                                commitId = headSha,
+                                                                path = path,
+                                                                line = lineNumber,
+                                                                body = inlineBody
+                                                            )
+                                                        }
+                                                        when (result) {
                                                             is GitResult.Success -> {
                                                                 inlineBody = ""
                                                                 inlineLine = ""
@@ -295,15 +329,23 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                                 if (parts.size != 2) return@PrDetailSection
                                                 scope.launch {
                                                     reviewBusy = true
-                                                    when (
-                                                        val result = api.submitPullRequestReview(
-                                                            owner = parts[0],
-                                                            repo = parts[1],
+                                                    val repoRef = GitRepoRef.of(parts[0], parts[1])
+                                                    val active = provider
+                                                    val result = if (repoRef == null || active == null) {
+                                                        GitResult.Failure(
+                                                            com.sherwood.wta.core.studio.git
+                                                                .GitFailureKind.UNSUPPORTED,
+                                                            message = Strings.studioReadOnlyAction
+                                                        )
+                                                    } else {
+                                                        active.submitReview(
+                                                            ref = repoRef,
                                                             number = pr.number,
                                                             body = reviewText,
                                                             requestChanges = requestChanges
                                                         )
-                                                    ) {
+                                                    }
+                                                    when (result) {
                                                         is GitResult.Success -> {
                                                             reviewText = ""
                                                             snackbarHostState.showSnackbar(
@@ -338,7 +380,7 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                     onClick = {
                                         if (parts.size == 2) {
                                             uriHandler.openUri(
-                                                "${endpoints.githubWebBaseUrl}/${parts[0]}/${parts[1]}/tree/${branch.name}"
+                                                "${studio.baseUrl}/${parts[0]}/${parts[1]}/tree/${branch.name}"
                                             )
                                         }
                                     }
@@ -362,6 +404,7 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
  */
 @Composable
 private fun PrDetailSection(
+    capabilities: com.sherwood.wta.core.studio.git.GitCapabilities?,
     detail: PrDetail,
     reviewText: String,
     onReviewTextChange: (String) -> Unit,
@@ -421,16 +464,20 @@ private fun PrDetailSection(
             active = inlinePath == file.filename,
             onClick = { pull.htmlUrl.takeIf { it.isNotBlank() }?.let(onOpenOnGitHub) },
             trailing = {
-                WtaButton(
-                    text = Strings.studioPrInlineComment,
-                    size = WtaButtonSize.Small,
-                    variant = WtaButtonVariant.Outlined,
-                    onClick = {
-                        onInlinePathChange(if (inlinePath == file.filename) null else file.filename)
-                        onInlineLineChange("")
-                        onInlineBodyChange("")
-                    }
-                )
+                if (capabilities?.inlineComments == true) {
+                    WtaButton(
+                        text = Strings.studioPrInlineComment,
+                        size = WtaButtonSize.Small,
+                        variant = WtaButtonVariant.Outlined,
+                        onClick = {
+                            onInlinePathChange(
+                                if (inlinePath == file.filename) null else file.filename
+                            )
+                            onInlineLineChange("")
+                            onInlineBodyChange("")
+                        }
+                    )
+                }
             }
         )
         if (inlinePath == file.filename) {
@@ -454,6 +501,14 @@ private fun PrDetailSection(
     pull.body?.takeIf { it.isNotBlank() }?.let { bodyText ->
         WtaSectionDivider()
         WtaSettingRow(title = Strings.studioPrBody, subtitle = bodyText)
+    }
+    if (capabilities?.reviews != true) {
+        WtaSectionDivider()
+        WtaSettingRow(
+            title = Strings.studioPrReview,
+            subtitle = Strings.studioReadOnlyAction
+        )
+        return
     }
     WtaSectionDivider()
     Column(
@@ -507,7 +562,7 @@ private fun InlineCommentComposer(
     // suggestion list comes from the diff itself. When the patch is missing (binary
     // or oversized file) we keep the number field and say nothing about validity.
     val suggestable = remember(patch) {
-        GitHubApiClient.commentableNewLines(patch, limit = 18)
+        GitDiffLines.commentableNewLines(patch, limit = 18)
     }
     Column(
         modifier = Modifier
@@ -566,7 +621,7 @@ private fun InlineCommentComposer(
 }
 
 /** States exactly what GitHub reported — an absent status is never shown as success. */
-private fun checksSummary(checks: GitHubCheckSummary): String = when (checks.state) {
+private fun checksSummary(checks: GitCheckSummary): String = when (checks.state) {
     ChecksState.PASSING -> Strings.studioPrChecksPassed
     ChecksState.PENDING ->
         if (checks.pending > 0) Strings.studioPrChecksPending(checks.pending)

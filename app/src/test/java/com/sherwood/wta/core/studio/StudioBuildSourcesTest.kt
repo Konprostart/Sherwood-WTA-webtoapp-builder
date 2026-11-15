@@ -2,6 +2,8 @@ package com.sherwood.wta.core.studio
 
 import com.google.common.truth.Truth.assertThat
 import com.google.gson.JsonParser
+import com.sherwood.wta.core.studio.git.GitPipeline
+import com.sherwood.wta.core.studio.git.GitPipelineRun
 import org.junit.Test
 
 /**
@@ -15,10 +17,19 @@ class StudioBuildSourcesTest {
 
     private fun json(text: String) = JsonParser.parseString(text)
 
-    private fun run(id: Long, workflowId: Long, status: String = "queued") = GitHubWorkflowRun(
+    private fun workflow(id: String = "1", path: String = ".github/workflows/android-ci.yml") =
+        GitPipeline(id = id, name = "Android CI Build", path = path, state = "active")
+
+    private fun run(
+        id: Long,
+        workflowId: String = "1",
+        workflowPath: String? = ".github/workflows/android-ci.yml",
+        status: String = "queued"
+    ) = GitPipelineRun(
         id = id,
         name = "Android CI Build",
         workflowId = workflowId,
+        workflowPath = workflowPath,
         status = status,
         conclusion = null,
         branch = "feat/studio",
@@ -107,14 +118,14 @@ class StudioBuildSourcesTest {
             run(id = 102, workflowId = 1)
         )
         // 100 existed before the dispatch; 101 belongs to a different workflow.
-        val selected = BuildStudio.selectDispatchedRun(candidates, setOf(100L), workflowId = 1)
+        val selected = BuildStudio.selectDispatchedRun(candidates, setOf(100L), workflow("1"))
         assertThat(selected?.id).isEqualTo(102L)
     }
 
     @Test
     fun returnsNullWhileTheDispatchedRunIsNotListedYet() {
         val candidates = listOf(run(id = 100, workflowId = 1))
-        val selected = BuildStudio.selectDispatchedRun(candidates, setOf(100L), workflowId = 1)
+        val selected = BuildStudio.selectDispatchedRun(candidates, setOf(100L), workflow("1"))
         assertThat(selected).isNull()
     }
 
@@ -124,8 +135,23 @@ class StudioBuildSourcesTest {
             run(id = 200, workflowId = 9),
             run(id = 201, workflowId = 9)
         )
-        assertThat(BuildStudio.selectDispatchedRun(candidates, emptySet(), workflowId = 1))
+        assertThat(BuildStudio.selectDispatchedRun(candidates, emptySet(), workflow("1")))
             .isNull()
+    }
+
+    @Test
+    fun matchesAHostThatNamesTheWorkflowFileInsteadOfItsId() {
+        // Gitea/Forgejo runs carry no workflow id, only the workflow path.
+        val candidates = listOf(
+            run(id = 300, workflowId = "", workflowPath = ".gitea/workflows/build.yml"),
+            run(id = 301, workflowId = "", workflowPath = ".gitea/workflows/release.yml")
+        )
+        val selected = BuildStudio.selectDispatchedRun(
+            candidates,
+            knownRunIds = setOf(300L),
+            workflow = workflow(id = "release", path = ".gitea/workflows/release.yml")
+        )
+        assertThat(selected?.id).isEqualTo(301L)
     }
 
     // ------------------------------------------------------------ export name

@@ -19,6 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.io.File
 import android.content.Context
 import com.sherwood.wta.core.studio.git.*
 
@@ -565,6 +566,108 @@ class GitHubApiClient(
             downloadBytes(artifact.archiveDownloadUrl)
         }
 
+    /**
+     * Streams the source archive of [ref] into [target] as a zip.
+     *
+     * With a token the authenticated zipball endpoint is used, which is what makes a
+     * private repository importable; without one the public archive URL is used. The
+     * archive is never buffered in memory — a source tree can be hundreds of megabytes.
+     * A missing token never blocks a public import.
+     */
+    suspend fun downloadRepositoryArchive(
+        owner: String,
+        repo: String,
+        ref: String,
+        target: File,
+        onProgress: (Float) -> Unit = {}
+    ): GitResult<Unit> = withContext(Dispatchers.IO) {
+        val token = tokenOrNull()
+        val urls = buildList {
+            if (token != null) add(url("repos", owner, repo, "zipball", ref))
+            val archive = runCatching {
+                endpoints.githubWebBaseUrl.trimEnd('/').toHttpUrl().newBuilder()
+                    .addPathSegment(owner)
+                    .addPathSegment(repo)
+                    .addPathSegments("archive/refs/heads")
+                    .addPathSegment("$ref.zip")
+                    .build()
+                    .toString()
+            }.getOrNull()
+            if (archive != null) add(archive)
+        }
+        if (urls.isEmpty()) {
+            return@withContext GitResult.Failure(
+                GitFailureKind.UNEXPECTED,
+                message = "No archive URL could be built"
+            )
+        }
+
+        var lastFailure: GitResult.Failure? = null
+        for (archiveUrl in urls) {
+            val isApiRoute = archiveUrl.contains("/repos/")
+            val builder = Request.Builder().url(archiveUrl).get()
+            if (token != null && isApiRoute) {
+                builder.header("Authorization", "Bearer $token")
+                    .header("Accept", JSON_ACCEPT)
+                    .header("X-GitHub-Api-Version", API_VERSION)
+            }
+            val result: GitResult<Unit> = try {
+                urlGuard(archiveUrl)
+                redirectClient.newCall(builder.build()).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        failureFrom(
+                            response.code,
+                            response.header("x-ratelimit-remaining"),
+                            response.header("retry-after"),
+                            null
+                        )
+                    } else {
+                        val body = response.body
+                        if (body == null) {
+                            GitResult.Failure(GitFailureKind.UNEXPECTED, message = "Empty response")
+                        } else {
+                            streamToFile(body.byteStream(), body.contentLength(), target, onProgress)
+                            GitResult.Success(Unit)
+                        }
+                    }
+                }
+            } catch (e: IOException) {
+                AppLogger.w(TAG, "Archive download failed: ${e.javaClass.simpleName}")
+                GitResult.Failure(GitFailureKind.NETWORK)
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "Archive download error: ${e.javaClass.simpleName}")
+                GitResult.Failure(GitFailureKind.NETWORK)
+            }
+            if (result is GitResult.Success) return@withContext result
+            lastFailure = result as GitResult.Failure
+        }
+        lastFailure ?: GitResult.Failure(GitFailureKind.UNEXPECTED)
+    }
+
+    private fun streamToFile(
+        input: java.io.InputStream,
+        contentLength: Long,
+        target: File,
+        onProgress: (Float) -> Unit
+    ) {
+        var total = 0L
+        java.io.FileOutputStream(target).use { output ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read <= 0) break
+                total += read
+                if (total > MAX_ARCHIVE_BYTES) {
+                    throw IOException("Archive larger than ${MAX_ARCHIVE_BYTES / 1024 / 1024} MB")
+                }
+                output.write(buffer, 0, read)
+                if (contentLength > 0) {
+                    onProgress((total.toFloat() / contentLength).coerceIn(0f, 1f))
+                }
+            }
+        }
+    }
+
     // ----------------------------------------------------------------- releases
 
     /**
@@ -804,6 +907,9 @@ class GitHubApiClient(
         private const val MAX_ERROR_MESSAGE = 500
         private const val JSON_ACCEPT = "application/vnd.github+json"
         private const val BINARY_ACCEPT = "application/octet-stream"
+
+        /** A source archive larger than this is refused instead of filling the phone. */
+        private const val MAX_ARCHIVE_BYTES = 300L * 1024 * 1024
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
         // --------------------------------------------------------- pure parsers
@@ -906,40 +1012,9 @@ class GitHubApiClient(
             )
         }
 
-        /**
-         * New-side line numbers a review comment may target, read from a unified-diff
-         * `patch`. Removed lines do not exist on the new side and are skipped, so every
-         * number returned is one GitHub accepts with `side = RIGHT`.
-         *
-         * Returns an empty list when GitHub omitted the patch (binary or oversized diff);
-         * callers then fall back to manual line entry instead of guessing.
-         */
-        fun commentableNewLines(patch: String?, limit: Int = 40): List<Int> {
-            if (patch.isNullOrBlank() || limit <= 0) return emptyList()
-            val result = ArrayList<Int>()
-            var newLine = 0
-            for (raw in patch.split('\n')) {
-                if (raw.startsWith("@@")) {
-                    // Hunk header: @@ -oldStart[,oldCount] +newStart[,newCount] @@
-                    val plus = raw.indexOf('+')
-                    if (plus < 0) continue
-                    newLine = raw.substring(plus + 1).takeWhile { it.isDigit() }.toIntOrNull() ?: 0
-                    continue
-                }
-                if (newLine <= 0) continue
-                when {
-                    raw.startsWith("+") -> {
-                        result.add(newLine)
-                        newLine++
-                    }
-                    raw.startsWith("-") -> Unit   // gone on the new side
-                    raw.startsWith("\\") -> Unit  // "\ No newline at end of file"
-                    else -> newLine++             // context line
-                }
-                if (result.size >= limit) break
-            }
-            return result
-        }
+        /** New-side line numbers a review comment may target; see [GitDiffLines]. */
+        fun commentableNewLines(patch: String?, limit: Int = 40): List<Int> =
+            GitDiffLines.commentableNewLines(patch, limit)
 
         fun parsePullRequestReviewComment(json: JsonElement): GitHubPullRequestReviewComment? {
             val obj = json.asObjectOrNull() ?: return null
@@ -955,58 +1030,25 @@ class GitHubApiClient(
         }
 
         /** `completed` is the only terminal check-run status. */
-        fun isCompleted(status: String): Boolean = status.equals("completed", ignoreCase = true)
+        fun isCompleted(status: String): Boolean = GitChecks.isCompleted(status)
 
-        fun isPassing(conclusion: String?): Boolean = when (conclusion?.lowercase()) {
-            "success", "neutral", "skipped" -> true
-            else -> false
-        }
+        fun isPassing(conclusion: String?): Boolean = GitChecks.isPassing(conclusion)
 
-        fun isFailing(conclusion: String?): Boolean = when (conclusion?.lowercase()) {
-            "failure", "cancelled", "timed_out", "action_required", "startup_failure" -> true
-            else -> false
-        }
+        fun isFailing(conclusion: String?): Boolean = GitChecks.isFailing(conclusion)
 
-        fun summarizeChecks(checks: List<GitHubCheckRun>, combinedState: String?): GitHubCheckSummary {
-            val total = checks.size
-            val pending = checks.count { !isCompleted(it.status) }
-            val failing = checks.count { isCompleted(it.status) && isFailing(it.conclusion) }
-            val passing = checks.count { isCompleted(it.status) && isPassing(it.conclusion) }
-            return GitHubCheckSummary(
-                state = checksStateOf(combinedState, checks),
-                total = total,
-                pending = pending,
-                passing = passing,
-                failing = failing,
-                checks = checks,
-                combinedState = combinedState
-            )
-        }
+        fun summarizeChecks(checks: List<GitHubCheckRun>, combinedState: String?): GitHubCheckSummary =
+            GitChecks.summarize(checks, combinedState)
 
-        /**
-         * Failing wins over pending, pending over passing, and no signal at all stays
-         * [ChecksState.UNKNOWN]. Reporting UNKNOWN instead of PASSING is what keeps the
-         * UI from telling the user a build is green when GitHub has not said anything.
-         */
-        fun checksStateOf(combinedState: String?, checks: List<GitHubCheckRun>): ChecksState {
-            val combined = combinedState?.lowercase()
-            if (checks.any { isCompleted(it.status) && isFailing(it.conclusion) }) {
-                return ChecksState.FAILING
-            }
-            if (combined == "failure" || combined == "error") return ChecksState.FAILING
-            if (checks.any { !isCompleted(it.status) }) return ChecksState.PENDING
-            if (combined == "pending") return ChecksState.PENDING
-            if (checks.isNotEmpty() && checks.all { isCompleted(it.status) }) {
-                return ChecksState.PASSING
-            }
-            if (combined == "success") return ChecksState.PASSING
-            return ChecksState.UNKNOWN
-        }
+        /** Failing wins over pending, pending over passing, and no signal stays UNKNOWN. */
+        fun checksStateOf(combinedState: String?, checks: List<GitHubCheckRun>): ChecksState =
+            GitChecks.stateOf(combinedState, checks)
 
         fun parseWorkflow(json: JsonElement): GitHubWorkflow? {
             val obj = json.asObjectOrNull() ?: return null
             return GitHubWorkflow(
-                id = obj.long("id") ?: return null,
+                // The neutral model carries the id as text: Gitea's is a string, and the
+                // dispatch path passes it back verbatim either way.
+                id = obj.long("id")?.toString() ?: return null,
                 name = obj.string("name") ?: return null,
                 path = obj.string("path").orEmpty(),
                 state = obj.string("state")
@@ -1019,7 +1061,8 @@ class GitHubApiClient(
             return GitHubWorkflowRun(
                 id = id,
                 name = obj.string("name") ?: obj.string("display_title").orEmpty(),
-                workflowId = obj.long("workflow_id") ?: 0L,
+                workflowId = obj.long("workflow_id")?.toString().orEmpty(),
+                workflowPath = obj.string("path"),
                 status = obj.string("status") ?: "unknown",
                 conclusion = obj.string("conclusion"),
                 branch = obj.string("head_branch"),
@@ -1111,30 +1154,7 @@ class GitHubApiClient(
         }
 
         // ------------------------------------------------------- JSON utilities
-
-        internal fun JsonElement.asObjectOrNull(): JsonObject? =
-            takeIf { it.isJsonObject }?.asJsonObject
-
-        internal fun JsonElement.asArrayOrNull(): JsonArray? =
-            takeIf { it.isJsonArray }?.asJsonArray
-
-        internal fun JsonObject.string(key: String): String? =
-            get(key)?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotBlank() }
-
-        internal fun JsonObject.int(key: String): Int? =
-            (get(key)?.takeIf { it.isJsonPrimitive }?.asInt)
-
-        internal fun JsonObject.long(key: String): Long? =
-            (get(key)?.takeIf { it.isJsonPrimitive }?.asLong)
-
-        internal fun JsonObject.bool(key: String): Boolean? =
-            (get(key)?.takeIf { it.isJsonPrimitive }?.asBoolean)
-
-        internal fun JsonObject.obj(key: String): JsonObject? =
-            get(key)?.takeIf { it.isJsonObject }?.asJsonObject
-
-        internal fun JsonObject.arr(key: String): JsonArray? =
-            get(key)?.takeIf { it.isJsonArray }?.asJsonArray
+        // Shared with every other hosting driver; see git/GitJson.kt.
     }
 }
 

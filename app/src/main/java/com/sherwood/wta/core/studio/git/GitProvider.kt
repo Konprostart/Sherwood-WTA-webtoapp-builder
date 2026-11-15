@@ -1,16 +1,22 @@
 package com.sherwood.wta.core.studio.git
 
+import java.io.File
+
 /**
  * The hosting platform a [GitProvider] speaks to.
+ *
+ * [storageId] is the stable lower-case name written into provenance files. It is separate
+ * from the enum name so a rename of the constant can never silently invalidate an
+ * existing working copy.
  *
  * Adding an entry here does not make it usable: [GitProviderRegistry] only hands out a
  * driver that is actually implemented in this build, and reports the rest as
  * unavailable instead of pretending to connect.
  */
-enum class GitProviderId {
-    GITHUB,
-    GITEA,
-    FORGEJO
+enum class GitProviderId(val storageId: String) {
+    GITHUB("github"),
+    GITEA("gitea"),
+    FORGEJO("forgejo")
 }
 
 /** How a provider names its change requests, so the UI and the agent can say the right word. */
@@ -26,6 +32,10 @@ enum class GitChangeRequestTerm {
  * section a provider cannot serve and explains why, rather than showing a control that
  * would always fail. A capability is a statement about the host's API, not a promise
  * that a particular repository has data.
+ *
+ * The write capabilities are separate flags rather than one "writable" switch because a
+ * driver can be read-only in some respects and writable in others. Gitea in this build is
+ * the read/write split's first case: everything is readable, nothing is written yet.
  */
 data class GitCapabilities(
     val changeRequestTerm: GitChangeRequestTerm,
@@ -50,7 +60,15 @@ data class GitCapabilities(
     /** Creating a repository through the API. */
     val createRepository: Boolean,
     /** OAuth device flow, as an alternative to a personal access token. */
-    val oauthDeviceFlow: Boolean
+    val oauthDeviceFlow: Boolean,
+    /** Creating a branch on the host. */
+    val createBranches: Boolean,
+    /** Server-side merge of one branch into another. */
+    val mergeBranches: Boolean,
+    /** Opening a pull/merge request from the API. */
+    val createChangeRequests: Boolean,
+    /** Merging a pull/merge request from the API. */
+    val mergeChangeRequests: Boolean
 )
 
 /**
@@ -110,6 +128,14 @@ data class NewGitChangeRequest(
     val draft: Boolean = false
 )
 
+/** What a "Test connection" reports. [serverVersion] is null when the host has no such endpoint. */
+data class GitServerInfo(
+    val provider: GitProviderId,
+    val baseUrl: String,
+    val login: String?,
+    val serverVersion: String?
+)
+
 /**
  * Everything the Studio does with a git host, expressed without naming one.
  *
@@ -134,6 +160,14 @@ interface GitProvider {
     // ----------------------------------------------------------------- account
 
     suspend fun account(): GitResult<GitAccount>
+
+    /**
+     * Identity plus server version, for the settings screen's "Test connection".
+     *
+     * Never used for authorisation decisions: a failure here is reported to the user and
+     * nothing else changes.
+     */
+    suspend fun serverInfo(): GitResult<GitServerInfo>
 
     // ------------------------------------------------------------ repositories
 
@@ -187,6 +221,24 @@ interface GitProvider {
 
     suspend fun checks(ref: GitRepoRef, revision: String): GitResult<GitCheckSummary>
 
+    /** Submits a review (approve / request changes / plain comment) on a change request. */
+    suspend fun submitReview(
+        ref: GitRepoRef,
+        number: Int,
+        body: String,
+        requestChanges: Boolean
+    ): GitResult<Unit>
+
+    /** Adds one line-anchored review comment to a changed file. */
+    suspend fun addReviewComment(
+        ref: GitRepoRef,
+        number: Int,
+        commitId: String,
+        path: String,
+        line: Int,
+        body: String
+    ): GitResult<Unit>
+
     // ------------------------------------------------------------------ commits
 
     suspend fun commits(
@@ -232,6 +284,20 @@ interface GitProvider {
     suspend fun downloadReleaseAsset(asset: GitReleaseAsset): GitResult<ByteArray>
 
     // ------------------------------------------------------------------- writes
+
+    /**
+     * Downloads the source archive of [branch] into [target] as a zip, reporting progress
+     * in 0..1 when the host sends a content length.
+     *
+     * This is how the importer gets files from a host it cannot reach with a git client.
+     * The caller owns [target] and deletes it afterwards.
+     */
+    suspend fun downloadArchive(
+        ref: GitRepoRef,
+        branch: String,
+        target: File,
+        onProgress: (Float) -> Unit = {}
+    ): GitResult<Unit>
 
     /**
      * The writer used to publish a reviewed change set, or null when this provider

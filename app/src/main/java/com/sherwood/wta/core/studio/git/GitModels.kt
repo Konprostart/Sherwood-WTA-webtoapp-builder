@@ -31,7 +31,14 @@ enum class GitFailureKind {
     NETWORK,
     /** A 2xx response whose body did not carry the expected fields. */
     UNEXPECTED,
-    HTTP
+    HTTP,
+    /**
+     * The active driver does not implement this operation in this build.
+     *
+     * It is a distinct kind on purpose: "this server is read-only here" must never look
+     * like a transient network failure, or a caller would retry it forever.
+     */
+    UNSUPPORTED
 }
 
 sealed class GitResult<out T> {
@@ -175,7 +182,11 @@ data class GitChangeRequestReviewComment(
 
 /** One runnable CI workflow/pipeline definition of a repository. */
 data class GitPipeline(
-    val id: Long,
+    /**
+     * Provider identifier. GitHub uses a numeric workflow id, Gitea/Forgejo use a string
+     * id, so the neutral type is a string; it is passed back verbatim when dispatching.
+     */
+    val id: String,
     val name: String,
     val path: String,
     val state: String?
@@ -185,7 +196,13 @@ data class GitPipeline(
 data class GitPipelineRun(
     val id: Long,
     val name: String,
-    val workflowId: Long,
+    /**
+     * Workflow id when the host reports one. Empty is valid: Gitea/Forgejo name the
+     * workflow file in [workflowPath] instead of repeating a numeric id on the run.
+     */
+    val workflowId: String,
+    /** Workflow file path reported by the host, when known. */
+    val workflowPath: String?,
     val status: String,
     val conclusion: String?,
     val branch: String?,

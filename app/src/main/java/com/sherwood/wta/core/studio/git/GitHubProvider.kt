@@ -52,6 +52,23 @@ class GitHubProvider(
 
     override suspend fun account(): GitResult<GitAccount> = api.currentUser()
 
+    /**
+     * GitHub.com has no version endpoint the Studio can use, so the version is reported
+     * as unknown rather than invented. The identity is what makes the probe useful.
+     */
+    override suspend fun serverInfo(): GitResult<GitServerInfo> =
+        when (val user = api.currentUser()) {
+            is GitResult.Success -> GitResult.Success(
+                GitServerInfo(
+                    provider = id,
+                    baseUrl = baseUrl,
+                    login = user.value.login,
+                    serverVersion = null
+                )
+            )
+            is GitResult.Failure -> user
+        }
+
     override suspend fun repositories(page: Int): GitResult<List<GitRepository>> =
         api.listRepositories(page)
 
@@ -126,6 +143,46 @@ class GitHubProvider(
     override suspend fun checks(ref: GitRepoRef, revision: String): GitResult<GitCheckSummary> =
         api.getCommitChecks(ref.owner, ref.name, revision)
 
+    override suspend fun submitReview(
+        ref: GitRepoRef,
+        number: Int,
+        body: String,
+        requestChanges: Boolean
+    ): GitResult<Unit> = when (
+        val result = api.submitPullRequestReview(
+            owner = ref.owner,
+            repo = ref.name,
+            number = number,
+            body = body,
+            requestChanges = requestChanges
+        )
+    ) {
+        is GitResult.Success -> GitResult.Success(Unit)
+        is GitResult.Failure -> result
+    }
+
+    override suspend fun addReviewComment(
+        ref: GitRepoRef,
+        number: Int,
+        commitId: String,
+        path: String,
+        line: Int,
+        body: String
+    ): GitResult<Unit> = when (
+        val result = api.addPullRequestReviewComment(
+            owner = ref.owner,
+            repo = ref.name,
+            number = number,
+            commitId = commitId,
+            path = path,
+            line = line,
+            body = body
+        )
+    ) {
+        is GitResult.Success -> GitResult.Success(Unit)
+        is GitResult.Failure -> result
+    }
+
     override suspend fun commits(
         ref: GitRepoRef,
         branch: String?,
@@ -176,6 +233,19 @@ class GitHubProvider(
     override suspend fun downloadReleaseAsset(asset: GitReleaseAsset): GitResult<ByteArray> =
         api.downloadReleaseAsset(asset)
 
+    override suspend fun downloadArchive(
+        ref: GitRepoRef,
+        branch: String,
+        target: java.io.File,
+        onProgress: (Float) -> Unit
+    ): GitResult<Unit> = api.downloadRepositoryArchive(
+        owner = ref.owner,
+        repo = ref.name,
+        ref = branch,
+        target = target,
+        onProgress = onProgress
+    )
+
     override fun commitWriter(): GitCommitWriter = GitHubCommitWriter(dataClient)
 
     companion object {
@@ -197,7 +267,11 @@ class GitHubProvider(
             releases = true,
             binaryReleaseAssets = true,
             createRepository = true,
-            oauthDeviceFlow = true
+            oauthDeviceFlow = true,
+            createBranches = true,
+            mergeBranches = true,
+            createChangeRequests = true,
+            mergeChangeRequests = true
         )
     }
 }

@@ -2,6 +2,7 @@ package com.sherwood.wta.core.studio
 
 import android.content.Context
 import com.google.gson.JsonParser
+import com.sherwood.wta.core.studio.git.GitProviderId
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.network.NetworkModule
 import kotlinx.coroutines.Dispatchers
@@ -237,28 +238,52 @@ class StudioSettingsStore private constructor(context: Context) {
             prefs.edit().putString(KEY_OAUTH_CLIENT_ID, value.trim()).apply()
         }
 
-    var lastRepository: String?
-        get() = prefs.getString(KEY_LAST_REPO, null)?.takeIf { it.contains('/') }
-        set(value) {
-            prefs.edit().apply {
-                if (value == null) remove(KEY_LAST_REPO) else putString(KEY_LAST_REPO, value)
-            }.apply()
-        }
-
-    /** Repositories shown in the workspace inbox, as `owner/repo`. */
-    fun watchlist(): List<String> =
-        prefs.getStringSet(KEY_WATCHLIST, emptySet()).orEmpty().sorted()
-
-    fun setWatchlist(repos: Collection<String>) {
-        prefs.edit().putStringSet(KEY_WATCHLIST, repos.toSet()).apply()
+    /**
+     * The repository the Studio last opened for [provider].
+     *
+     * Stored per provider so switching servers does not silently point the Builds tab at
+     * a repository name that does not exist there. GitHub also reads the original unkeyed
+     * slot, so an installation that was already in use keeps its selection after upgrade.
+     */
+    fun lastRepository(provider: GitProviderId): String? {
+        val stored = prefs.getString(lastRepoKey(provider), null)
+            ?.takeIf { it.contains('/') }
+        if (stored != null) return stored
+        if (provider != GitProviderId.GITHUB) return null
+        return prefs.getString(KEY_LAST_REPO, null)?.takeIf { it.contains('/') }
     }
 
-    fun toggleWatch(ownerRepo: String): List<String> {
-        val current = watchlist().toMutableSet()
+    fun setLastRepository(provider: GitProviderId, value: String?) {
+        prefs.edit().apply {
+            if (value == null) remove(lastRepoKey(provider)) else putString(lastRepoKey(provider), value)
+        }.apply()
+    }
+
+    /** Repositories shown in the workspace inbox for [provider], as `owner/repo`. */
+    fun watchlist(provider: GitProviderId): List<String> {
+        val stored = prefs.getStringSet(watchlistKey(provider), null)
+        if (stored != null) return stored.sorted()
+        if (provider != GitProviderId.GITHUB) return emptyList()
+        // The pre-2.9.7 watchlist had no provider; every entry in it is GitHub.
+        return prefs.getStringSet(KEY_WATCHLIST, emptySet()).orEmpty().sorted()
+    }
+
+    fun setWatchlist(provider: GitProviderId, repos: Collection<String>) {
+        prefs.edit().putStringSet(watchlistKey(provider), repos.toSet()).apply()
+    }
+
+    fun toggleWatch(provider: GitProviderId, ownerRepo: String): List<String> {
+        val current = watchlist(provider).toMutableSet()
         if (!current.add(ownerRepo)) current.remove(ownerRepo)
-        setWatchlist(current)
+        setWatchlist(provider, current)
         return current.sorted()
     }
+
+    private fun lastRepoKey(provider: GitProviderId): String =
+        "$KEY_LAST_REPO:${provider.storageId}"
+
+    private fun watchlistKey(provider: GitProviderId): String =
+        "$KEY_WATCHLIST:${provider.storageId}"
 
     companion object {
         internal const val PREFS = "sherwood_studio_settings"

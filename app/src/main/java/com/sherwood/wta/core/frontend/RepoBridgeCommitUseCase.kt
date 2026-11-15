@@ -7,7 +7,9 @@ import com.sherwood.wta.core.studio.git.GitCommitWriter
 import com.sherwood.wta.core.studio.git.GitFailureKind
 import com.sherwood.wta.core.studio.git.GitFileChange
 import com.sherwood.wta.core.studio.git.GitHubCommitWriter
+import com.sherwood.wta.core.studio.git.GitCommitWriterResolver
 import com.sherwood.wta.core.studio.git.GitRepoRef
+import com.sherwood.wta.core.studio.git.GitWriterResolution
 import com.sherwood.wta.core.studio.git.GitResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +31,8 @@ enum class RepoBridgeCommitFailureKind {
     TOO_MANY_FILES,
     FILE_TOO_LARGE,
     MASS_DELETION_UNCONFIRMED,
+    /** The working copy's host has no write support in this build. */
+    PROVIDER_READ_ONLY,
     /** The working copy changed after it was reviewed; review it again. */
     REVIEW_STALE,
     /** A file contains a credential format that is never pushed. */
@@ -102,9 +106,10 @@ sealed class RepoBridgeCommitResult {
  *
  * Publishing goes through a [GitCommitWriter] rather than a concrete host client, so the
  * review, the secret scanner and the "new branch, never forced" rule are written once and
- * apply to every hosting platform. The default writer is the GitHub one because an
- * imported working copy's provenance is still recorded in GitHub terms; a second writable
- * provider will resolve the writer from the working copy's own metadata.
+ * apply to every hosting platform. When no writer is supplied, the working copy's own
+ * provenance decides which one is used; a copy whose host has no write support in this
+ * build fails with [RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY] instead of falling
+ * back to a different host's writer.
  *
  * There is no local git repository and no manifest file, so a user can edit files
  * with any tool and still get an accurate diff. The size limit below only applies to
@@ -114,9 +119,20 @@ sealed class RepoBridgeCommitResult {
 class RepoBridgeCommitUseCase(
     context: Context,
     private val projectDir: File,
-    private val writer: GitCommitWriter = GitHubCommitWriter(GitDataApiClient(context)),
+    writer: GitCommitWriter? = null,
     private val metadataStore: RepoBridgeMetadataStore = RepoBridgeMetadataStore()
 ) {
+
+    /**
+     * An explicitly supplied writer always wins (the tests use that); otherwise the
+     * working copy's provenance decides.
+     */
+    private val resolution: GitWriterResolution = writer
+        ?.let { GitWriterResolution.Ok(it) }
+        ?: GitCommitWriterResolver.resolve(context, projectDir)
+
+    private val writer: GitCommitWriter?
+        get() = (resolution as? GitWriterResolution.Ok)?.writer
 
     private var cachedPlan: Plan? = null
 
@@ -125,6 +141,11 @@ class RepoBridgeCommitUseCase(
 
     /** Reads the remote base tree and reports what a commit would upload. */
     suspend fun prepare(): RepoBridgePrepareResult = withContext(Dispatchers.IO) {
+        if (writer == null) {
+            return@withContext RepoBridgePrepareResult.Failure(
+                RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
+            )
+        }
         try {
             commitMutex.withLock { prepareInternal() }
         } catch (cancelled: CancellationException) {
@@ -192,6 +213,11 @@ class RepoBridgeCommitUseCase(
         confirmedDeletions: Int = 0,
         decision: ReviewDecision? = null
     ): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
+        if (writer == null) {
+            return@withContext RepoBridgeCommitResult.Failure(
+                RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
+            )
+        }
         try {
             commitMutex.withLock { commitInternal(message, confirmedDeletions, decision) }
         } catch (cancelled: CancellationException) {
@@ -208,6 +234,9 @@ class RepoBridgeCommitUseCase(
         confirmedDeletions: Int,
         decision: ReviewDecision?
     ): RepoBridgeCommitResult {
+        val writer = writer ?: return RepoBridgeCommitResult.Failure(
+            RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
+        )
         val trimmed = message.trim()
         if (trimmed.isEmpty()) {
             return RepoBridgeCommitResult.Failure(
@@ -447,6 +476,9 @@ class RepoBridgeCommitUseCase(
     }
 
     private suspend fun loadPlan(): PlanLoad {
+        val writer = writer ?: return PlanLoad.Error(
+            RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
+        )
         if (!projectDir.isDirectory) {
             return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_METADATA)
         }
@@ -667,6 +699,7 @@ class RepoBridgeCommitUseCase(
         GitFailureKind.UNPROCESSABLE -> RepoBridgeCommitFailureKind.REMOTE_REJECTED
         GitFailureKind.UNEXPECTED -> RepoBridgeCommitFailureKind.UNEXPECTED
         GitFailureKind.HTTP -> RepoBridgeCommitFailureKind.REMOTE_REJECTED
+        GitFailureKind.UNSUPPORTED -> RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
     }
 
     private data class Plan(

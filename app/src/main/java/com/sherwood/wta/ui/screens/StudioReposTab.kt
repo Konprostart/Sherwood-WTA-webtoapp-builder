@@ -29,19 +29,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import com.sherwood.wta.core.frontend.GitHubTokenStore
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.studio.DeviceFlowChallenge
 import com.sherwood.wta.core.studio.DeviceFlowPollResult
 import com.sherwood.wta.core.studio.DeviceFlowStartResult
 import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.FileDiff
-import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.GitHubBranch
-import com.sherwood.wta.core.studio.GitHubCommitSummary
+import com.sherwood.wta.core.studio.git.GitBranch
+import com.sherwood.wta.core.studio.git.GitCommitSummary
 import com.sherwood.wta.core.studio.GitHubOAuthClient
-import com.sherwood.wta.core.studio.GitHubRepository
+import com.sherwood.wta.core.studio.git.GitRepository
+import com.sherwood.wta.core.studio.git.GitFailureKind
+import com.sherwood.wta.core.studio.git.GitProviderId
+import com.sherwood.wta.core.studio.git.GitProviderLookup
+import com.sherwood.wta.core.studio.git.GitProviderRegistry
+import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitResult
+import com.sherwood.wta.core.studio.git.GitStudio
+import com.sherwood.wta.core.studio.git.NewGitChangeRequest
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.WorkspaceService
 import com.sherwood.wta.core.studio.WorkspaceStatus
@@ -69,24 +74,31 @@ internal fun StudioReposTab(
 ) {
     val scope = rememberCoroutineScope()
     val endpoints = remember { EndpointSettingsStore.current(context) }
-    val api = remember { GitHubApiClient(context, endpoints) }
     val oauth = remember { GitHubOAuthClient(endpoints = endpoints) }
-    val tokenStore = remember { GitHubTokenStore(context) }
     val studioSettings = remember { StudioSettingsStore.getInstance(context) }
     val workspace = remember { WorkspaceService(context) }
     val uriHandler = LocalUriHandler.current
 
+    // The active connection, resolved once. Everything below reads this instead of
+    // assuming GitHub: the capability flags decide which controls can be offered.
+    val studio = remember { GitStudio.state(context) }
+    val provider = remember(studio.id, studio.baseUrl) {
+        (GitProviderRegistry.active(context) as? GitProviderLookup.Available)?.provider
+    }
+    val capabilities = studio.capabilities
+    val isGitHub = studio.id == GitProviderId.GITHUB
+
     var connectedLogin by remember { mutableStateOf<String?>(null) }
-    var repos by remember { mutableStateOf<List<GitHubRepository>>(emptyList()) }
+    var repos by remember { mutableStateOf<List<GitRepository>>(emptyList()) }
     var query by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
-    var selectedRepo by remember { mutableStateOf<GitHubRepository?>(null) }
-    var branches by remember { mutableStateOf<List<GitHubBranch>>(emptyList()) }
+    var selectedRepo by remember { mutableStateOf<GitRepository?>(null) }
+    var branches by remember { mutableStateOf<List<GitBranch>>(emptyList()) }
     var selectedBranch by remember { mutableStateOf<String?>(null) }
     var projects by remember { mutableStateOf<List<File>>(emptyList()) }
     var status by remember { mutableStateOf<WorkspaceStatus?>(null) }
-    var history by remember { mutableStateOf<List<GitHubCommitSummary>>(emptyList()) }
-    var watchlist by remember { mutableStateOf(studioSettings.watchlist().toSet()) }
+    var history by remember { mutableStateOf<List<GitCommitSummary>>(emptyList()) }
+    var watchlist by remember { mutableStateOf(studioSettings.watchlist(studio.id).toSet()) }
 
     var challenge by remember { mutableStateOf<DeviceFlowChallenge?>(null) }
     var oauthError by remember { mutableStateOf<String?>(null) }
@@ -109,14 +121,21 @@ internal fun StudioReposTab(
     var prBusy by remember { mutableStateOf(false) }
 
     suspend fun loadRepositories() {
-        val user = api.currentUser()
-        if (user is GitResult.Success) connectedLogin = user.value.login
-        when (val result = api.listRepositories()) {
+        val active = provider ?: return
+        when (val user = active.account()) {
+            is GitResult.Success -> connectedLogin = user.value.login
+            is GitResult.Failure -> {
+                if (!studio.hasToken || user.kind == GitFailureKind.UNAUTHORIZED) {
+                    connectedLogin = null
+                }
+                snackbarHostState.showSnackbar(user.message ?: Strings.studioConnectFailed)
+                return
+            }
+        }
+        when (val result = active.repositories()) {
             is GitResult.Success -> repos = result.value
             is GitResult.Failure -> {
-                if (!tokenStore.hasToken() ||
-                    result.kind == com.sherwood.wta.core.studio.git.GitFailureKind.UNAUTHORIZED
-                ) {
+                if (!studio.hasToken || result.kind == GitFailureKind.UNAUTHORIZED) {
                     connectedLogin = null
                 }
                 snackbarHostState.showSnackbar(
@@ -126,9 +145,9 @@ internal fun StudioReposTab(
         }
     }
 
-    suspend fun loadRepository(repo: GitHubRepository) {
+    suspend fun loadRepository(repo: GitRepository) {
         selectedRepo = repo
-        studioSettings.lastRepository = repo.ownerRepo
+        studioSettings.setLastRepository(studio.id, repo.ownerRepo)
         selectedBranch = repo.defaultBranch
         branches = runCatching { workspace.branches(repo.owner, repo.name) }.getOrDefault(emptyList())
         projects = workspace.importedProjects(repo.owner, repo.name)
@@ -144,7 +163,7 @@ internal fun StudioReposTab(
 
     LaunchedEffect(Unit) {
         loading = true
-        if (tokenStore.hasToken()) {
+        if (studio.hasToken) {
             loadRepositories()
         }
         loading = false
@@ -218,60 +237,111 @@ internal fun StudioReposTab(
         verticalArrangement = Arrangement.spacedBy(WtaSpacing.SectionGap)
     ) {
         item {
-            WtaSection(title = "GitHub", description = Strings.studioAccountDesc) {
+            WtaSection(title = studio.displayName, description = Strings.studioAccountDesc) {
                 WtaSettingCard {
                     if (connectedLogin != null) {
                         WtaSettingRow(
                             title = Strings.studioConnected(connectedLogin.orEmpty()),
-                            subtitle = Strings.studioAccountDesc
+                            subtitle = studio.baseUrl
                         )
                     } else {
-                        val clientIdValid =
-                            GitHubOAuthClient.isValidClientId(studioSettings.oauthClientId)
                         Column(
                             modifier = Modifier.padding(
                                 horizontal = WtaSpacing.RowHorizontal,
                                 vertical = WtaSpacing.ContentGap
                             )
                         ) {
-                            // State first, then the action: the Connect button cannot
-                            // work without a Client ID, so say that before it is tapped
-                            // instead of after.
-                            if (!clientIdValid) {
-                                Text(
-                                    Strings.studioClientIdMissing,
+                            when {
+                                // An unavailable provider is stated, never silently
+                                // replaced by GitHub: the token must not go elsewhere.
+                                studio.unavailableReason != null -> Text(
+                                    when (studio.unavailableReason) {
+                                        GitProviderUnavailableReason.MISSING_BASE_URL ->
+                                            Strings.studioProviderMissingUrl
+                                        GitProviderUnavailableReason.NON_HTTPS_BASE_URL ->
+                                            Strings.studioProviderInsecureUrl
+                                        else -> Strings.studioProviderNotImplemented
+                                    },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
-                            } else if (LocalShowDescriptions.current) {
-                                Text(
-                                    Strings.studioClientIdHint,
+                                // The device flow exists only on GitHub; Gitea/Forgejo
+                                // are connected with a personal access token.
+                                !isGitHub -> Text(
+                                    Strings.studioGiteaConnectHint,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            WtaButton(
-                                onClick = { startDeviceFlow() },
-                                text = Strings.studioConnect
-                            )
-                            if (oauthError != null) {
-                                Text(
-                                    oauthError.orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
+                                else -> {
+                                    val clientIdValid = GitHubOAuthClient.isValidClientId(
+                                        studioSettings.oauthClientId
+                                    )
+                                    // State first, then the action: the Connect button
+                                    // cannot work without a Client ID, so say that before
+                                    // it is tapped instead of after.
+                                    if (!clientIdValid) {
+                                        Text(
+                                            Strings.studioClientIdMissing,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    } else if (LocalShowDescriptions.current) {
+                                        Text(
+                                            Strings.studioClientIdHint,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                    WtaButton(
+                                        onClick = { startDeviceFlow() },
+                                        text = Strings.studioConnect
+                                    )
+                                    if (oauthError != null) {
+                                        Text(
+                                            oauthError.orEmpty(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
                             }
                         }
-                        // The token path is an equal alternative, not a hidden one:
-                        // the same store backs both, so a saved token connects Studio
-                        // without any OAuth App at all.
+                        // The token path is an equal alternative, not a hidden one. On
+                        // GitHub it already has its own screen; on a self-hosted server
+                        // it is entered in Studio settings, next to the server URL.
                         WtaSectionDivider()
-                        WtaSettingRow(
-                            title = Strings.gitTokenTitle,
-                            subtitle = Strings.studioTokenAlternate.ifDescriptionsShown(),
-                            onClick = onOpenGitSettings
-                        )
+                        if (isGitHub) {
+                            WtaSettingRow(
+                                title = Strings.gitTokenTitle,
+                                subtitle = Strings.studioTokenAlternate.ifDescriptionsShown(),
+                                onClick = onOpenGitSettings
+                            )
+                        } else {
+                            WtaSettingRow(
+                                title = Strings.studioProviderToken,
+                                subtitle = if (studio.hasToken) {
+                                    Strings.studioProviderTokenSaved
+                                } else {
+                                    Strings.studioProviderTokenMissing
+                                }
+                            )
+                        }
+                    }
+                    if (!isGitHub) {
+                        WtaSectionDivider()
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = WtaSpacing.RowHorizontal,
+                                vertical = WtaSpacing.ContentGap
+                            )
+                        ) {
+                            Text(
+                                Strings.studioProviderReadOnly,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -314,7 +384,7 @@ internal fun StudioReposTab(
                                     trailing = {
                                         WtaButton(
                                             onClick = {
-                                                watchlist = studioSettings.toggleWatch(repo.ownerRepo).toSet()
+                                                watchlist = studioSettings.toggleWatch(studio.id, repo.ownerRepo).toSet()
                                             },
                                             text = if (watched) Strings.studioUnwatch else Strings.studioWatch,
                                             variant = WtaButtonVariant.Outlined,
@@ -334,16 +404,25 @@ internal fun StudioReposTab(
             item {
                 WtaSection(title = Strings.studioBranches) {
                     WtaSettingCard {
-                        WtaSettingRow(
-                            title = Strings.studioNewBranch,
-                            onClick = {
-                                newBranchName = ""
-                                newBranchFrom = repo.defaultBranch
-                                showNewBranch = true
-                            }
-                        )
-                        branches.forEach { branch ->
+                        if (capabilities?.createBranches == true) {
+                            WtaSettingRow(
+                                title = Strings.studioNewBranch,
+                                onClick = {
+                                    newBranchName = ""
+                                    newBranchFrom = repo.defaultBranch
+                                    showNewBranch = true
+                                }
+                            )
                             com.sherwood.wta.ui.design.WtaSectionDivider()
+                        } else {
+                            WtaSettingRow(
+                                title = Strings.studioNewBranch,
+                                subtitle = Strings.studioReadOnlyAction
+                            )
+                            com.sherwood.wta.ui.design.WtaSectionDivider()
+                        }
+                        branches.forEachIndexed { index, branch ->
+                            if (index > 0) com.sherwood.wta.ui.design.WtaSectionDivider()
                             WtaSettingRow(
                                 title = branch.name,
                                 subtitle = branch.sha.take(10),
@@ -362,11 +441,18 @@ internal fun StudioReposTab(
                             WtaSettingRow(title = Strings.studioNoProject)
                         } else {
                             val project = projects.first()
+                            // Change tracking diffs against the host's git objects, which
+                            // a read-only driver cannot serve. Name that instead of a
+                            // status row that can never leave "loading".
                             WtaSettingRow(
-                                title = status?.let {
-                                    if (it.isClean) Strings.studioStatusClean
-                                    else Strings.studioStatusChanges(it.changes.total)
-                                } ?: Strings.loading,
+                                title = if (!studio.canPublish) {
+                                    Strings.studioProviderReadOnly
+                                } else {
+                                    status?.let {
+                                        if (it.isClean) Strings.studioStatusClean
+                                        else Strings.studioStatusChanges(it.changes.total)
+                                    } ?: Strings.loading
+                                },
                                 subtitle = project.absolutePath
                             )
                             com.sherwood.wta.ui.design.WtaSectionDivider()
@@ -379,6 +465,10 @@ internal fun StudioReposTab(
                                     ),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                // Checkout and pull both need the working copy's diff
+                                // against the base commit, which a read-only driver
+                                // cannot compute; offering them would fail every time.
+                                if (studio.canPublish) {
                                 WtaButton(
                                     text = Strings.studioCheckout,
                                     size = WtaButtonSize.Small,
@@ -421,6 +511,7 @@ internal fun StudioReposTab(
                                         }
                                     }
                                 )
+                                }
                                 WtaButton(
                                     text = Strings.studioManifest,
                                     size = WtaButtonSize.Small,
@@ -451,22 +542,26 @@ internal fun StudioReposTab(
                                     }
                                 )
                                 // A pull request is how a Studio branch reaches the
-                                // rest of the world (including an external workspace):
-                                // without it the only path was a manual visit to GitHub.
-                                WtaButton(
-                                    text = Strings.studioCreatePr,
-                                    size = WtaButtonSize.Small,
-                                    variant = WtaButtonVariant.Outlined,
-                                    onClick = {
-                                        prHead = selectedBranch ?: repo.defaultBranch
-                                        prBase = repo.defaultBranch
-                                        prTitle = ""
-                                        prBodyText = ""
-                                        prDraft = false
-                                        showNewPr = true
-                                    }
-                                )
+                                // rest of the world (including an external workspace).
+                                // A driver without that API says so instead of offering a
+                                // button that would always fail.
+                                if (capabilities?.createChangeRequests == true) {
+                                    WtaButton(
+                                        text = Strings.studioCreatePr,
+                                        size = WtaButtonSize.Small,
+                                        variant = WtaButtonVariant.Outlined,
+                                        onClick = {
+                                            prHead = selectedBranch ?: repo.defaultBranch
+                                            prBase = repo.defaultBranch
+                                            prTitle = ""
+                                            prBodyText = ""
+                                            prDraft = false
+                                            showNewPr = true
+                                        }
+                                    )
+                                }
                             }
+                            if (studio.canPublish) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -510,6 +605,7 @@ internal fun StudioReposTab(
                                     variant = WtaButtonVariant.Outlined,
                                     onClick = { commitProject = project }
                                 )
+                            }
                             }
                             if (status?.changes?.total?.let { it > 0 } == true) {
                                 val changes = status?.changes
@@ -568,6 +664,12 @@ internal fun StudioReposTab(
             item {
                 WtaSection(title = Strings.studioMerge) {
                     WtaSettingCard {
+                        if (capabilities?.mergeBranches != true) {
+                            WtaSettingRow(
+                                title = Strings.studioMerge,
+                                subtitle = Strings.studioReadOnlyAction
+                            )
+                        } else {
                         WtaSettingRow(
                             title = "${selectedBranch ?: repo.defaultBranch} → ${repo.defaultBranch}",
                             subtitle = Strings.studioMerge,
@@ -595,6 +697,7 @@ internal fun StudioReposTab(
                                 }
                             }
                         )
+                        }
                     }
                 }
             }
@@ -808,17 +911,26 @@ internal fun StudioReposTab(
                     onClick = {
                         scope.launch {
                             prBusy = true
-                            when (
-                                val result = api.createPullRequest(
-                                    owner = repoForPr.owner,
-                                    repo = repoForPr.name,
-                                    title = prTitle,
-                                    head = prHead.trim(),
-                                    base = prBase.trim(),
-                                    body = prBodyText.takeIf { it.isNotBlank() },
-                                    draft = prDraft
+                            val active = provider
+                            val repoRef = GitRepoRef.of(repoForPr.owner, repoForPr.name)
+                            val result = if (active == null || repoRef == null) {
+                                GitResult.Failure(
+                                    GitFailureKind.UNSUPPORTED,
+                                    message = Strings.studioConnectFailed
                                 )
-                            ) {
+                            } else {
+                                active.createChangeRequest(
+                                    repoRef,
+                                    NewGitChangeRequest(
+                                        title = prTitle,
+                                        head = prHead.trim(),
+                                        base = prBase.trim(),
+                                        body = prBodyText.takeIf { it.isNotBlank() },
+                                        draft = prDraft
+                                    )
+                                )
+                            }
+                            when (result) {
                                 is GitResult.Success -> {
                                     showNewPr = false
                                     snackbarHostState.showSnackbar(

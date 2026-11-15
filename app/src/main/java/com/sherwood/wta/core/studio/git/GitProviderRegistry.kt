@@ -25,7 +25,7 @@ sealed class GitProviderLookup {
  * The single place that decides which hosting platform answers.
  *
  * The Studio asks for the active provider once and then only ever sees [GitProvider].
- * Adding Gitea/Forgejo is a new entry in [drivers]; no caller changes.
+ * Adding a host is a new entry in [drivers]; no caller changes.
  *
  * An unsupported or misconfigured provider is reported as
  * [GitProviderLookup.Unavailable] instead of falling back to GitHub. A silent fallback
@@ -37,16 +37,52 @@ object GitProviderRegistry {
     /**
      * Factories by provider id. GitHub's factory ignores the base URL because its
      * endpoints come from [com.sherwood.wta.core.studio.EndpointConfig]; a self-hosted
-     * driver receives the configured server URL.
+     * driver receives the configured server URL and the credential slot derived from it.
      */
-    private val drivers: Map<GitProviderId, (Context, String) -> GitProvider> = mapOf(
-        GitProviderId.GITHUB to { context, _ -> GitHubProvider(context) }
+    private val drivers:
+        Map<GitProviderId, (Context, String) -> GitProvider> = mapOf(
+        GitProviderId.GITHUB to { context, _ -> GitHubProvider(context) },
+        GitProviderId.GITEA to { context, baseUrl -> gitea(context, GitProviderId.GITEA, baseUrl) },
+        GitProviderId.FORGEJO to { context, baseUrl -> gitea(context, GitProviderId.FORGEJO, baseUrl) }
     )
+
+    private fun gitea(context: Context, id: GitProviderId, baseUrl: String): GitProvider {
+        val key = GitCredentialKey.of(id, baseUrl)
+            ?: error("An HTTPS base URL is required before a provider is built")
+        return GiteaProvider(
+            id = id,
+            baseUrl = baseUrl,
+            tokenProvider = GitCredentialStore(context).tokenProvider(key)
+        )
+    }
 
     fun active(context: Context): GitProviderLookup {
         val settings = GitProviderSettings.getInstance(context)
         val id = settings.activeProvider
         return of(context, id, settings.baseUrl(id))
+    }
+
+    /**
+     * Resolves the driver a *working copy* belongs to, from its recorded provenance.
+     *
+     * The active setting is not consulted here on purpose: a project imported from
+     * `git.example.com` must keep talking to that server even after the user switches the
+     * active provider to GitHub. A missing host falls back to the configured server for
+     * that provider, which is the only sensible reading of a v1 record.
+     */
+    fun forProvenance(
+        context: Context,
+        provider: GitProviderId,
+        host: String?
+    ): GitProviderLookup {
+        if (provider == GitProviderId.GITHUB) {
+            return of(context, GitProviderId.GITHUB)
+        }
+        val configured = GitProviderSettings.getInstance(context).baseUrl(provider)
+        if (!host.isNullOrBlank()) {
+            return of(context, provider, "https://${host.trim()}")
+        }
+        return of(context, provider, configured)
     }
 
     fun of(

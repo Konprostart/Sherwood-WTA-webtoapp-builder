@@ -317,8 +317,16 @@ class GitHubOpenPullRequestTool : Tool {
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
         val connection = resolveGitHubConnection(ctx)
-        if (!connection.hasToken) return ToolResult.ok(NOT_CONNECTED)
+        if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
         connection.failure?.let { return ToolResult.error(it) }
+        // Writes need a host with a publish path. Gitea/Forgejo are read-only in this
+        // build, and saying so is the difference between "unavailable" and "broken".
+        if (!connection.canPublish) {
+            return ToolResult.error(
+                "%s is read-only in this build (%s). %s is not available; the user can " +
+                    "still import repositories and download build artifacts." % (tool, connection.providerName, feature)
+            )
+        }
 
         val requestedRepository = argString(args, "repository")?.takeIf { it.isNotBlank() }
         val (owner, repo) = parseOwnerRepo(requestedRepository ?: connection.repository)

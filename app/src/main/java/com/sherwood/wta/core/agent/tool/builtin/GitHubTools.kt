@@ -6,12 +6,17 @@ import com.sherwood.wta.core.agent.files.ProjectFileManager
 import com.sherwood.wta.core.agent.tool.Tool
 import com.sherwood.wta.core.agent.tool.ToolContext
 import com.sherwood.wta.core.agent.tool.ToolResult
-import com.sherwood.wta.core.frontend.GitHubTokenStore
 import com.sherwood.wta.core.studio.EndpointSettingsStore
-import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.WorkspaceService
+import com.sherwood.wta.core.studio.git.GitCapabilities
+import com.sherwood.wta.core.studio.git.GitProvider
+import com.sherwood.wta.core.studio.git.GitProviderId
+import com.sherwood.wta.core.studio.git.GitProviderLookup
+import com.sherwood.wta.core.studio.git.GitProviderRegistry
+import com.sherwood.wta.core.studio.git.GitRepoRef
+import com.sherwood.wta.core.studio.git.GitResult
+import com.sherwood.wta.core.studio.git.GitStudio
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,13 +42,21 @@ private const val MAX_IMPORT_FILES = 2_000
 private const val MAX_IMPORT_FILE_BYTES = 4L * 1024 * 1024
 private const val MAX_IMPORT_TOTAL_BYTES = 32L * 1024 * 1024
 
-/** Shared by the read tools and the publish tool so the advice stays identical. */
-internal val NOT_CONNECTED = """
-GitHub is not connected: no token is stored on this device.
-Connect it in Settings → Git access → "GitHub personal access token" (recommended: a
-fine-grained token limited to the one repository), or connect through Studio →
-Repositories with the OAuth device flow.
-""".trimIndent()
+/** Advice for a host with no stored token; the wording names the host and where to go. */
+internal fun notConnectedMessage(connection: GitHubConnection): String =
+    if (connection.providerId == GitProviderId.GITHUB) {
+        """
+        GitHub is not connected: no token is stored on this device.
+        Connect it in Settings → Git access → "GitHub personal access token" (recommended: a
+        fine-grained token limited to the one repository), or connect through Studio →
+        Repositories with the OAuth device flow.
+        """.trimIndent()
+    } else {
+        """
+        ${connection.providerName} is not connected: no token is stored for ${connection.baseUrl}.
+        Add a personal access token in Studio → Settings → Git hosting.
+        """.trimIndent()
+    }
 
 /** What the stored credential can do, and which repository Studio is pointed at. */
 internal data class GitHubConnection(
@@ -52,33 +65,93 @@ internal data class GitHubConnection(
     /** Set when a token exists but cannot be used — never silently ignored. */
     val failure: String?,
     val repository: String,
-    val branch: String
+    val branch: String,
+    val providerId: GitProviderId,
+    val providerName: String,
+    val baseUrl: String,
+    val capabilities: GitCapabilities?,
+    /** True when the host has a publish path in this build. */
+    val canPublish: Boolean,
+    val provider: GitProvider?
 )
 
+/**
+ * Resolves the active connection — whatever host it is.
+ *
+ * The token still comes from the one credential store the Studio owns, so the agent never
+ * sees a second path to a secret. Which host answers is decided by the saved provider
+ * setting; an unavailable host is reported as a problem instead of falling back to GitHub.
+ */
 internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection {
     val context = ctx.androidContext
     val studioSettings = StudioSettingsStore.getInstance(context)
     val endpoints = EndpointSettingsStore.current(context)
-    val repository = studioSettings.lastRepository
+    val state = GitStudio.state(context)
+    val repository = studioSettings.lastRepository(state.id)
         ?: "${endpoints.projectOwner}/${endpoints.projectRepo}".trim('/')
+    val branch = endpoints.projectBranch
 
-    val hasToken = withContext(Dispatchers.IO) {
-        GitHubTokenStore(context).currentToken() != null
+    val lookup = GitProviderRegistry.active(context)
+    val provider = (lookup as? GitProviderLookup.Available)?.provider
+    if (provider == null) {
+        val reason = (lookup as? GitProviderLookup.Unavailable)?.reason
+        return GitHubConnection(
+            hasToken = state.hasToken,
+            login = null,
+            failure = "${state.displayName} is not usable in this build ($reason).",
+            repository = repository,
+            branch = branch,
+            providerId = state.id,
+            providerName = state.displayName,
+            baseUrl = state.baseUrl,
+            capabilities = state.capabilities,
+            canPublish = state.canPublish,
+            provider = null
+        )
     }
-    if (!hasToken) {
-        return GitHubConnection(false, null, null, repository, endpoints.projectBranch)
+    if (!state.hasToken) {
+        return GitHubConnection(
+            hasToken = false,
+            login = null,
+            failure = null,
+            repository = repository,
+            branch = branch,
+            providerId = state.id,
+            providerName = state.displayName,
+            baseUrl = state.baseUrl,
+            capabilities = state.capabilities,
+            canPublish = state.canPublish,
+            provider = provider
+        )
     }
-    return when (val user = GitHubApiClient(context, endpoints).currentUser()) {
-        is GitResult.Success ->
-            GitHubConnection(true, user.value.login, null, repository, endpoints.projectBranch)
-        is GitResult.Failure ->
-            GitHubConnection(
-                hasToken = true,
-                login = null,
-                failure = user.message ?: "GitHub rejected the stored token (${user.kind}).",
-                repository = repository,
-                branch = endpoints.projectBranch
-            )
+    return when (val user = provider.account()) {
+        is GitResult.Success -> GitHubConnection(
+            hasToken = true,
+            login = user.value.login,
+            failure = null,
+            repository = repository,
+            branch = branch,
+            providerId = state.id,
+            providerName = state.displayName,
+            baseUrl = state.baseUrl,
+            capabilities = state.capabilities,
+            canPublish = state.canPublish,
+            provider = provider
+        )
+        is GitResult.Failure -> GitHubConnection(
+            hasToken = true,
+            login = null,
+            failure = user.message
+                ?: "${state.displayName} rejected the stored token (${user.kind}).",
+            repository = repository,
+            branch = branch,
+            providerId = state.id,
+            providerName = state.displayName,
+            baseUrl = state.baseUrl,
+            capabilities = state.capabilities,
+            canPublish = state.canPublish,
+            provider = provider
+        )
     }
 }
 
@@ -130,9 +203,10 @@ internal fun sessionFolderName(raw: String?, fallback: String): String =
 class GitHubStatusTool : Tool {
     override val name = "GitHubStatus"
     override val description = """
-        Report the GitHub connection Studio is using: whether a token is stored, which
-        account it authenticates as, the repository Studio last opened, and the local
-        working copies already imported for it.
+        Report the git host Studio is using — GitHub, Gitea or Forgejo, whichever the user
+        configured: whether a token is stored, which account it authenticates as, the
+        repository Studio last opened, the local working copies already imported, and
+        whether this host can publish in this build.
         Read-only. Call this first — GitHubImportRepository defaults to the repository
         reported here, and when nothing is connected this explains what the user must do.
     """.trimIndent()
@@ -143,15 +217,16 @@ class GitHubStatusTool : Tool {
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
         val connection = resolveGitHubConnection(ctx)
-        if (!connection.hasToken) return ToolResult.ok(NOT_CONNECTED)
+        if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
 
         val workspace = WorkspaceService(ctx.androidContext)
         val imported = withContext(Dispatchers.IO) { workspace.allImportedProjects() }
 
         return ToolResult.ok(
             buildString {
+                appendLine("Host: ${connection.providerName} (${connection.baseUrl})")
                 if (connection.login != null) {
-                    appendLine("GitHub account: ${connection.login}")
+                    appendLine("Account: ${connection.login}")
                 }
                 // A token that exists but cannot authenticate is a broken connection, not
                 // a working one; say so rather than printing a healthy-looking report.
@@ -170,19 +245,28 @@ class GitHubStatusTool : Tool {
                     }
                     if (imported.size > 10) appendLine("… ${imported.size - 10} more")
                 }
-                appendLine(
-                    "GitHubCreateRepository creates a new repository on this account " +
-                        "(optionally seeded with a public repository's files) — it also " +
-                        "asks for a fresh approval tap."
-                )
+                if (connection.canPublish) {
+                    appendLine(
+                        "GitHubCreateRepository creates a new repository on this account " +
+                            "(optionally seeded with a public repository's files) — it also " +
+                            "asks for a fresh approval tap."
+                    )
+                } else {
+                    appendLine(
+                        "This host is read-only in this build: creating a repository, " +
+                            "opening a pull request and pushing a commit are unavailable."
+                    )
+                }
                 appendLine(
                     "Next: GitHubImportRepository copies a repository into this session " +
                         "folder, after which Read/Write/Edit/ListFiles/Glob/Grep work on its files."
                 )
-                appendLine(
-                    "GitHubOpenPullRequest then sends those edits as a NEW branch plus a " +
-                        "pull request, with a fresh approval tap on every call."
-                )
+                if (connection.canPublish) {
+                    appendLine(
+                        "GitHubOpenPullRequest then sends those edits as a NEW branch plus a " +
+                            "pull request, with a fresh approval tap on every call."
+                    )
+                }
             }.trimEnd()
         )
     }
@@ -191,7 +275,8 @@ class GitHubStatusTool : Tool {
 class GitHubListRepositoriesTool : Tool {
     override val name = "GitHubListRepositories"
     override val description = """
-        List the GitHub repositories the stored token can see, newest activity first.
+        List the repositories the stored token can see on the configured git host
+        (GitHub, Gitea or Forgejo), newest activity first.
         Read-only. Use it to find the repository the user means when GitHubStatus shows a
         repository that does not exist or that they did not mention.
     """.trimIndent()
@@ -205,14 +290,15 @@ class GitHubListRepositoriesTool : Tool {
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
         val connection = resolveGitHubConnection(ctx)
-        if (!connection.hasToken) return ToolResult.ok(NOT_CONNECTED)
+        if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
         connection.failure?.let { return ToolResult.error(it) }
+        val provider = connection.provider
+            ?: return ToolResult.error("${connection.providerName} is not usable in this build.")
 
         val limit = args.get("limit")?.asInt?.coerceIn(1, 100) ?: 30
         val includeForks = args.get("includeForks")?.asBoolean ?: false
 
-        val api = GitHubApiClient(ctx.androidContext, EndpointSettingsStore.current(ctx.androidContext))
-        return when (val result = api.listRepositories()) {
+        return when (val result = provider.repositories()) {
             is GitResult.Success -> {
                 val repos = result.value.filter { includeForks || !it.fork }
                 if (repos.isEmpty()) {
@@ -241,13 +327,14 @@ class GitHubListRepositoriesTool : Tool {
 class GitHubImportRepositoryTool : Tool {
     override val name = "GitHubImportRepository"
     override val description = """
-        Copy a GitHub repository's files into this chat's working folder so the file tools
-        can read and edit them. Defaults to the repository and branch Studio is pointed at
-        (see GitHubStatus).
+        Copy a repository's files from the configured git host (GitHub, Gitea or Forgejo)
+        into this chat's working folder so the file tools can read and edit them. Defaults
+        to the repository and branch Studio is pointed at (see GitHubStatus).
         Local only: this downloads files into the app's session storage. It does NOT
-        commit, push, open a pull request or change the remote branch. When the edits are
-        ready, send them with GitHubOpenPullRequest (new branch + pull request) or from
-        Studio's Repositories tab.
+        commit, push, open a pull request or change the remote branch. On a host that
+        cannot publish, importing is the end of the chain; elsewhere the edits can be sent
+        with GitHubOpenPullRequest (new branch + pull request) or from Studio's
+        Repositories tab.
         Re-running replaces previously imported files of the same folder. Large
         repositories are capped (2000 files / 32 MB, 4 MB per file).
     """.trimIndent()
@@ -267,7 +354,7 @@ class GitHubImportRepositoryTool : Tool {
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
         val connection = resolveGitHubConnection(ctx)
-        if (!connection.hasToken) return ToolResult.ok(NOT_CONNECTED)
+        if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
         connection.failure?.let { return ToolResult.error(it) }
 
         val requested = argString(args, "repository")?.takeIf { it.isNotBlank() }
@@ -283,7 +370,9 @@ class GitHubImportRepositoryTool : Tool {
         val folder = sessionFolderName(argString(args, "folder"), repo)
 
         val workspace = WorkspaceService(ctx.androidContext)
-        val outcome = withContext(Dispatchers.IO) { importSource(workspace, owner, repo, branch) }
+        val outcome = withContext(Dispatchers.IO) {
+            importSource(workspace, owner, repo, branch, connection.providerId)
+        }
         val source = outcome.getOrElse { failure ->
             return ToolResult.error(
                 "GitHubImportRepository: could not fetch $owner/$repo@$branch — " +
@@ -313,10 +402,20 @@ class GitHubImportRepositoryTool : Tool {
                 stats.samplePaths.take(20).forEach { appendLine("  $folder/$it") }
                 if (stats.samplePaths.size > 20) appendLine("  …")
                 appendLine(
-                    "Read and edit them with the file tools. When the change is complete, " +
-                        "call GitHubOpenPullRequest to push it to a new branch and open a " +
-                        "pull request (the user approves each push)."
+                    "Read and edit them with the file tools."
                 )
+                if (connection.canPublish) {
+                    appendLine(
+                        "When the change is complete, call GitHubOpenPullRequest to push it " +
+                            "to a new branch and open a pull request (the user approves " +
+                            "each push)."
+                    )
+                } else {
+                    appendLine(
+                        "${connection.providerName} is read-only in this build, so the edits " +
+                            "stay in this chat folder; they cannot be pushed from here."
+                    )
+                }
             }.trimEnd()
         )
     }
@@ -329,13 +428,15 @@ class GitHubImportRepositoryTool : Tool {
         workspace: WorkspaceService,
         owner: String,
         repo: String,
-        branch: String
+        branch: String,
+        providerId: GitProviderId
     ): Result<File> {
         val existing = runCatching { workspace.importedProjects(owner, repo) }
             .getOrDefault(emptyList())
             .firstOrNull { dir ->
                 val metadata = workspace.metadata(dir) ?: return@firstOrNull false
-                metadata.ref == branch
+                // A same-named repository on another host is a different project.
+                metadata.providerId == providerId && metadata.ref == branch
             }
         if (existing != null) return Result.success(existing)
 

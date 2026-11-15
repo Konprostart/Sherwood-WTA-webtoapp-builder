@@ -3,6 +3,7 @@ package com.sherwood.wta.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -42,6 +45,14 @@ import com.sherwood.wta.core.studio.EndpointConfig
 import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.ThirdPartyNotices
+import com.sherwood.wta.core.studio.git.GitCredentialKey
+import com.sherwood.wta.core.studio.git.GitCredentialStore
+import com.sherwood.wta.core.studio.git.GitProviderId
+import com.sherwood.wta.core.studio.git.GitProviderLookup
+import com.sherwood.wta.core.studio.git.GitProviderRegistry
+import com.sherwood.wta.core.studio.git.GitProviderSettings
+import com.sherwood.wta.core.studio.git.GitProviderUnavailableReason
+import com.sherwood.wta.core.studio.git.GitStudio
 import com.sherwood.wta.ui.design.WtaButton
 import com.sherwood.wta.ui.design.WtaButtonVariant
 import com.sherwood.wta.ui.design.WtaScreen
@@ -200,6 +211,42 @@ private fun StudioSettingsScreen(
     var errors by remember { mutableStateOf(emptyMap<String, String>()) }
     var showLicenses by remember { mutableStateOf(false) }
 
+    // ---- git hosting choice (GitHub / Gitea / Forgejo) ----------------------
+    val providerSettings = remember { GitProviderSettings.getInstance(context) }
+    val credentials = remember { GitCredentialStore(context) }
+    var providerId by remember { mutableStateOf(providerSettings.activeProvider) }
+    var serverUrl by remember { mutableStateOf(providerSettings.baseUrl(providerId)) }
+    var tokenInput by remember { mutableStateOf("") }
+    var tokenMessage by remember { mutableStateOf<String?>(null) }
+    var tokenError by remember { mutableStateOf(false) }
+    var testing by remember { mutableStateOf(false) }
+    var testMessage by remember { mutableStateOf<String?>(null) }
+    var testOk by remember { mutableStateOf(false) }
+
+    val credentialKey = remember(providerId, serverUrl) {
+        GitCredentialKey.of(providerId, serverUrl)
+    }
+    val hasToken = credentialKey?.let { credentials.hasToken(it) } == true
+    val serverUrlProblem = GitStudio.baseUrlProblem(providerId, serverUrl)
+
+    fun saveToken() {
+        val key = credentialKey
+        if (key == null) {
+            tokenError = true
+            tokenMessage = if (serverUrl.isBlank()) Strings.studioProviderMissingUrl
+            else Strings.studioProviderInsecureUrl
+            return
+        }
+        credentials.saveToken(key, tokenInput).onSuccess {
+            tokenInput = ""
+            tokenError = false
+            tokenMessage = Strings.studioProviderTokenSaved
+        }.onFailure {
+            tokenError = true
+            tokenMessage = it.message ?: Strings.studioTestFailed
+        }
+    }
+
     if (showLicenses) {
         StudioLicensesScreen(onBack = { showLicenses = false })
         return
@@ -232,9 +279,26 @@ private fun StudioSettingsScreen(
             scope.launch { snackbarHostState.showSnackbar(Strings.studioInvalidEndpoint) }
             return
         }
+        // A provider with an unusable server URL must never become active: every request
+        // after that would fail, and the reason would look like a network problem.
+        val providerProblem = GitStudio.baseUrlProblem(providerId, serverUrl)
+        if (providerProblem != null) {
+            tokenError = true
+            tokenMessage = if (providerProblem == GitProviderUnavailableReason.MISSING_BASE_URL) {
+                Strings.studioProviderMissingUrl
+            } else {
+                Strings.studioProviderInsecureUrl
+            }
+            scope.launch { snackbarHostState.showSnackbar(tokenMessage.orEmpty()) }
+            return
+        }
         val result = store.save(config)
         if (result.isSuccess) {
             studioSettings.oauthClientId = oauthClientId
+            // Base URL first, then the active provider, so a screen that reads the
+            // active provider never sees it pointing at a server it cannot resolve.
+            providerSettings.setBaseUrl(providerId, serverUrl)
+            providerSettings.activeProvider = providerId
             scope.launch { snackbarHostState.showSnackbar(Strings.studioSaved) }
         } else {
             scope.launch {
@@ -265,7 +329,235 @@ private fun StudioSettingsScreen(
                 .padding(horizontal = WtaSpacing.ScreenHorizontal, vertical = WtaSpacing.ScreenVertical),
             verticalArrangement = Arrangement.spacedBy(WtaSpacing.SectionGap)
         ) {
-            WtaSection(title = Strings.studioClientId) {
+            WtaSection(title = Strings.studioGitHosting, description = Strings.studioGitHostingDesc) {
+                WtaSettingCard {
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = WtaSpacing.RowHorizontal,
+                            vertical = WtaSpacing.ContentGap
+                        )
+                    ) {
+                        Text(
+                            Strings.studioProvider,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        GitStudio.selectable().forEach { option ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.small)
+                                    .clickable {
+                                        providerId = option
+                                        serverUrl = providerSettings.baseUrl(option)
+                                        testMessage = null
+                                        tokenMessage = null
+                                        tokenError = false
+                                    }
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                RadioButton(
+                                    selected = providerId == option,
+                                    onClick = {
+                                        providerId = option
+                                        serverUrl = providerSettings.baseUrl(option)
+                                        testMessage = null
+                                    }
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    GitStudio.displayName(option),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    if (providerId != GitProviderId.GITHUB) {
+                        WtaSectionDivider()
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = WtaSpacing.RowHorizontal,
+                                vertical = WtaSpacing.ContentGap
+                            )
+                        ) {
+                            OutlinedTextField(
+                                value = serverUrl,
+                                onValueChange = {
+                                    serverUrl = it.trim()
+                                    testMessage = null
+                                },
+                                label = { Text(Strings.studioServerUrl) },
+                                singleLine = true,
+                                isError = serverUrl.isNotBlank() &&
+                                    serverUrlProblem == GitProviderUnavailableReason.NON_HTTPS_BASE_URL,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            // The blocking states are stated; the neutral hint follows the
+                            // About "show descriptions" switch.
+                            when {
+                                serverUrl.isBlank() -> Text(
+                                    Strings.studioServerUrlMissing,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                serverUrlProblem == GitProviderUnavailableReason.NON_HTTPS_BASE_URL ->
+                                    Text(
+                                        Strings.studioServerUrlInsecure,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                LocalShowDescriptions.current -> Text(
+                                    Strings.studioServerUrlHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        WtaSectionDivider()
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = WtaSpacing.RowHorizontal,
+                                vertical = WtaSpacing.ContentGap
+                            )
+                        ) {
+                            if (LocalShowDescriptions.current) {
+                                Text(
+                                    Strings.studioGiteaConnectHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.height(6.dp))
+                            }
+                            OutlinedTextField(
+                                value = tokenInput,
+                                onValueChange = {
+                                    tokenInput = it
+                                    tokenError = false
+                                    tokenMessage = null
+                                },
+                                label = { Text(Strings.studioProviderToken) },
+                                singleLine = true,
+                                isError = tokenError,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (LocalShowDescriptions.current) {
+                                Text(
+                                    Strings.studioProviderTokenHint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                WtaButton(
+                                    onClick = { saveToken() },
+                                    text = Strings.studioSaveToken,
+                                    enabled = tokenInput.isNotBlank(),
+                                    variant = WtaButtonVariant.Outlined
+                                )
+                                WtaButton(
+                                    onClick = {
+                                        testing = true
+                                        testMessage = null
+                                        scope.launch {
+                                            val lookup = GitProviderRegistry.of(
+                                                context,
+                                                providerId,
+                                                serverUrl
+                                            )
+                                            val message = when (lookup) {
+                                                is GitProviderLookup.Unavailable -> {
+                                                    testOk = false
+                                                    when (lookup.reason) {
+                                                        GitProviderUnavailableReason.MISSING_BASE_URL ->
+                                                            Strings.studioProviderMissingUrl
+                                                        GitProviderUnavailableReason.NON_HTTPS_BASE_URL ->
+                                                            Strings.studioProviderInsecureUrl
+                                                        GitProviderUnavailableReason
+                                                            .NOT_IMPLEMENTED_IN_THIS_BUILD ->
+                                                            Strings.studioProviderNotImplemented
+                                                    }
+                                                }
+                                                is GitProviderLookup.Available -> when (
+                                                    val info = lookup.provider.serverInfo()
+                                                ) {
+                                                    is com.sherwood.wta.core.studio.git
+                                                        .GitResult.Success -> {
+                                                        testOk = true
+                                                        val login = info.value.login.orEmpty()
+                                                        val version = info.value.serverVersion
+                                                        if (version.isNullOrBlank()) {
+                                                            Strings.studioTestOk(login)
+                                                        } else {
+                                                            Strings.studioTestOkVersion(login, version)
+                                                        }
+                                                    }
+                                                    is com.sherwood.wta.core.studio.git
+                                                        .GitResult.Failure -> {
+                                                        testOk = false
+                                                        info.message ?: Strings.studioTestFailed
+                                                    }
+                                                }
+                                            }
+                                            testMessage = message
+                                            testing = false
+                                        }
+                                    },
+                                    text = if (testing) Strings.studioTesting
+                                    else Strings.studioTestConnection,
+                                    enabled = !testing,
+                                    variant = WtaButtonVariant.Outlined
+                                )
+                            }
+                            if (tokenMessage != null) {
+                                Text(
+                                    tokenMessage.orEmpty(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (tokenError) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else if (!hasToken) {
+                                Text(
+                                    Strings.studioProviderTokenMissing,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            testMessage?.let { message ->
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (testOk) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        WtaSectionDivider()
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = WtaSpacing.RowHorizontal,
+                                vertical = WtaSpacing.ContentGap
+                            )
+                        ) {
+                            // The read-only boundary is a fact about this build, so it is
+                            // always shown rather than hidden behind the description switch.
+                            Text(
+                                Strings.studioProviderReadOnly,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (providerId == GitProviderId.GITHUB) {
+                WtaSection(title = Strings.studioClientId) {
                 WtaSettingCard {
                     Column(
                         modifier = Modifier.padding(
@@ -298,6 +590,7 @@ private fun StudioSettingsScreen(
                             )
                         }
                     }
+                }
                 }
             }
 

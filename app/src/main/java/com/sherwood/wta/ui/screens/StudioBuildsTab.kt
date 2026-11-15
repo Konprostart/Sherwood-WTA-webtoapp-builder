@@ -37,14 +37,16 @@ import com.sherwood.wta.core.studio.BuildProgress
 import com.sherwood.wta.core.studio.BuildRunDetails
 import com.sherwood.wta.core.studio.BuildStudio
 import com.sherwood.wta.core.studio.BuildTimeoutException
-import com.sherwood.wta.core.studio.EndpointSettingsStore
-import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.GitHubArtifact
-import com.sherwood.wta.core.studio.GitHubRelease
-import com.sherwood.wta.core.studio.GitHubRepository
+import com.sherwood.wta.core.studio.git.GitProviderLookup
+import com.sherwood.wta.core.studio.git.GitProviderRegistry
+import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitResult
-import com.sherwood.wta.core.studio.GitHubWorkflow
-import com.sherwood.wta.core.studio.GitHubWorkflowRun
+import com.sherwood.wta.core.studio.git.GitStudio
+import com.sherwood.wta.core.studio.git.GitArtifact
+import com.sherwood.wta.core.studio.git.GitRelease
+import com.sherwood.wta.core.studio.git.GitRepository
+import com.sherwood.wta.core.studio.git.GitPipeline
+import com.sherwood.wta.core.studio.git.GitPipelineRun
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.WorkspaceService
 import com.sherwood.wta.ui.design.WtaButton
@@ -71,30 +73,35 @@ private data class ImportedBranch(
 @Composable
 internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostState) {
     val scope = rememberCoroutineScope()
-    val endpoints = remember { EndpointSettingsStore.current(context) }
-    val api = remember { GitHubApiClient(context, endpoints) }
     val buildStudio = remember { BuildStudio(context) }
     val workspace = remember { WorkspaceService(context) }
     val settings = remember { StudioSettingsStore.getInstance(context) }
     val uriHandler = LocalUriHandler.current
 
-    var repoKey by remember { mutableStateOf(settings.lastRepository.orEmpty()) }
-    var repositories by remember { mutableStateOf<List<GitHubRepository>>(emptyList()) }
-    var workflows by remember { mutableStateOf<List<GitHubWorkflow>>(emptyList()) }
-    var runs by remember { mutableStateOf<List<GitHubWorkflowRun>>(emptyList()) }
-    var releases by remember { mutableStateOf<List<GitHubRelease>>(emptyList()) }
+    // The active connection; read capabilities decide whether a build can be started.
+    val studio = remember { GitStudio.state(context) }
+    val provider = remember(studio.id, studio.baseUrl) {
+        (GitProviderRegistry.active(context) as? GitProviderLookup.Available)?.provider
+    }
+    val canDispatch = studio.capabilities?.pipelineDispatch == true
+
+    var repoKey by remember { mutableStateOf(settings.lastRepository(studio.id).orEmpty()) }
+    var repositories by remember { mutableStateOf<List<GitRepository>>(emptyList()) }
+    var workflows by remember { mutableStateOf<List<GitPipeline>>(emptyList()) }
+    var runs by remember { mutableStateOf<List<GitPipelineRun>>(emptyList()) }
+    var releases by remember { mutableStateOf<List<GitRelease>>(emptyList()) }
     var imported by remember { mutableStateOf<List<ImportedBranch>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var showRepoPicker by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableStateOf(0) }
     var downloadingAssetId by remember { mutableStateOf<Long?>(null) }
 
-    var dispatchWorkflow by remember { mutableStateOf<GitHubWorkflow?>(null) }
+    var dispatchWorkflow by remember { mutableStateOf<GitPipeline?>(null) }
     var dispatchRef by remember { mutableStateOf("") }
 
-    var detailRun by remember { mutableStateOf<GitHubWorkflowRun?>(null) }
+    var detailRun by remember { mutableStateOf<GitPipelineRun?>(null) }
     var detail by remember { mutableStateOf<BuildRunDetails?>(null) }
-    var detailArtifacts by remember { mutableStateOf<List<GitHubArtifact>>(emptyList()) }
+    var detailArtifacts by remember { mutableStateOf<List<GitArtifact>>(emptyList()) }
     var detailLogs by remember { mutableStateOf<String?>(null) }
     var detailBusy by remember { mutableStateOf(false) }
 
@@ -102,7 +109,7 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
     // Editable: a build usually wants the PR branch the agent just pushed, not the
     // branch the working copy was imported from.
     var buildRef by remember { mutableStateOf("") }
-    var buildWorkflow by remember { mutableStateOf<GitHubWorkflow?>(null) }
+    var buildWorkflow by remember { mutableStateOf<GitPipeline?>(null) }
     var buildProgress by remember { mutableStateOf<BuildProgress?>(null) }
     var buildResult by remember { mutableStateOf<BranchBuildResult?>(null) }
     var buildError by remember { mutableStateOf<String?>(null) }
@@ -140,11 +147,14 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
         val pair = ownerRepo() ?: return
         loading = true
         val (owner, repo) = pair
-        when (val repoResult = api.getRepository(owner, repo)) {
-            is GitResult.Success -> {
-                dispatchRef = repoResult.value.defaultBranch
+        val repoRef = GitRepoRef.of(owner, repo)
+        if (repoRef != null) {
+            when (val repoResult = provider?.repository(repoRef)) {
+                is GitResult.Success -> {
+                    dispatchRef = repoResult.value.defaultBranch
+                }
+                else -> Unit
             }
-            is GitResult.Failure -> Unit
         }
         val wf = buildStudio.workflows(owner, repo)
         if (wf.isSuccess) {
@@ -170,7 +180,11 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
     }
 
     LaunchedEffect(Unit) {
-        when (val result = api.listRepositories()) {
+        val active = provider
+        when (val result = active?.repositories() ?: GitResult.Failure(
+            com.sherwood.wta.core.studio.git.GitFailureKind.UNSUPPORTED,
+            message = Strings.studioProviderNotImplemented
+        )) {
             is GitResult.Success -> {
                 repositories = result.value
                 if (ownerRepo() == null) {
@@ -191,7 +205,7 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
         }
     }
 
-    fun startBranchBuild(target: ImportedBranch, workflow: GitHubWorkflow, ref: String) {
+    fun startBranchBuild(target: ImportedBranch, workflow: GitPipeline, ref: String) {
         buildResult = null
         buildError = null
         buildProgress = BuildProgress(BuildPhase.DISPATCHING)
@@ -286,21 +300,29 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
                                 branch.baseSha?.let { append(" · ").append(it.take(10)) }
                             },
                             trailing = {
-                                WtaButton(
-                                    text = Strings.studioBuildThisBranch,
-                                    size = WtaButtonSize.Small,
-                                    onClick = {
-                                        buildTarget = branch
-                                        buildRef = branch.branch
-                                        buildResult = null
-                                        buildError = null
-                                        buildProgress = null
-                                        val known = runs.firstOrNull { it.branch == branch.branch }
-                                            ?.workflowId
-                                        buildWorkflow = workflows.firstOrNull { it.id == known }
-                                            ?: workflows.firstOrNull()
-                                    }
-                                )
+                                if (canDispatch) {
+                                    WtaButton(
+                                        text = Strings.studioBuildThisBranch,
+                                        size = WtaButtonSize.Small,
+                                        onClick = {
+                                            buildTarget = branch
+                                            buildRef = branch.branch
+                                            buildResult = null
+                                            buildError = null
+                                            buildProgress = null
+                                            val known = runs.firstOrNull {
+                                                it.branch == branch.branch
+                                            }
+                                            buildWorkflow = workflows.firstOrNull { candidate ->
+                                                candidate.id == known?.workflowId ||
+                                                    (
+                                                        known?.workflowPath != null &&
+                                                            candidate.path == known.workflowPath
+                                                        )
+                                            } ?: workflows.firstOrNull()
+                                        }
+                                    )
+                                }
                             }
                         )
                     }
@@ -321,14 +343,16 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
                             title = workflow.name,
                             subtitle = workflow.path,
                             trailing = {
-                                WtaButton(
-                                    text = Strings.studioRunWorkflow,
-                                    size = WtaButtonSize.Small,
-                                    onClick = {
-                                        dispatchWorkflow = workflow
-                                        if (dispatchRef.isBlank()) dispatchRef = "main"
-                                    }
-                                )
+                                if (canDispatch) {
+                                    WtaButton(
+                                        text = Strings.studioRunWorkflow,
+                                        size = WtaButtonSize.Small,
+                                        onClick = {
+                                            dispatchWorkflow = workflow
+                                            if (dispatchRef.isBlank()) dispatchRef = "main"
+                                        }
+                                    )
+                                }
                             }
                         )
                     }
@@ -492,7 +516,7 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
                             active = repo.ownerRepo == repoKey,
                             onClick = {
                                 repoKey = repo.ownerRepo
-                                settings.lastRepository = repo.ownerRepo
+                                settings.setLastRepository(studio.id, repo.ownerRepo)
                                 showRepoPicker = false
                             }
                         )

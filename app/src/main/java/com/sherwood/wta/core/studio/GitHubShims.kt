@@ -22,18 +22,17 @@ import com.sherwood.wta.core.studio.git.GitRunJob
 import com.sherwood.wta.core.studio.git.GitRunStep
 
 /**
- * Temporary bridge between the pre-split GitHub type names and the provider-neutral
- * model in [com.sherwood.wta.core.studio.git].
+ * The GitHub transport's vocabulary, kept as aliases of the provider-neutral model in
+ * [com.sherwood.wta.core.studio.git].
  *
- * The Studio's services now speak the neutral vocabulary. The screens and the agent
- * tools are still written against the old names, and a type alias keeps them
- * compiling without a 600-line rename that would bury the actual seam in noise.
- * The alias resolves to the same class, so there is no conversion, no copying and no
- * behaviour difference.
+ * `GitHubApiClient` is the GitHub driver and names its own concepts accordingly, and the
+ * publish path plus a few older tests still read those names. An alias resolves to the
+ * same class, so there is no conversion, no copying and no behaviour difference.
  *
- * These aliases go away in the release that introduces the first non-GitHub driver:
- * from then on the UI has to name a provider-independent type anyway, and a lingering
- * `GitHubRepository` next to a Gitea server would be actively misleading.
+ * The Studio's screens and services do **not** use these names any more: with a second
+ * driver in the build, a `GitHubRepository` next to a Gitea server would be actively
+ * misleading, so the UI speaks `GitRepository`, `GitChangeRequest`, `GitPipelineRun` and
+ * so on. Anything reachable only through these aliases is GitHub-specific code.
  *
  * `GitResult` and `GitFailureKind` are deliberately absent: Kotlin does not let a
  * type alias qualify its nested classes (`Alias.Success`), so those two names were

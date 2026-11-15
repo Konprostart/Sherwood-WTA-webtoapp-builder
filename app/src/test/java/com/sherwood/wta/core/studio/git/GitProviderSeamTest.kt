@@ -3,6 +3,7 @@ package com.sherwood.wta.core.studio.git
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -113,24 +114,32 @@ class GitProviderSeamTest {
     // ---------------------------------------------------------------------- registry
 
     @Test
-    fun `github is the only provider this build can connect to`() {
-        assertThat(GitProviderRegistry.supported()).containsExactly(GitProviderId.GITHUB)
+    fun `github gitea and forgejo all have a driver in this build`() {
+        assertThat(GitProviderRegistry.supported()).containsExactly(
+            GitProviderId.GITHUB,
+            GitProviderId.GITEA,
+            GitProviderId.FORGEJO
+        )
     }
 
     @Test
-    fun `an unimplemented provider is reported instead of falling back to github`() {
-        val context = context()
+    fun `a self-hosted provider resolves to its own driver and keeps its id`() {
         val lookup = GitProviderRegistry.of(
-            context,
+            context(),
             GitProviderId.GITEA,
             "https://git.example.com"
         )
 
-        assertThat(lookup).isInstanceOf(GitProviderLookup.Unavailable::class.java)
-        val unavailable = lookup as GitProviderLookup.Unavailable
-        assertThat(unavailable.id).isEqualTo(GitProviderId.GITEA)
-        assertThat(unavailable.reason)
-            .isEqualTo(GitProviderUnavailableReason.NOT_IMPLEMENTED_IN_THIS_BUILD)
+        val available = lookup as GitProviderLookup.Available
+        assertThat(available.provider.id).isEqualTo(GitProviderId.GITEA)
+        assertThat(available.provider.baseUrl).isEqualTo("https://git.example.com")
+        // Forgejo is a distinct id even though it shares Gitea's API.
+        val forgejo = GitProviderRegistry.of(
+            context(),
+            GitProviderId.FORGEJO,
+            "https://code.example.com"
+        ) as GitProviderLookup.Available
+        assertThat(forgejo.provider.id).isEqualTo(GitProviderId.FORGEJO)
     }
 
     @Test
@@ -174,6 +183,142 @@ class GitProviderSeamTest {
         assertThat(capabilities.releases).isTrue()
         assertThat(capabilities.binaryReleaseAssets).isTrue()
         assertThat(capabilities.pipelineDispatch).isTrue()
+        assertThat(capabilities.createBranches).isTrue()
+        assertThat(capabilities.mergeBranches).isTrue()
+        assertThat(capabilities.createChangeRequests).isTrue()
+        assertThat(capabilities.mergeChangeRequests).isTrue()
+    }
+
+    @Test
+    fun `gitea advertises reads and no writes`() {
+        val capabilities = GiteaProvider.CAPABILITIES
+
+        assertThat(capabilities.checks).isTrue()
+        assertThat(capabilities.pipelines).isTrue()
+        assertThat(capabilities.runLogs).isTrue()
+        assertThat(capabilities.artifacts).isTrue()
+        assertThat(capabilities.releases).isTrue()
+        // Every write is off: the driver must not offer a control it cannot honour.
+        assertThat(capabilities.reviews).isFalse()
+        assertThat(capabilities.inlineComments).isFalse()
+        assertThat(capabilities.pipelineDispatch).isFalse()
+        assertThat(capabilities.createRepository).isFalse()
+        assertThat(capabilities.createBranches).isFalse()
+        assertThat(capabilities.mergeBranches).isFalse()
+        assertThat(capabilities.createChangeRequests).isFalse()
+        assertThat(capabilities.mergeChangeRequests).isFalse()
+        assertThat(capabilities.oauthDeviceFlow).isFalse()
+    }
+
+    @Test
+    fun `gitea write operations fail as unsupported rather than as network errors`() =
+        runBlocking<Unit> {
+            val provider = (GitProviderRegistry.of(
+                context(),
+                GitProviderId.GITEA,
+                "https://git.example.com"
+            ) as GitProviderLookup.Available).provider
+            val ref = GitRepoRef.parse("owner/repo")!!
+
+            val created = provider.createChangeRequest(
+                ref,
+                NewGitChangeRequest(title = "t", head = "h", base = "main")
+            )
+            val failure = created as GitResult.Failure
+            assertThat(failure.kind).isEqualTo(GitFailureKind.UNSUPPORTED)
+            assertThat(provider.commitWriter()).isNull()
+        }
+
+    // ------------------------------------------------------------- studio state
+
+    @Test
+    fun `the provider name shown to the user is the product name`() {
+        assertThat(GitStudio.displayName(GitProviderId.GITHUB)).isEqualTo("GitHub")
+        assertThat(GitStudio.displayName(GitProviderId.GITEA)).isEqualTo("Gitea")
+        assertThat(GitStudio.displayName(GitProviderId.FORGEJO)).isEqualTo("Forgejo")
+        assertThat(GitStudio.selectable()).hasSize(3)
+    }
+
+    @Test
+    fun `a server url is validated before it is saved`() {
+        // GitHub has no editable server URL, so nothing can be wrong with it.
+        assertThat(GitStudio.baseUrlProblem(GitProviderId.GITHUB, "")).isNull()
+        assertThat(GitStudio.baseUrlProblem(GitProviderId.GITEA, "  "))
+            .isEqualTo(GitProviderUnavailableReason.MISSING_BASE_URL)
+        assertThat(GitStudio.baseUrlProblem(GitProviderId.GITEA, "http://git.example.com"))
+            .isEqualTo(GitProviderUnavailableReason.NON_HTTPS_BASE_URL)
+        assertThat(GitStudio.baseUrlProblem(GitProviderId.GITEA, "https://git.example.com"))
+            .isNull()
+        assertThat(GitStudio.baseUrlProblem(GitProviderId.FORGEJO, "git.example.com")).isNull()
+    }
+
+    @Test
+    fun `the state reports why an unconfigured server cannot be used`() {
+        val context = context()
+        val settings = GitProviderSettings.getInstance(context)
+        val previousProvider = settings.activeProvider
+        val previousUrl = settings.baseUrl(GitProviderId.GITEA)
+        try {
+            settings.setBaseUrl(GitProviderId.GITEA, "")
+            settings.activeProvider = GitProviderId.GITEA
+
+            val state = GitStudio.state(context)
+
+            assertThat(state.id).isEqualTo(GitProviderId.GITEA)
+            assertThat(state.displayName).isEqualTo("Gitea")
+            assertThat(state.isAvailable).isFalse()
+            assertThat(state.unavailableReason)
+                .isEqualTo(GitProviderUnavailableReason.MISSING_BASE_URL)
+            assertThat(state.canPublish).isFalse()
+        } finally {
+            settings.activeProvider = previousProvider
+            settings.setBaseUrl(GitProviderId.GITEA, previousUrl)
+        }
+    }
+
+    @Test
+    fun `a configured gitea server yields a read-only state`() {
+        val context = context()
+        val settings = GitProviderSettings.getInstance(context)
+        val previousProvider = settings.activeProvider
+        val previousUrl = settings.baseUrl(GitProviderId.GITEA)
+        try {
+            settings.setBaseUrl(GitProviderId.GITEA, "https://git.example.com")
+            settings.activeProvider = GitProviderId.GITEA
+
+            val state = GitStudio.state(context)
+
+            assertThat(state.isAvailable).isTrue()
+            assertThat(state.capabilities).isEqualTo(GiteaProvider.CAPABILITIES)
+            // No writer means no publish UI, on this host and in this build.
+            assertThat(state.canPublish).isFalse()
+            assertThat(state.hasToken).isFalse()
+        } finally {
+            settings.activeProvider = previousProvider
+            settings.setBaseUrl(GitProviderId.GITEA, previousUrl)
+        }
+    }
+
+    @Test
+    fun `a working copy resolves against its own host, not the active one`() {
+        val context = context()
+        val settings = GitProviderSettings.getInstance(context)
+        val previousProvider = settings.activeProvider
+        try {
+            settings.activeProvider = GitProviderId.GITHUB
+
+            val lookup = GitProviderRegistry.forProvenance(
+                context,
+                GitProviderId.GITEA,
+                "git.example.com"
+            )
+
+            val available = lookup as GitProviderLookup.Available
+            assertThat(available.provider.id).isEqualTo(GitProviderId.GITEA)
+            assertThat(available.provider.baseUrl).isEqualTo("https://git.example.com")
+        } finally {
+            settings.activeProvider = previousProvider
+        }
     }
 
     private fun context(): Context = ApplicationProvider.getApplicationContext()

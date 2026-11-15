@@ -1,6 +1,7 @@
-# Sherwood Studio (GitHub, builds, vault)
+# Sherwood Studio (git hosts, builds, vault)
 
-Sherwood Studio is the GitHub-facing part of this app. It is host-only code under
+Sherwood Studio is the git-hosting part of this app. It speaks to **GitHub**, **Gitea**
+and **Forgejo** through one provider interface. It is host-only code under
 `app/src/main/java/com/sherwood/wta/core/studio/` and is opened from the home
 overflow menu (Sherwood Studio) or Settings.
 
@@ -10,22 +11,22 @@ Everything still ships as **one APK**. Studio is not a second app.
 
 | Area | Implementation | Notes |
 | --- | --- | --- |
-| GitHub account | `GitHubOAuthClient` | OAuth **Device Flow** with a user-owned public OAuth App client ID. No client secret exists in the APK. |
-| Token storage | existing `GitHubTokenStore` | Encrypted with Android Keystore, same store the repo bridge already uses. If the Keystore master key is unavailable the token falls back to a key derived from the package name and the APK signing certificate — that is obfuscation, not secret-key encryption, so Git settings shows which of the two is in use. |
-| Repositories | `GitHubApiClient.listRepositories` | Public and private (token scope `repo`). |
-| Branch, merge, history | `WorkspaceService` + `GitHubApiClient` | Branch create, checkout (clean working copy only), pull, merge, commit history. |
-| Commit / push | existing `RepoBridgeCommitUseCase` | Server-side Git Data API commit with the existing review and secret scanner. |
+| Account | `GitHubOAuthClient` (GitHub), `GiteaApiClient` (Gitea/Forgejo) | GitHub uses OAuth **Device Flow** with a user-owned public OAuth App client ID; no client secret exists in the APK. Gitea and Forgejo are connected with a personal access token, entered in Studio → Settings next to the server URL. |
+| Token storage | `GitCredentialStore` (GitHub via the existing `GitHubTokenStore` slot) | Encrypted with Android Keystore, one slot per `{provider}:{host}`. If the Keystore master key is unavailable a slot falls back to a key derived from the package name and the APK signing certificate — that is obfuscation, not secret-key encryption, so Git settings shows which of the two is in use. |
+| Repositories | `GitProvider.repositories` | Public and private that the token can see. |
+| Branch, merge, history | `WorkspaceService` + the provider | Branch list, checkout (clean working copy only), pull, history. Create and merge are offered only when the provider's capabilities allow them. |
+| Commit / push | existing `RepoBridgeCommitUseCase` | Server-side commit with the existing review and secret scanner, through the working copy's own `GitCommitWriter`. |
 | Diff | `UnifiedDiff` | Bounded local LCS; binary files report sizes only. |
-| Workspace inbox | `StudioInboxTab` | Watched repositories, open pull requests, branches; per-PR details, changed files, CI check state, a review-comment box and a per-file line comment composer. Commentable line numbers are read from the diff hunk headers (`GitHubApiClient.commentableNewLines`), so only new-side lines GitHub accepts are offered; binary/large files without a `patch` fall back to manual entry. |
-| Pull requests | `GitHubApiClient.createPullRequest` | Open a PR from a branch (title, description, base, draft). Errors come from GitHub's own message. Review submission is `COMMENT` / `REQUEST_CHANGES` only — the app never approves or merges on its own. |
+| Workspace inbox | `StudioInboxTab` | Watched repositories, open pull requests, branches; per-PR details, changed files, CI check state, a review-comment box and a per-file line comment composer. Commentable line numbers are read from the diff hunk headers (`GitDiffLines.commentableNewLines`), so only new-side lines the host accepts are offered; binary/large files without a `patch` fall back to manual entry. The review and line-comment composers appear only when the driver supports them, which today means GitHub. |
+| Pull requests | `GitProvider.createChangeRequest` | Open a PR from a branch (title, description, base, draft). Errors come from GitHub's own message. Review submission is `COMMENT` / `REQUEST_CHANGES` only — the app never approves or merges on its own. |
 | Inspector | `ArtifactInspector` + `StudioInspectorTab` | Integrity, signature, package identity and provenance for a vault artifact, each reported separately. |
-| Build Studio | `BuildStudio` | Workflow list, dispatch, run status, jobs, logs, artifacts, **build this branch** (dispatch → wait → import) and **releases** as an artifact source. |
+| Build Studio | `BuildStudio` | Workflow list, run status, jobs, logs, artifacts, **build this branch** (dispatch → wait → import; shown only when the provider can dispatch), and **releases** as an artifact source. |
 | Artifact vault | `ArtifactVault` | APK/AAB files with SHA-256, version, source commit, release tag, run id, signature. |
 | Signing Studio | `SigningStudio` + `ProjectSigningIdentity` | Signs vault APKs (apksig) and AABs with the **project's own** identity for the artifact's package. Imported keystore or the existing per-package key; a missing key must be created on purpose. |
 | Export | `ArtifactExport` | Share a vault file as a `FileProvider` content URI, or copy it into a document the user picks in the system picker (`Save to Downloads`). AABs are Play upload bundles, APKs are installable. |
 | Install | `ArtifactInstaller` | System installer via FileProvider with a read grant. |
 | Workspace link | `WorkspaceBridgeService` | Commits `.sherwood/workspace.json`; external tools read it over raw content. No Sherwood server. |
-| Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubCreateRepository` / `GitHubImportRepository` / `GitHubOpenPullRequest` | The in-app agent can read the connection, create a new independent repository, copy a repository into its own session folder, and send the edited files back as a new branch plus a pull request with a fresh approval tap. It never forks and never merges — see [Agent access](#agent-access). |
+| Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubCreateRepository` / `GitHubImportRepository` / `GitHubOpenPullRequest` | The in-app agent reads the connection of the **active** host, creates a new independent repository, copies a repository into its own session folder, and sends edited files back as a new branch plus a pull request with a fresh approval tap. Reading and importing work on Gitea/Forgejo; the two write tools refuse there because those drivers are read-only in this build. It never forks and never merges — see [Agent access](#agent-access). |
 | Endpoints | `EndpointConfig` | Every Studio address is HTTPS, validated, and overridable from Settings. |
 
 ## Provider seam
@@ -33,195 +34,80 @@ Everything still ships as **one APK**. Studio is not a second app.
 The Studio talks to a hosting platform through one interface,
 `com.sherwood.wta.core.studio.git.GitProvider`. Everything a hosting platform has to
 answer — account, repositories, branches, change requests, checks, commits, pipelines,
-artifacts, releases and the commit writer — is declared there with provider-neutral
-models (`GitRepository`, `GitChangeRequest`, `GitPipelineRun`, …). `BuildStudio` and
-`WorkspaceService` call that interface; they no longer name a host.
+artifacts, releases, the source archive and the commit writer — is declared there with
+provider-neutral models (`GitRepository`, `GitChangeRequest`, `GitPipelineRun`, …).
+`BuildStudio`, `WorkspaceService`, the importer and the Studio screens call that
+interface; none of them names a host.
 
-The Studio's **agent tools are the exception in this release**: they are still named
-`GitHub*` and still construct `GitHubApiClient`, because renaming them is the release
-that also makes them work against a second host. Until then they keep their
-GitHub-specific wording and behaviour unchanged.
-
-- **Which host answers** is decided in one place, `GitProviderRegistry`. An id that
-  has no driver in this build is reported as `GitProviderLookup.Unavailable` with a
-  typed reason (`NOT_IMPLEMENTED_IN_THIS_BUILD`, `MISSING_BASE_URL`,
-  `NON_HTTPS_BASE_URL`) instead of silently falling back to GitHub — a fallback would
-  send the user's edits and token to the wrong server.
-- **GitHub is the only driver that ships today** (`GitHubProvider`). It is a thin
-  adapter over the existing `GitHubApiClient`, so no request, header or error message
-  changed. A second host needs a driver and an entry in the registry, not a change to
-  any caller.
-- **Capabilities are explicit.** `GitCapabilities` states what a host can do
-  (reviews, inline comments, checks, dispatch, artifacts, binary release assets,
-  device flow, and whether its change requests are called pull or merge requests) so a
-  screen can hide a section it cannot serve and say why, rather than offer a control
-  that always fails.
-- **Credentials are per provider and per server.** `GitCredentialStore` keys a token
-  by `{provider}:{host}` and encrypts it with the Android Keystore master key through
-  the shared `TokenCipher`; the associated data is derived from the slot, so a
-  ciphertext moved to another slot fails to decrypt rather than authenticating as the
-  wrong server. GitHub keeps its original `sherwood_git` slot and storage key, so an
-  existing connection needs no migration. A self-hosted server must be HTTPS — the
-  token travels in a header.
+- **Which host answers** is decided in one place, `GitProviderRegistry`. An id with no
+  driver, no server URL, or a non-HTTPS URL is reported as
+  `GitProviderLookup.Unavailable` with a typed reason (`NOT_IMPLEMENTED_IN_THIS_BUILD`,
+  `MISSING_BASE_URL`, `NON_HTTPS_BASE_URL`) instead of falling back to GitHub — a
+  fallback would send the user's edits and token to the wrong server.
+- **Drivers in this build:** `GitHubProvider` (full read/write) and `GiteaProvider`
+  (Gitea **and** Forgejo, read-only). The GitHub driver is a thin adapter over the
+  existing `GitHubApiClient`, so no request, header or error message changed. The Gitea
+  driver is `GiteaApiClient` over `{server}/api/v1`; it reads account, repositories,
+  branches, pull requests, commit statuses, commits, file contents, Actions
+  workflows/runs/jobs/logs/artifacts, releases and the source archive.
+- **Read-only means read-only.** Every Gitea write — create repository, create branch,
+  merge branch, open or merge a pull request, submit a review, post a line comment,
+  dispatch a workflow — fails with `GitFailureKind.UNSUPPORTED` *before* any request is
+  made, and `commitWriter()` returns null. The screens read
+  `GitCapabilities` and either hide the control or replace it with one line saying why;
+  they never offer a button that would always fail.
+- **Capabilities are explicit.** `GitCapabilities` states what a driver can do (reviews,
+  inline comments, checks, pipeline dispatch, artifacts, binary release assets, device
+  flow, create/merge for branches and change requests, and whether change requests are
+  called pull or merge requests). It describes the **driver's** implementation, not a
+  particular server's version: a server that lacks an Actions endpoint reports a typed
+  failure from that call.
+- **Credentials are per provider and per server.** `GitCredentialStore` keys a token by
+  `{provider}:{host}` and encrypts it with the Android Keystore master key through the
+  shared `TokenCipher`; the associated data is derived from the slot, so a ciphertext
+  moved to another slot fails to decrypt rather than authenticating as the wrong server.
+  GitHub keeps its original `sherwood_git` slot and storage key, so an existing
+  connection needs no migration. A self-hosted server must be HTTPS — the token travels
+  in a header, and the URL is validated before it can be saved.
+- **Provenance decides the host for a working copy.** `repo_bridge.json` records
+  `provider` and `host` (schema 2). Opening, fetching, diffing or checking out a working
+  copy resolves the provider from that record, not from the active setting, so a project
+  imported from `git.example.com` keeps using that server after the user switches the
+  Studio to GitHub. A schema-1 record (written before 2.9.7) is read as GitHub and
+  upgraded on first open.
+- **Import is provider-neutral.** `RepoImporter` resolves the branch, resolves the commit
+  it points at, asks the provider for the source archive, extracts it through
+  `RepoArchive` (one hardened extractor for every host) and writes provenance. New
+  imports go to `filesDir/git_imports/`; copies written before 2.9.7 stay in
+  `filesDir/github_imports/` and are still listed there.
 - **Publishing goes through `GitCommitWriter`.** `RepoBridgeCommitUseCase` keeps the
   review, the secret scanner and the "new branch, never forced" rule, and asks the
-  writer to build the commit and then move the ref. The split exists so a host whose
-  API can only commit and move in one call can implement it without duplicating the
-  safety rules.
-- **The old GitHub type names are aliases.** `GitHubRepository`, `GitHubWorkflow` and
-  friends are `typealias`es for the neutral models, so the screens and the agent tools
-  kept compiling during the split. They are removed when the first non-GitHub driver
-  lands.
-
-Not generalised yet, and deliberately so: import still runs through
-`GitHubRepoFetcher`, `repo_bridge.json` still records GitHub-shaped provenance, and
-the Studio settings screen has no provider picker. Generalising those is the step that
-adds the second driver, not this one.
-
-## Signing a vault artifact
-
-Signing is per project, never per app. `ProjectSigningIdentity` resolves the
-identity for the **artifact's own package name**:
-
-1. an imported keystore for that package (`filesDir/project_signing/`), else
-2. the existing per-package key the export pipeline already uses
-   (`PerAppSigningIdentity`, `filesDir/app_signing/`), else
-3. **nothing** — signing is refused.
-
-The old behaviour (signing every artifact with the host application's key) was
-removed: an APK signed with Sherwood's key can never be updated by the project's
-key, and an AAB signed with it permanently breaks the Play upload path.
-
-The confirmation dialog shows the package, the identity origin (imported or
-generated), the key alias, the fingerprint and the expiry date *before* signing,
-and it is the only place that authorises creating a new key or signing with a
-different key than the artifact already carries. Importing a keystore for a package
-that already has one replaces the imported copy, and the dialog says so before the
-user can confirm — otherwise one wrong import would permanently pin the package to
-the wrong key. Keystore passwords are encrypted with the Android Keystore master key
-and bound to the package name, and are never logged or written into a project
-export.
-
-## Inspector
-
-`ArtifactInspector` recomputes everything from the file on disk and keeps four
-claims separate: hash integrity, signature verification, package identity and
-provenance. A matching SHA-256 never implies a trusted signature, and a verified
-signature never implies a known origin. AABs are read from
-`base/manifest/AndroidManifest.xml` (protobuf) and their JAR signature is verified
-by draining every entry through `JarFile(verify = true)`.
-
-## Local Git
-
-The app still has no `.git`. The investigation, the rejected options and the
-integration seam for a real local engine are in
-[`studio-local-git.md`](studio-local-git.md). The API engine remains the only
-active backend.
-
-## Why not JGit
-
-JGit's `java.nio.file` use requires API 26. This project keeps `minSdk` 24.
-Instead of raising the floor, the app uses the host's server-side git API — GitHub's
-Git Data API today, behind `GitCommitWriter`: the server builds the tree/commit
-objects, and the working copy is a plain directory diffed against the recorded base
-commit. Branch, merge, history and diff stay available without a local `.git`.
-
-## GitHub Actions artifacts
-
-1. Studio lists workflows (`GET /actions/workflows`) and starts one with
-   `workflow_dispatch`.
-2. Runs, jobs and logs come from the Actions API.
-3. A run's artifacts are downloaded as zips; the zip is unpacked in memory with a
-   per-file cap and every `.apk`/`.aab` is imported into the vault.
-4. The vault record keeps the source repository, branch, commit, workflow, run id
-   and SHA-256. Verification recomputes the hash from the file and re-checks the
-   APK signature with apksig.
-
-Building itself always happens in the repository's own workflows — the app never
-calls an author-owned build server.
-
-### Build this branch
-
-`BuildStudio.buildBranch` closes the loop for a working copy the Studio already
-imported: dispatch the selected workflow on the imported branch, wait for the run,
-then import its artifacts. Because `workflow_dispatch` answers 204 with no run id,
-the run is identified as *a run that did not exist before the dispatch and belongs
-to the dispatched workflow* (`selectDispatchedRun`); nothing else is accepted, so a
-concurrent run started by somebody else cannot be mistaken for ours.
-
-Artifacts are imported only when the run concluded `success`:
-
-- a failed run may still upload a partial bundle, and giving that the same vault
-  provenance as a real build would be misleading;
-- the failed run itself is returned, so the UI can name the conclusion and link to
-  the run page.
-
-Polling is bounded (45 min default) and cancelling the dialog stops the polling,
-not the run: the job keeps going on GitHub and can be reopened from Runs.
-
-### Releases as a source
-
-Not every repository uploads artifacts — many publish the same files as **release
-assets** (`gh release upload`, which is what this repository's `release.yml`
-does). `BuildStudio.releases` lists them and `downloadReleaseAsset` imports the
-`.apk`/`.aab` assets into the vault with the tag recorded as `releaseTag`.
-
-The API URL (`/releases/assets/{id}`) is stored rather than the browser URL,
-because only the API URL can be authenticated for a private repository, and it is
-downloaded with an `application/octet-stream` Accept header — the default JSON
-Accept returns metadata instead of the binary.
-
-## Exporting from the vault
-
-`ArtifactExport` is the only way a vault file leaves the app:
-
-- **Share** — `ACTION_SEND` with a `FileProvider` content URI and a read grant. The
-  file never gets a world-readable path.
-- **Save to Downloads** — the bytes are streamed into the document the user picked
-  with `ActivityResultContracts.CreateDocument`, so an AAB can be uploaded to the
-  Play Console from the phone and an APK can be installed by tapping it in Files.
-
-The saved name is the artifact's real name (`ArtifactExport.exportName` strips the
-vault's `-<id>` suffix), and the picker's MIME type is per kind — an APK is saved as
-`application/vnd.android.package-archive` so Android still offers to install it.
-
-## Workspace contract
-
-`WorkspaceBridgeService` writes `.sherwood/workspace.json`:
-
-```json
-{
-  "schema": 1,
-  "project": "owner/repo",
-  "branch": "main",
-  "packageName": "com.example.app",
-  "buildWorkflow": "release.yml",
-  "appVersion": "1.0.0",
-  "generatedBy": "Sherwood Studio",
-  "updatedAt": "2026-01-01T00:00:00Z"
-}
-```
-
-A workspace with GitHub access reads it, edits code on a branch, opens a pull
-request, and the Studio's inbox shows the branch/PR for review, merge and build.
-This repository itself carries one at `.sherwood/workspace.json` as a working
-example.
-
+  writer to build the commit and then move the ref. It resolves the writer from the
+  working copy's provenance; a provider without one fails with
+  `PROVIDER_READ_ONLY` instead of borrowing another host's writer.
 ## Agent access
 
-The in-app agent has five GitHub tools, registered in
-`ToolRegistryFactory.baseTools()`. They reuse the credential Studio already
-owns — `GitHubTokenStore`, filled by Settings → Git access (personal access
-token) or by the OAuth device flow — so there is no second token path and no
-credential inside the agent loop.
+The in-app agent has five git tools, registered in
+`ToolRegistryFactory.baseTools()`. They still carry `GitHub*` names in this
+release (the rename lands with the host that first writes through them), but
+they operate on the **active** host: `GitHubStatus` and
+`GitHubListRepositories` read whatever provider is configured, and
+`GitHubImportRepository` imports through it. They reuse the credentials Studio
+already owns — `GitCredentialStore`, filled by Settings → Git access on GitHub
+or by Studio → Settings → Git hosting on a self-hosted server — so there is no
+second token path and no credential inside the agent loop.
+
+On a read-only driver (Gitea/Forgejo in this build) the two write tools refuse
+with an explicit message and a `GitFailureKind.UNSUPPORTED`-shaped reason
+instead of attempting a request; reading and importing keep working.
 
 | Tool | Read-only | Effect |
 | --- | --- | --- |
 | `GitHubStatus` | yes | Connection state, authenticated login, the repository Studio is pointed at, and the working copies already imported. |
 | `GitHubListRepositories` | yes | Repositories the token can see (name, visibility, default branch, last push). |
-| `GitHubCreateRepository` | no (fresh prompt on **every** call) | Creates a **new, independent** repository with `POST /user/repos` (`auto_init` on, so the default branch exists immediately). Visibility defaults to private. Optional `sourceRepository` seeds it with a **public** repository's files — files only, no history and no fork link — which is the rebrand path. `.github/workflows/*` is never copied. Caps, refused rather than truncated: 500 files, 10 MB per file, 64 MB total. |
+| `GitHubCreateRepository` | no (fresh prompt on **every** call) | GitHub only. Creates a **new, independent** repository with `POST /user/repos` (`auto_init` on, so the default branch exists immediately). Visibility defaults to private. Optional `sourceRepository` seeds it with a **public** repository's files — files only, no history and no fork link — which is the rebrand path. `.github/workflows/*` is never copied. Caps, refused rather than truncated: 500 files, 10 MB per file, 64 MB total. |
 | `GitHubImportRepository` | no (permission prompt) | Copies a repository's files into the agent's own session folder, so `Read`/`Write`/`Edit`/`Glob`/`Grep` work on them. Reuses an existing Studio working copy when one matches the branch; folder `.git` is skipped, and the copy is capped at 2000 files, 32 MB total and 4 MB per file. |
-| `GitHubOpenPullRequest` | no (fresh prompt on **every** call) | Copies the edited files into a Studio working copy, creates a **new** branch from the imported base commit, commits there through `RepoBridgeCommitUseCase` (review + secret scanner), and opens a pull request. Returns the PR URL. |
+| `GitHubOpenPullRequest` | no (fresh prompt on **every** call) | GitHub only in this build. Copies the edited files into a Studio working copy, creates a **new** branch from the imported base commit, commits there through `RepoBridgeCommitUseCase` (review + secret scanner), and opens a pull request. Returns the PR URL. |
 
 `GitHubCreateRepository` (`GitHubCreateRepositoryTool.kt`) validates and
 measures the source **before** the repository is created, so a refused source
@@ -258,8 +144,10 @@ received the commit is left in place and the error names it.
 
 **What the agent cannot do, by design:** merge, approve or comment on a pull
 request, dispatch a workflow, delete a branch, or force-update a ref. Those
-calls live in `WorkspaceService` and `GitHubApiClient` and are reached only
-from Studio's own screens, where the user taps them.
+calls live in `WorkspaceService` and the provider drivers and are reached only
+from Studio's own screens, where the user taps them. Creating a repository and
+pushing both require a driver with a publish path; a read-only driver refuses
+before the first request.
 
 ## Tests
 

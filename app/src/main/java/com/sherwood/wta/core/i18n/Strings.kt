@@ -5447,6 +5447,32 @@ object Strings {
     val studioSaved: String get() = StringsE.studioSaved
     val studioInvalidEndpoint: String get() = StringsE.studioInvalidEndpoint
 
+    // Studio: git hosting choice (GitHub / Gitea / Forgejo)
+    val studioGitHosting: String get() = StringsE.studioGitHosting
+    val studioGitHostingDesc: String get() = StringsE.studioGitHostingDesc
+    val studioProvider: String get() = StringsE.studioProvider
+    val studioServerUrl: String get() = StringsE.studioServerUrl
+    val studioServerUrlHint: String get() = StringsE.studioServerUrlHint
+    val studioServerUrlMissing: String get() = StringsE.studioServerUrlMissing
+    val studioServerUrlInsecure: String get() = StringsE.studioServerUrlInsecure
+    val studioProviderToken: String get() = StringsE.studioProviderToken
+    val studioProviderTokenHint: String get() = StringsE.studioProviderTokenHint
+    val studioProviderTokenSaved: String get() = StringsE.studioProviderTokenSaved
+    val studioProviderTokenMissing: String get() = StringsE.studioProviderTokenMissing
+    val studioTestConnection: String get() = StringsE.studioTestConnection
+    val studioTesting: String get() = StringsE.studioTesting
+    fun studioTestOk(login: String): String = StringsE.studioTestOk(login)
+    fun studioTestOkVersion(login: String, version: String): String =
+        StringsE.studioTestOkVersion(login, version)
+    val studioTestFailed: String get() = StringsE.studioTestFailed
+    val studioSaveToken: String get() = StringsE.studioSaveToken
+    val studioProviderReadOnly: String get() = StringsE.studioProviderReadOnly
+    val studioProviderNotImplemented: String get() = StringsE.studioProviderNotImplemented
+    val studioProviderMissingUrl: String get() = StringsE.studioProviderMissingUrl
+    val studioProviderInsecureUrl: String get() = StringsE.studioProviderInsecureUrl
+    val studioGiteaConnectHint: String get() = StringsE.studioGiteaConnectHint
+    val studioReadOnlyAction: String get() = StringsE.studioReadOnlyAction
+
 
     // Studio: project signing, inspector and pull requests
     val studioWorkspaceChannel: String get() = StringsE.studioWorkspaceChannel

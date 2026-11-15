@@ -19713,4 +19713,305 @@ object StringsE {
         AppLanguage.KOREAN -> "커밋 $sha"
     }
 
+    // ------------------------------------------------ Studio: git hosting choice
+
+    val studioGitHosting: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Git 托管"
+        AppLanguage.ENGLISH -> "Git hosting"
+        AppLanguage.ARABIC -> "استضافة Git"
+        AppLanguage.PORTUGUESE -> "Hospedagem Git"
+        AppLanguage.SPANISH -> "Hospedaje Git"
+        AppLanguage.FRENCH -> "Hébergement Git"
+        AppLanguage.GERMAN -> "Git-Hosting"
+        AppLanguage.RUSSIAN -> "Хостинг Git"
+        AppLanguage.JAPANESE -> "Git ホスティング"
+        AppLanguage.KOREAN -> "Git 호스팅"
+    }
+
+    val studioGitHostingDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Studio 一次只连接一个 Git 服务器，以下设置都针对它。"
+        AppLanguage.ENGLISH -> "The Studio talks to one git server at a time. Everything below applies to it."
+        AppLanguage.ARABIC -> "يتصل الاستوديو بخادم Git واحد في كل مرة. كل ما يلي ينطبق عليه."
+        AppLanguage.PORTUGUESE -> "O Studio fala com um servidor Git por vez. Tudo abaixo se aplica a ele."
+        AppLanguage.SPANISH -> "El Studio se conecta a un servidor Git cada vez. Todo lo de abajo se aplica a él."
+        AppLanguage.FRENCH -> "Le Studio dialogue avec un seul serveur Git à la fois. Tout ce qui suit s'y applique."
+        AppLanguage.GERMAN -> "Studio spricht immer mit einem Git-Server. Alles Folgende gilt für ihn."
+        AppLanguage.RUSSIAN -> "Студия работает с одним Git-сервером за раз. Всё ниже относится к нему."
+        AppLanguage.JAPANESE -> "Studio は一度に 1 つの Git サーバーと通信します。以下の設定はすべてそのサーバーに適用されます。"
+        AppLanguage.KOREAN -> "Studio는 한 번에 하나의 Git 서버와 통신합니다. 아래 설정은 모두 해당 서버에 적용됩니다."
+    }
+
+    val studioProvider: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "提供商"
+        AppLanguage.ENGLISH -> "Provider"
+        AppLanguage.ARABIC -> "المزوّد"
+        AppLanguage.PORTUGUESE -> "Provedor"
+        AppLanguage.SPANISH -> "Proveedor"
+        AppLanguage.FRENCH -> "Fournisseur"
+        AppLanguage.GERMAN -> "Anbieter"
+        AppLanguage.RUSSIAN -> "Провайдер"
+        AppLanguage.JAPANESE -> "プロバイダー"
+        AppLanguage.KOREAN -> "공급자"
+    }
+
+    val studioServerUrl: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "服务器地址"
+        AppLanguage.ENGLISH -> "Server URL"
+        AppLanguage.ARABIC -> "عنوان الخادم"
+        AppLanguage.PORTUGUESE -> "URL do servidor"
+        AppLanguage.SPANISH -> "URL del servidor"
+        AppLanguage.FRENCH -> "URL du serveur"
+        AppLanguage.GERMAN -> "Server-URL"
+        AppLanguage.RUSSIAN -> "URL сервера"
+        AppLanguage.JAPANESE -> "サーバー URL"
+        AppLanguage.KOREAN -> "서버 URL"
+    }
+
+    val studioServerUrlHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "仅支持 HTTPS —— 令牌通过请求头发送。"
+        AppLanguage.ENGLISH -> "HTTPS only — the token is sent in a request header."
+        AppLanguage.ARABIC -> "HTTPS فقط — يُرسل الرمز في ترويسة الطلب."
+        AppLanguage.PORTUGUESE -> "Somente HTTPS — o token vai em um cabeçalho da requisição."
+        AppLanguage.SPANISH -> "Solo HTTPS: el token viaja en una cabecera de la petición."
+        AppLanguage.FRENCH -> "HTTPS uniquement — le jeton est envoyé dans un en-tête de requête."
+        AppLanguage.GERMAN -> "Nur HTTPS — das Token wird in einem Anfrage-Header gesendet."
+        AppLanguage.RUSSIAN -> "Только HTTPS — токен передаётся в заголовке запроса."
+        AppLanguage.JAPANESE -> "HTTPS のみ — トークンはリクエストヘッダーで送信されます。"
+        AppLanguage.KOREAN -> "HTTPS만 — 토큰은 요청 헤더로 전송됩니다."
+    }
+
+    val studioServerUrlMissing: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请填写服务器地址后再连接。"
+        AppLanguage.ENGLISH -> "Enter the server URL to connect."
+        AppLanguage.ARABIC -> "أدخل عنوان الخادم للاتصال."
+        AppLanguage.PORTUGUESE -> "Informe a URL do servidor para conectar."
+        AppLanguage.SPANISH -> "Introduce la URL del servidor para conectar."
+        AppLanguage.FRENCH -> "Saisissez l'URL du serveur pour vous connecter."
+        AppLanguage.GERMAN -> "Gib die Server-URL ein, um dich zu verbinden."
+        AppLanguage.RUSSIAN -> "Укажите URL сервера, чтобы подключиться."
+        AppLanguage.JAPANESE -> "接続するサーバー URL を入力してください。"
+        AppLanguage.KOREAN -> "연결할 서버 URL을 입력하세요."
+    }
+
+    val studioServerUrlInsecure: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "只接受 HTTPS，因为令牌通过请求头发送。"
+        AppLanguage.ENGLISH -> "Only HTTPS is accepted, because the token travels in a request header."
+        AppLanguage.ARABIC -> "يُقبل HTTPS فقط، لأن الرمز يُرسل في ترويسة الطلب."
+        AppLanguage.PORTUGUESE -> "Apenas HTTPS é aceito, porque o token viaja em um cabeçalho da requisição."
+        AppLanguage.SPANISH -> "Solo se acepta HTTPS, porque el token viaja en una cabecera de la petición."
+        AppLanguage.FRENCH -> "Seul HTTPS est accepté, car le jeton voyage dans un en-tête de requête."
+        AppLanguage.GERMAN -> "Nur HTTPS wird akzeptiert, weil das Token in einem Anfrage-Header übertragen wird."
+        AppLanguage.RUSSIAN -> "Принимается только HTTPS, потому что токен передаётся в заголовке запроса."
+        AppLanguage.JAPANESE -> "トークンはリクエストヘッダーで送信されるため、HTTPS のみ使用できます。"
+        AppLanguage.KOREAN -> "토큰이 요청 헤더로 전송되므로 HTTPS만 허용됩니다."
+    }
+
+    val studioProviderToken: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "个人访问令牌"
+        AppLanguage.ENGLISH -> "Personal access token"
+        AppLanguage.ARABIC -> "رمز وصول شخصي"
+        AppLanguage.PORTUGUESE -> "Token de acesso pessoal"
+        AppLanguage.SPANISH -> "Token de acceso personal"
+        AppLanguage.FRENCH -> "Jeton d'accès personnel"
+        AppLanguage.GERMAN -> "Persönliches Zugriffstoken"
+        AppLanguage.RUSSIAN -> "Личный токен доступа"
+        AppLanguage.JAPANESE -> "個人アクセストークン"
+        AppLanguage.KOREAN -> "개인 액세스 토큰"
+    }
+
+    val studioProviderTokenHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在服务器的 设置 → 应用 中创建。它会在本机加密保存。"
+        AppLanguage.ENGLISH -> "Create one on the server under Settings → Applications. It is stored encrypted on this device."
+        AppLanguage.ARABIC -> "أنشئه على الخادم من الإعدادات ← التطبيقات. يُخزَّن مشفرًا على هذا الجهاز."
+        AppLanguage.PORTUGUESE -> "Crie um no servidor em Configurações → Aplicações. Ele é guardado criptografado neste dispositivo."
+        AppLanguage.SPANISH -> "Créalo en el servidor en Ajustes → Aplicaciones. Se guarda cifrado en este dispositivo."
+        AppLanguage.FRENCH -> "Créez-le sur le serveur dans Paramètres → Applications. Il est stocké chiffré sur cet appareil."
+        AppLanguage.GERMAN -> "Erstelle es auf dem Server unter Einstellungen → Anwendungen. Es wird verschlüsselt auf diesem Gerät gespeichert."
+        AppLanguage.RUSSIAN -> "Создайте его на сервере: Настройки → Приложения. Он хранится на этом устройстве в зашифрованном виде."
+        AppLanguage.JAPANESE -> "サーバーの 設定 → アプリケーション で作成します。この端末に暗号化して保存されます。"
+        AppLanguage.KOREAN -> "서버의 설정 → 애플리케이션에서 만드세요. 이 기기에 암호화되어 저장됩니다."
+    }
+
+    val studioProviderTokenSaved: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此服务器已保存令牌。"
+        AppLanguage.ENGLISH -> "A token is saved for this server."
+        AppLanguage.ARABIC -> "تم حفظ رمز لهذا الخادم."
+        AppLanguage.PORTUGUESE -> "Há um token salvo para este servidor."
+        AppLanguage.SPANISH -> "Hay un token guardado para este servidor."
+        AppLanguage.FRENCH -> "Un jeton est enregistré pour ce serveur."
+        AppLanguage.GERMAN -> "Für diesen Server ist ein Token gespeichert."
+        AppLanguage.RUSSIAN -> "Для этого сервера сохранён токен."
+        AppLanguage.JAPANESE -> "このサーバーのトークンは保存済みです。"
+        AppLanguage.KOREAN -> "이 서버의 토큰이 저장되어 있습니다."
+    }
+
+    val studioProviderTokenMissing: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此服务器尚未保存令牌。"
+        AppLanguage.ENGLISH -> "No token is saved for this server yet."
+        AppLanguage.ARABIC -> "لم يُحفظ رمز لهذا الخادم بعد."
+        AppLanguage.PORTUGUESE -> "Ainda não há token salvo para este servidor."
+        AppLanguage.SPANISH -> "Aún no hay token guardado para este servidor."
+        AppLanguage.FRENCH -> "Aucun jeton n'est encore enregistré pour ce serveur."
+        AppLanguage.GERMAN -> "Für diesen Server ist noch kein Token gespeichert."
+        AppLanguage.RUSSIAN -> "Для этого сервера токен ещё не сохранён."
+        AppLanguage.JAPANESE -> "このサーバーのトークンはまだ保存されていません。"
+        AppLanguage.KOREAN -> "이 서버의 토큰이 아직 저장되지 않았습니다."
+    }
+
+    val studioTestConnection: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "测试连接"
+        AppLanguage.ENGLISH -> "Test connection"
+        AppLanguage.ARABIC -> "اختبار الاتصال"
+        AppLanguage.PORTUGUESE -> "Testar conexão"
+        AppLanguage.SPANISH -> "Probar conexión"
+        AppLanguage.FRENCH -> "Tester la connexion"
+        AppLanguage.GERMAN -> "Verbindung testen"
+        AppLanguage.RUSSIAN -> "Проверить подключение"
+        AppLanguage.JAPANESE -> "接続をテスト"
+        AppLanguage.KOREAN -> "연결 테스트"
+    }
+
+    val studioTesting: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在测试…"
+        AppLanguage.ENGLISH -> "Testing…"
+        AppLanguage.ARABIC -> "جارٍ الاختبار…"
+        AppLanguage.PORTUGUESE -> "Testando…"
+        AppLanguage.SPANISH -> "Probando…"
+        AppLanguage.FRENCH -> "Test en cours…"
+        AppLanguage.GERMAN -> "Wird getestet…"
+        AppLanguage.RUSSIAN -> "Проверка…"
+        AppLanguage.JAPANESE -> "テスト中…"
+        AppLanguage.KOREAN -> "테스트 중…"
+    }
+
+    fun studioTestOk(login: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已连接：$login"
+        AppLanguage.ENGLISH -> "Connected as $login"
+        AppLanguage.ARABIC -> "متصل باسم $login"
+        AppLanguage.PORTUGUESE -> "Conectado como $login"
+        AppLanguage.SPANISH -> "Conectado como $login"
+        AppLanguage.FRENCH -> "Connecté en tant que $login"
+        AppLanguage.GERMAN -> "Verbunden als $login"
+        AppLanguage.RUSSIAN -> "Подключено как $login"
+        AppLanguage.JAPANESE -> "$login として接続しました"
+        AppLanguage.KOREAN -> "$login(으)로 연결됨"
+    }
+
+    fun studioTestOkVersion(login: String, version: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已连接：$login（服务器 $version）"
+        AppLanguage.ENGLISH -> "Connected as $login (server $version)"
+        AppLanguage.ARABIC -> "متصل باسم $login (الخادم $version)"
+        AppLanguage.PORTUGUESE -> "Conectado como $login (servidor $version)"
+        AppLanguage.SPANISH -> "Conectado como $login (servidor $version)"
+        AppLanguage.FRENCH -> "Connecté en tant que $login (serveur $version)"
+        AppLanguage.GERMAN -> "Verbunden als $login (Server $version)"
+        AppLanguage.RUSSIAN -> "Подключено как $login (сервер $version)"
+        AppLanguage.JAPANESE -> "$login として接続しました（サーバー $version）"
+        AppLanguage.KOREAN -> "$login(으)로 연결됨 (서버 $version)"
+    }
+
+    val studioTestFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "连接失败"
+        AppLanguage.ENGLISH -> "Connection failed"
+        AppLanguage.ARABIC -> "فشل الاتصال"
+        AppLanguage.PORTUGUESE -> "Falha na conexão"
+        AppLanguage.SPANISH -> "Error de conexión"
+        AppLanguage.FRENCH -> "Échec de la connexion"
+        AppLanguage.GERMAN -> "Verbindung fehlgeschlagen"
+        AppLanguage.RUSSIAN -> "Не удалось подключиться"
+        AppLanguage.JAPANESE -> "接続に失敗しました"
+        AppLanguage.KOREAN -> "연결 실패"
+    }
+
+    val studioSaveToken: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "保存令牌"
+        AppLanguage.ENGLISH -> "Save token"
+        AppLanguage.ARABIC -> "حفظ الرمز"
+        AppLanguage.PORTUGUESE -> "Salvar token"
+        AppLanguage.SPANISH -> "Guardar token"
+        AppLanguage.FRENCH -> "Enregistrer le jeton"
+        AppLanguage.GERMAN -> "Token speichern"
+        AppLanguage.RUSSIAN -> "Сохранить токен"
+        AppLanguage.JAPANESE -> "トークンを保存"
+        AppLanguage.KOREAN -> "토큰 저장"
+    }
+
+    val studioProviderReadOnly: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此版本为只读：可浏览、导入并下载构建产物；不能在服务器上创建或修改内容。"
+        AppLanguage.ENGLISH -> "Read-only in this build: browsing, importing and downloading build artifacts work. Creating or changing anything on the server does not."
+        AppLanguage.ARABIC -> "للقراءة فقط في هذا الإصدار: التصفح والاستيراد وتنزيل مخرجات البناء تعمل. إنشاء أو تغيير أي شيء على الخادم لا يعمل."
+        AppLanguage.PORTUGUESE -> "Somente leitura nesta versão: navegar, importar e baixar artefatos de build funcionam. Criar ou alterar algo no servidor não funciona."
+        AppLanguage.SPANISH -> "Solo lectura en esta versión: navegar, importar y descargar artefactos de compilación funciona. Crear o cambiar algo en el servidor no funciona."
+        AppLanguage.FRENCH -> "Lecture seule dans cette version : parcourir, importer et télécharger les artefacts de build fonctionnent. Créer ou modifier quoi que ce soit sur le serveur ne fonctionne pas."
+        AppLanguage.GERMAN -> "In dieser Version schreibgeschützt: Durchsuchen, Importieren und Herunterladen von Build-Artefakten funktioniert. Etwas auf dem Server zu erstellen oder zu ändern nicht."
+        AppLanguage.RUSSIAN -> "В этой версии только чтение: просмотр, импорт и скачивание артефактов сборки работают. Создавать или изменять что-либо на сервере нельзя."
+        AppLanguage.JAPANESE -> "このバージョンは読み取り専用です。閲覧・インポート・ビルド成果物のダウンロードは可能ですが、サーバー上での作成・変更はできません。"
+        AppLanguage.KOREAN -> "이 버전은 읽기 전용입니다. 탐색, 가져오기, 빌드 산출물 다운로드는 되지만 서버에서 생성하거나 변경할 수는 없습니다."
+    }
+
+    val studioProviderNotImplemented: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此版本不支持该提供商。"
+        AppLanguage.ENGLISH -> "This provider is not available in this build."
+        AppLanguage.ARABIC -> "هذا المزوّد غير متاح في هذا الإصدار."
+        AppLanguage.PORTUGUESE -> "Este provedor não está disponível nesta versão."
+        AppLanguage.SPANISH -> "Este proveedor no está disponible en esta versión."
+        AppLanguage.FRENCH -> "Ce fournisseur n'est pas disponible dans cette version."
+        AppLanguage.GERMAN -> "Dieser Anbieter ist in dieser Version nicht verfügbar."
+        AppLanguage.RUSSIAN -> "Этот провайдер недоступен в этой версии."
+        AppLanguage.JAPANESE -> "このプロバイダーはこのバージョンでは利用できません。"
+        AppLanguage.KOREAN -> "이 공급자는 이 버전에서 사용할 수 없습니다."
+    }
+
+    val studioProviderMissingUrl: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请先填写服务器地址。"
+        AppLanguage.ENGLISH -> "Add the server URL first."
+        AppLanguage.ARABIC -> "أضف عنوان الخادم أولًا."
+        AppLanguage.PORTUGUESE -> "Informe primeiro a URL do servidor."
+        AppLanguage.SPANISH -> "Introduce primero la URL del servidor."
+        AppLanguage.FRENCH -> "Ajoutez d'abord l'URL du serveur."
+        AppLanguage.GERMAN -> "Gib zuerst die Server-URL ein."
+        AppLanguage.RUSSIAN -> "Сначала укажите URL сервера."
+        AppLanguage.JAPANESE -> "先にサーバー URL を入力してください。"
+        AppLanguage.KOREAN -> "먼저 서버 URL을 입력하세요."
+    }
+
+    val studioProviderInsecureUrl: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "服务器地址必须是 HTTPS。"
+        AppLanguage.ENGLISH -> "The server URL must be HTTPS."
+        AppLanguage.ARABIC -> "يجب أن يكون عنوان الخادم HTTPS."
+        AppLanguage.PORTUGUESE -> "A URL do servidor deve ser HTTPS."
+        AppLanguage.SPANISH -> "La URL del servidor debe ser HTTPS."
+        AppLanguage.FRENCH -> "L'URL du serveur doit être en HTTPS."
+        AppLanguage.GERMAN -> "Die Server-URL muss HTTPS sein."
+        AppLanguage.RUSSIAN -> "URL сервера должен быть HTTPS."
+        AppLanguage.JAPANESE -> "サーバー URL は HTTPS である必要があります。"
+        AppLanguage.KOREAN -> "서버 URL은 HTTPS여야 합니다."
+    }
+
+    val studioGiteaConnectHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "使用个人访问令牌连接。Gitea 和 Forgejo 没有设备码登录。"
+        AppLanguage.ENGLISH -> "Connect with a personal access token. Gitea and Forgejo have no device-flow login."
+        AppLanguage.ARABIC -> "اتصل برمز وصول شخصي. لا يوفر Gitea وForgejo تسجيل الدخول برمز الجهاز."
+        AppLanguage.PORTUGUESE -> "Conecte com um token de acesso pessoal. Gitea e Forgejo não têm login por código de dispositivo."
+        AppLanguage.SPANISH -> "Conecta con un token de acceso personal. Gitea y Forgejo no tienen inicio por código de dispositivo."
+        AppLanguage.FRENCH -> "Connectez-vous avec un jeton d'accès personnel. Gitea et Forgejo n'ont pas de connexion par code d'appareil."
+        AppLanguage.GERMAN -> "Verbinde dich mit einem persönlichen Zugriffstoken. Gitea und Forgejo haben keinen Gerätecode-Login."
+        AppLanguage.RUSSIAN -> "Подключитесь с личным токеном доступа. У Gitea и Forgejo нет входа по коду устройства."
+        AppLanguage.JAPANESE -> "個人アクセストークンで接続します。Gitea と Forgejo にはデバイスコードログインがありません。"
+        AppLanguage.KOREAN -> "개인 액세스 토큰으로 연결하세요. Gitea와 Forgejo에는 기기 코드 로그인이 없습니다."
+    }
+
+    val studioReadOnlyAction: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此服务器不支持该操作"
+        AppLanguage.ENGLISH -> "Not available for this server"
+        AppLanguage.ARABIC -> "غير متاح لهذا الخادم"
+        AppLanguage.PORTUGUESE -> "Indisponível para este servidor"
+        AppLanguage.SPANISH -> "No disponible para este servidor"
+        AppLanguage.FRENCH -> "Indisponible pour ce serveur"
+        AppLanguage.GERMAN -> "Für diesen Server nicht verfügbar"
+        AppLanguage.RUSSIAN -> "Недоступно для этого сервера"
+        AppLanguage.JAPANESE -> "このサーバーでは利用できません"
+        AppLanguage.KOREAN -> "이 서버에서 사용할 수 없음"
+    }
+
 }

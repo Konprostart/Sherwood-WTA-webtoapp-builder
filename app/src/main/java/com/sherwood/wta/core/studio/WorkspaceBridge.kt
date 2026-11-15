@@ -153,22 +153,24 @@ class WorkspaceBridgeService(private val context: Context) {
 
         Repository: $ownerRepo
 
-        Sherwood Studio talks to an external workspace only through GitHub. There is
-        no Sherwood server, no account linking and no API key involved, and no live
-        connection exists: the repository is the entire channel. This is one optional
-        way to work on the project; the AI providers configured in the app itself are
-        separate and unaffected. Any tool with GitHub access can follow this contract
-        - a ChatGPT workspace, another assistant, an IDE, or a person.
+        Sherwood Studio talks to an external workspace only through the repository's
+        git host (GitHub, Gitea or Forgejo). There is no Sherwood server, no account
+        linking and no API key involved, and no live connection exists: the repository
+        is the entire channel. This is one optional way to work on the project; the AI
+        providers configured in the app itself are separate and unaffected. Any tool
+        with access to the repository can follow this contract - a ChatGPT workspace,
+        another assistant, an IDE, or a person.
 
         1. Read `.sherwood/workspace.json` from the branch you work on. It names the
            project, branch, package name and build workflow.
-        2. Create a branch, commit changes and open a pull request against the
-           default branch. Do not push secrets, keystores or `local.properties`.
+        2. Create a branch, commit changes and open a pull request (a merge request on
+           GitLab-style hosts) against the default branch. Do not push secrets,
+           keystores or `local.properties`.
         3. Sherwood Studio shows the branch and the pull request in its Workspace
            Inbox, where it can be reviewed, merged and built.
-        4. Building is done by `.github/workflows/` in the repository itself
-           (GitHub Actions). Sherwood Studio only starts the workflow and downloads
-           the resulting APK/AAB artifact.
+        4. Building is done by the repository's own CI (GitHub Actions, or the
+           Gitea/Forgejo Actions runner). Sherwood Studio only starts the workflow and
+           downloads the resulting APK/AAB artifact.
         5. Every downloaded artifact is hashed (SHA-256) and stored in the local
            vault with its source commit and run id.
 

@@ -1,6 +1,7 @@
 package com.sherwood.wta.core.frontend
 
 import com.google.common.truth.Truth.assertThat
+import com.sherwood.wta.core.studio.git.GitProviderId
 import java.io.File
 import org.junit.Assert.assertThrows
 import org.junit.Rule
@@ -122,6 +123,70 @@ class RepoBridgeMetadataStoreTest {
         assertThat(RepoBridgeMetadata.isSha(SHA.uppercase())).isFalse()
         assertThat(RepoBridgeMetadata.isSha(SHA.take(39))).isFalse()
         assertThat(RepoBridgeMetadata.isSha("g".repeat(40))).isFalse()
+    }
+
+    // ------------------------------------------------- provider provenance (v2)
+
+    @Test
+    fun `records the provider and host of the copy`() {
+        val project = folder.newFolder("gitea")
+
+        store.write(
+            project,
+            metadata().copy(provider = "gitea", host = "git.example.com")
+        )
+
+        val restored = store.read(project)!!
+        assertThat(restored.provider).isEqualTo("gitea")
+        assertThat(restored.providerId).isEqualTo(GitProviderId.GITEA)
+        assertThat(restored.host).isEqualTo("git.example.com")
+        assertThat(restored.serverUrl).isEqualTo("https://git.example.com")
+    }
+
+    @Test
+    fun `an unknown provider is rejected instead of being read as github`() {
+        val project = folder.newFolder("bogus")
+        File(project, RepoBridgeMetadataStore.FILE_NAME).writeText(
+            """{"schemaVersion":2,"provider":"bitbucket","host":"bitbucket.org",
+               "owner":"o","repo":"r","ref":"main"}""",
+            Charsets.UTF_8
+        )
+
+        assertThat(store.read(project)).isNull()
+    }
+
+    @Test
+    fun `a schema 1 record is read as github and upgraded on disk`() {
+        val project = folder.newFolder("legacy")
+        val file = File(project, RepoBridgeMetadataStore.FILE_NAME)
+        file.writeText(
+            """{"schemaVersion":1,"host":"github.com","owner":"octocat",
+               "repo":"hello-world","ref":"main","baseSha":"$SHA"}""",
+            Charsets.UTF_8
+        )
+
+        val restored = store.read(project)
+
+        requireNotNull(restored)
+        assertThat(restored.schemaVersion).isEqualTo(RepoBridgeMetadata.SCHEMA_VERSION)
+        // Schema 1 could only be written by the GitHub importer.
+        assertThat(restored.provider).isEqualTo(RepoBridgeMetadata.PROVIDER_GITHUB)
+        assertThat(restored.providerId).isEqualTo(GitProviderId.GITHUB)
+        assertThat(restored.owner).isEqualTo("octocat")
+
+        // The upgrade is persisted so the next open needs no migration step.
+        val onDisk = file.readText(Charsets.UTF_8)
+        assertThat(onDisk).contains("\"schemaVersion\":2")
+        assertThat(onDisk).contains("\"provider\":\"github\"")
+    }
+
+    @Test
+    fun `a host may carry a non-default port`() {
+        val project = folder.newFolder("port")
+
+        store.write(project, metadata().copy(provider = "gitea", host = "git.example.com:8443"))
+
+        assertThat(store.read(project)!!.host).isEqualTo("git.example.com:8443")
     }
 
     companion object {

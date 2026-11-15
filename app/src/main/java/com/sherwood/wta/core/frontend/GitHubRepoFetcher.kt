@@ -4,6 +4,8 @@ import android.content.Context
 import com.google.gson.JsonParser
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.network.NetworkModule
+import com.sherwood.wta.core.studio.git.RepoArchive
+import com.sherwood.wta.core.studio.git.RepoImportStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +17,6 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
-import java.util.zip.ZipInputStream
 
 data class GitHubRepoSpec(
     val owner: String,
@@ -394,105 +395,18 @@ class GitHubRepoFetcher(
             .build()
             .toString()
 
+    /**
+     * Unpacks the archive into a fresh working-copy directory.
+     *
+     * The extraction itself is [RepoArchive]'s job: the same untrusted-input limits apply
+     * to every host, so there is one hardened implementation rather than one per importer.
+     */
     private fun extract(zipFile: File, repoName: String, subPath: String?): File {
         val extractDir = File(
             context.filesDir,
-            "github_imports/${sanitize(repoName)}_${System.currentTimeMillis()}"
-        ).apply {
-            if (exists()) deleteRecursively()
-            mkdirs()
-        }
-
-        var entryCount = 0
-        var fileCount = 0
-        var totalBytes = 0L
-
-        try {
-            ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
-                var entry = zis.nextEntry
-                while (entry != null) {
-                    entryCount++
-                    if (entryCount > MAX_ENTRY_COUNT) {
-                        throw IllegalStateException("Archive has too many entries (> $MAX_ENTRY_COUNT)")
-                    }
-
-                    val entryName = entry.name
-                    if (shouldSkipEntry(entryName)) {
-                        zis.closeEntry()
-                        entry = zis.nextEntry
-                        continue
-                    }
-
-                    val target = File(extractDir, entryName).canonicalFile
-                    // + File.separator: a bare prefix match lets sibling directories through.
-                    if (!target.path.startsWith(extractDir.canonicalPath + File.separator)) {
-                        AppLogger.w(TAG, "Skip unsafe zip entry: $entryName")
-                        zis.closeEntry()
-                        entry = zis.nextEntry
-                        continue
-                    }
-
-                    if (entry.isDirectory) {
-                        target.mkdirs()
-                    } else {
-                        fileCount++
-                        target.parentFile?.mkdirs()
-                        FileOutputStream(target).use { out ->
-                            val buf = ByteArray(64 * 1024)
-                            var read: Int
-                            while (zis.read(buf).also { read = it } != -1) {
-                                totalBytes += read
-                                if (totalBytes > MAX_EXTRACTED_SIZE) {
-                                    throw IllegalStateException(
-                                        "Extracted content larger than ${MAX_EXTRACTED_SIZE / 1024 / 1024} MB"
-                                    )
-                                }
-                                out.write(buf, 0, read)
-                            }
-                        }
-                    }
-
-                    zis.closeEntry()
-                    entry = zis.nextEntry
-                }
-            }
-            // A body that is not a zip yields zero entries; never report that as success.
-            if (fileCount == 0) {
-                throw IllegalStateException("Downloaded archive contains no files")
-            }
-        } catch (e: Exception) {
-            extractDir.deleteRecursively()
-            throw e
-        }
-
-        val unwrapped = unwrapSingleRootDir(extractDir)
-
-        val finalDir = if (!subPath.isNullOrBlank()) {
-            val sub = File(unwrapped, subPath).canonicalFile
-            if (!sub.path.startsWith(unwrapped.canonicalPath)) {
-                extractDir.deleteRecursively()
-                throw IllegalStateException("Invalid sub-path: $subPath")
-            }
-            if (!sub.exists() || !sub.isDirectory) {
-                extractDir.deleteRecursively()
-                throw IllegalStateException("Sub-path not found in repository: $subPath")
-            }
-            sub
-        } else {
-            unwrapped
-        }
-
-        return finalDir
-    }
-
-    private fun unwrapSingleRootDir(dir: File): File {
-        val children = dir.listFiles() ?: return dir
-        return if (children.size == 1 && children[0].isDirectory) children[0] else dir
-    }
-
-    private fun shouldSkipEntry(name: String): Boolean {
-        val parts = name.split('/', '\\')
-        return parts.any { p -> SKIP_PATTERNS.any { it.equals(p, ignoreCase = true) } }
+            "${RepoImportStorage.CURRENT}/${sanitize(repoName)}_${System.currentTimeMillis()}"
+        )
+        return RepoArchive.extract(zipFile, extractDir, subPath)
     }
 
     private fun sanitize(name: String): String =
@@ -532,15 +446,7 @@ class GitHubRepoFetcher(
 
         private const val MAX_DOWNLOAD_SIZE = 300L * 1024 * 1024
 
-        private const val MAX_EXTRACTED_SIZE = 1024L * 1024 * 1024
-
-        private const val MAX_ENTRY_COUNT = 50_000
-
         private const val MAX_LOGIN_LENGTH = 100
-
-        private val SKIP_PATTERNS = setOf(
-            "__MACOSX", ".DS_Store", "Thumbs.db"
-        )
 
         private val BRANCH_FALLBACKS = listOf("main", "master")
 
