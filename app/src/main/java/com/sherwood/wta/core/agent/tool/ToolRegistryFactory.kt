@@ -36,6 +36,7 @@ import com.sherwood.wta.core.agent.tool.builtin.GrepTool
 import com.sherwood.wta.core.agent.tool.builtin.InstallRuntimeTool
 import com.sherwood.wta.core.agent.tool.builtin.KillAllPortsTool
 import com.sherwood.wta.core.agent.tool.builtin.KillPortTool
+import com.sherwood.wta.core.agent.tool.builtin.GitHubCreateRepositoryTool
 import com.sherwood.wta.core.agent.tool.builtin.GitHubImportRepositoryTool
 import com.sherwood.wta.core.agent.tool.builtin.GitHubListRepositoriesTool
 import com.sherwood.wta.core.agent.tool.builtin.GitHubOpenPullRequestTool
@@ -145,9 +146,10 @@ class ToolRegistryFactory(
         GetModuleTool(),
         CreateModuleTool(),
         UpdateModuleTool(),
-        // GitHub (read + local import + new-branch/PR publish; never merges, never force-pushes)
+        // GitHub (create + read + local import + new-branch/PR publish; never forks, never merges, never force-pushes)
         GitHubStatusTool(),
         GitHubListRepositoriesTool(),
+        GitHubCreateRepositoryTool(),
         GitHubImportRepositoryTool(),
         GitHubOpenPullRequestTool(),
         PreviewTool(),

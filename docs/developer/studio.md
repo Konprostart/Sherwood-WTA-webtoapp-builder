@@ -25,7 +25,7 @@ Everything still ships as **one APK**. Studio is not a second app.
 | Export | `ArtifactExport` | Share a vault file as a `FileProvider` content URI, or copy it into a document the user picks in the system picker (`Save to Downloads`). AABs are Play upload bundles, APKs are installable. |
 | Install | `ArtifactInstaller` | System installer via FileProvider with a read grant. |
 | Workspace link | `WorkspaceBridgeService` | Commits `.sherwood/workspace.json`; external tools read it over raw content. No Sherwood server. |
-| Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubImportRepository` / `GitHubOpenPullRequest` | The in-app agent can read the connection, copy a repository into its own session folder, and send the edited files back as a new branch plus a pull request with a fresh approval tap. It never merges — see [Agent access](#agent-access). |
+| Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubCreateRepository` / `GitHubImportRepository` / `GitHubOpenPullRequest` | The in-app agent can read the connection, create a new independent repository, copy a repository into its own session folder, and send the edited files back as a new branch plus a pull request with a fresh approval tap. It never forks and never merges — see [Agent access](#agent-access). |
 | Endpoints | `EndpointConfig` | Every Studio address is HTTPS, validated, and overridable from Settings. |
 
 ## Signing a vault artifact
@@ -159,7 +159,7 @@ example.
 
 ## Agent access
 
-The in-app agent has four GitHub tools, registered in
+The in-app agent has five GitHub tools, registered in
 `ToolRegistryFactory.baseTools()`. They reuse the credential Studio already
 owns — `GitHubTokenStore`, filled by Settings → Git access (personal access
 token) or by the OAuth device flow — so there is no second token path and no
@@ -169,8 +169,17 @@ credential inside the agent loop.
 | --- | --- | --- |
 | `GitHubStatus` | yes | Connection state, authenticated login, the repository Studio is pointed at, and the working copies already imported. |
 | `GitHubListRepositories` | yes | Repositories the token can see (name, visibility, default branch, last push). |
+| `GitHubCreateRepository` | no (fresh prompt on **every** call) | Creates a **new, independent** repository with `POST /user/repos` (`auto_init` on, so the default branch exists immediately). Visibility defaults to private. Optional `sourceRepository` seeds it with a **public** repository's files — files only, no history and no fork link — which is the rebrand path. `.github/workflows/*` is never copied. Caps, refused rather than truncated: 500 files, 10 MB per file, 64 MB total. |
 | `GitHubImportRepository` | no (permission prompt) | Copies a repository's files into the agent's own session folder, so `Read`/`Write`/`Edit`/`Glob`/`Grep` work on them. Reuses an existing Studio working copy when one matches the branch; folder `.git` is skipped, and the copy is capped at 2000 files, 32 MB total and 4 MB per file. |
 | `GitHubOpenPullRequest` | no (fresh prompt on **every** call) | Copies the edited files into a Studio working copy, creates a **new** branch from the imported base commit, commits there through `RepoBridgeCommitUseCase` (review + secret scanner), and opens a pull request. Returns the PR URL. |
+
+`GitHubCreateRepository` (`GitHubCreateRepositoryTool.kt`) validates and
+measures the source **before** the repository is created, so a refused source
+never leaves a stray repository behind. It never calls `/forks` or
+`/generate`: the result has no upstream link. A private source is refused when
+the new repository would be public, and a failure during upload leaves the
+branch at the initial commit rather than a half-applied project — every blob is
+created before the tree and the commit.
 
 `GitHubOpenPullRequest` (`GitHubPublishTool.kt`) enforces four rules in code,
 not by prompting the model:

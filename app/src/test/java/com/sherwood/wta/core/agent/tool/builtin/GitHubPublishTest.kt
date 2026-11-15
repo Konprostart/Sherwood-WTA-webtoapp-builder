@@ -387,52 +387,7 @@ class GitHubPublishTest {
         baseSha = baseSha
     )
 
-    private fun toolContext(context: Context, prompter: PermissionPrompter) = ToolContext(
-        androidContext = context,
-        sessionId = "publish-test",
-        fileManager = ProjectFileManager(context),
-        textModel = SavedModel(
-            model = AiModel(id = "m", name = "m", provider = AiProvider.OPENAI),
-            apiKeyId = "k",
-            capabilities = listOf(ModelCapability.TEXT)
-        ),
-        textApiKey = ApiKeyConfig(provider = AiProvider.OPENAI, apiKey = "key"),
-        prompter = prompter,
-        todos = TodoManager(),
-        appRepository = WebAppRepository(FakeWebAppDao())
-    )
-
     private companion object {
         const val SHA_A = "0123456789abcdef0123456789abcdef01234567"
-    }
-
-    /** The repository eagerly reads three Flow properties at construction; the rest is never called here. */
-    private class FakeWebAppDao : WebAppDao {
-        override fun getAllWebApps(): Flow<List<WebApp>> = flowOf(emptyList())
-        override fun getAllWebAppSummaries(): Flow<List<WebAppSummary>> = flowOf(emptyList())
-        override fun getHttpWebApps(appType: AppType): Flow<List<WebApp>> = flowOf(emptyList())
-        override suspend fun getStartupCandidatesWithoutIcons(appType: AppType, limit: Int): List<WebAppStartupCandidate> = throw NotImplementedError()
-        override suspend fun getWebAppById(id: Long): WebApp? = throw NotImplementedError()
-        override fun getWebAppByIdFlow(id: Long): Flow<WebApp?> = throw NotImplementedError()
-        override suspend fun insert(webApp: WebApp): Long = throw NotImplementedError()
-        override suspend fun update(webApp: WebApp) = throw NotImplementedError()
-        override suspend fun delete(webApp: WebApp) = throw NotImplementedError()
-        override suspend fun deleteById(id: Long) = throw NotImplementedError()
-        override suspend fun updateActivationStatus(id: Long, activated: Boolean) = throw NotImplementedError()
-        override suspend fun upgradeRemoteHttpUrls(appType: AppType, updatedAt: Long): Int = throw NotImplementedError()
-        override suspend fun getCount(): Int = throw NotImplementedError()
-        override fun searchWebApps(query: String): Flow<List<WebApp>> = throw NotImplementedError()
-        override suspend fun insertAll(webApps: List<WebApp>): List<Long> = throw NotImplementedError()
-        override suspend fun updateAll(webApps: List<WebApp>) = throw NotImplementedError()
-        override suspend fun deleteAll(webApps: List<WebApp>) = throw NotImplementedError()
-        override suspend fun deleteByIds(ids: List<Long>) = throw NotImplementedError()
-        override suspend fun updateActivationStatusBatch(ids: List<Long>, activated: Boolean) = throw NotImplementedError()
-        override suspend fun getWebAppsByIds(ids: List<Long>): List<WebApp> = throw NotImplementedError()
-        override fun getActivatedWebApps(): Flow<List<WebApp>> = throw NotImplementedError()
-        override fun getRecentWebApps(limit: Int): Flow<List<WebApp>> = throw NotImplementedError()
-        override suspend fun countByName(name: String, excludeId: Long): Int = throw NotImplementedError()
-        override suspend fun clearCategoryId(categoryId: Long) = throw NotImplementedError()
-        override suspend fun getAllUrls(): List<String> = throw NotImplementedError()
-        override suspend fun updateHomeSortIndex(id: Long, index: Int) = throw NotImplementedError()
     }
 }

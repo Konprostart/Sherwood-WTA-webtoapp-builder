@@ -300,6 +300,45 @@ class GitHubApiClient(
     suspend fun getRepository(owner: String, repo: String): GitHubResult<GitHubRepository> =
         getJson(url("repos", owner, repo)) { parseRepository(it) }
 
+    /**
+     * Creates a repository under the authenticated account (`POST /user/repos`).
+     *
+     * [autoInit] makes GitHub create the initial commit (and therefore the default
+     * branch) immediately, so the result is usable for an import or a pull request
+     * without a second step. The created repository is always independent: this never
+     * calls `/forks`, so the response carries `fork = false` and no upstream link.
+     *
+     * Organisations are deliberately not supported — those live under
+     * `POST /orgs/{org}/repos`, which needs a scope decision the caller has not made.
+     *
+     * The common rejections are `422` (the name is taken or malformed) and `403` (the
+     * token may not create repositories); [failureFrom] keeps GitHub's own text.
+     */
+    suspend fun createRepository(
+        name: String,
+        description: String? = null,
+        privateRepository: Boolean = false,
+        autoInit: Boolean = true,
+        homepage: String? = null
+    ): GitHubResult<GitHubRepository> {
+        if (name.isBlank()) {
+            return GitHubResult.Failure(
+                GitHubFailureKind.UNPROCESSABLE,
+                message = "A repository name is required"
+            )
+        }
+        val payload = JsonObject().apply {
+            addProperty("name", name.trim())
+            addProperty("private", privateRepository)
+            addProperty("auto_init", autoInit)
+            if (!description.isNullOrBlank()) addProperty("description", description.trim())
+            if (!homepage.isNullOrBlank()) addProperty("homepage", homepage.trim())
+        }
+        return sendJson("POST", url("user", "repos"), payload.toString()) { json ->
+            parseRepository(json)
+        }
+    }
+
     // ----------------------------------------------------------------- branches
 
     suspend fun listBranches(owner: String, repo: String, perPage: Int = 100): GitHubResult<List<GitHubBranch>> =
@@ -957,13 +996,30 @@ class GitHubApiClient(
             segments.forEach { addPathSegments(it) }
         }
 
+    /**
+     * GitHub's own explanation, for the UI and for the agent.
+     *
+     * A `422` usually carries a generic top-level `message` ("Repository creation
+     * failed.") plus the useful text in `errors[].message` ("name already exists on this
+     * account"), so the details are appended instead of dropped — otherwise the caller
+     * can only report "creation failed" and the user cannot act on it.
+     */
     private fun extractMessage(body: String?): String? {
         if (body.isNullOrBlank()) return null
         val json = runCatching {
             JsonParser.parseString(body).takeIf { it.isJsonObject }?.asJsonObject
         }.getOrNull()
         val message = json?.string("message") ?: body
-        return message.trim().take(MAX_ERROR_MESSAGE)
+        val details = json?.get("errors")
+            ?.takeIf { it.isJsonArray }
+            ?.asJsonArray
+            ?.mapNotNull { element ->
+                element.takeIf { it.isJsonObject }?.asJsonObject?.string("message")
+            }
+            .orEmpty()
+            .filter { it.isNotBlank() && !message.contains(it) }
+        val combined = if (details.isEmpty()) message else message + ": " + details.joinToString("; ")
+        return combined.trim().take(MAX_ERROR_MESSAGE)
     }
 
     companion object {

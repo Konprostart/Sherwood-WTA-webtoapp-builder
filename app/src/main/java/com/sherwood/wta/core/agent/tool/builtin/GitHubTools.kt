@@ -24,10 +24,12 @@ import java.io.File
  * there is no second token path and no credential handling inside the agent loop.
  *
  * Boundary: these tools **read** GitHub and **write only into the agent session
- * sandbox**. The one exception is [GitHubOpenPullRequestTool] in
- * `GitHubPublishTool.kt`, which is the single path that sends changes to GitHub; it is
- * bounded to a new branch, a pull request and a fresh user approval on every call, and
- * it never merges or force-pushes. Nothing here merges, comments or dispatches a workflow.
+ * sandbox**. Two tools write to the account itself, each behind its own fresh approval
+ * tap on every call: [GitHubCreateRepositoryTool] in `GitHubCreateRepositoryTool.kt`
+ * creates a new, independent repository (never a fork), and [GitHubOpenPullRequestTool]
+ * in `GitHubPublishTool.kt` is the only path that sends changes to an existing one — it
+ * is bounded to a new branch and a pull request and never merges or force-pushes.
+ * Nothing here merges, comments or dispatches a workflow.
  */
 
 /** Session-sandbox limits for an imported repository, so a huge repo cannot fill the disk. */
@@ -168,6 +170,11 @@ class GitHubStatusTool : Tool {
                     }
                     if (imported.size > 10) appendLine("… ${imported.size - 10} more")
                 }
+                appendLine(
+                    "GitHubCreateRepository creates a new repository on this account " +
+                        "(optionally seeded with a public repository's files) — it also " +
+                        "asks for a fresh approval tap."
+                )
                 appendLine(
                     "Next: GitHubImportRepository copies a repository into this session " +
                         "folder, after which Read/Write/Edit/ListFiles/Glob/Grep work on its files."
