@@ -241,7 +241,9 @@ internal class GiteaApiClient(
             apiUrl("repos", owner, repo, "pulls", number.toString(), "merge"),
             body
         )) {
-            is GitResult.Success -> GitResult.Success(GitMergeResult(merged = true))
+            is GitResult.Success -> GitResult.Success(
+                GitMergeResult(merged = true, sha = null, message = null)
+            )
             is GitResult.Failure -> merged
         }
     }

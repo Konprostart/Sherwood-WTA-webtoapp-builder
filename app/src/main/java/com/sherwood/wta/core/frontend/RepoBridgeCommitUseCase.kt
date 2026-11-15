@@ -174,7 +174,8 @@ class RepoBridgeCommitUseCase(
         }
         val files = (scanned as ScanResult.Ok).files
         val changes = diff(files, plan.remoteBlobs)
-        val oversized = oversizedChange(changes, files)
+        val limits = writer?.publishLimits ?: GitCommitWriter.DEFAULT_PUBLISH_LIMITS
+        val oversized = oversizedChange(changes, files, limits.maxFileBytes)
         if (oversized != null) {
             cachedPlan = null
             return RepoBridgePrepareResult.Failure(
@@ -182,7 +183,7 @@ class RepoBridgeCommitUseCase(
                 oversized
             )
         }
-        val review = when (val built = buildReview(changes, files, plan)) {
+        val review = when (val built = buildReview(changes, files, plan, limits.maxFileBytes)) {
             is ReviewBuild.Error -> {
                 cachedPlan = null
                 return RepoBridgePrepareResult.Failure(built.reason, built.detail)
