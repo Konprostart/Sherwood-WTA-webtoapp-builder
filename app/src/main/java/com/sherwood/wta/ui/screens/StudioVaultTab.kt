@@ -71,7 +71,12 @@ internal fun StudioVaultTab(context: Context, snackbarHostState: SnackbarHostSta
     var savingArtifact by remember { mutableStateOf<VaultArtifact?>(null) }
 
     fun reload() {
-        artifacts = vault.list()
+        // The index is read from disk; reading it on the main thread stalls the first
+        // frame of the tab on a device with a large vault or slow storage.
+        scope.launch {
+            val loaded = withContext(Dispatchers.IO) { vault.list() }
+            artifacts = loaded
+        }
     }
 
     /**
@@ -410,8 +415,10 @@ internal fun StudioVaultTab(context: Context, snackbarHostState: SnackbarHostSta
                     val artifact = deleting
                     deleting = null
                     if (artifact != null) {
-                        vault.delete(artifact)
-                        reload()
+                        scope.launch {
+                            withContext(Dispatchers.IO) { vault.delete(artifact) }
+                            reload()
+                        }
                     }
                 }) { Text(Strings.delete) }
             },

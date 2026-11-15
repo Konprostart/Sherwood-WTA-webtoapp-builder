@@ -57,6 +57,19 @@ class TelegramSettings private constructor(context: Context) {
             prefs.edit().putBoolean(KEY_ALLOW_BUILDS, value).apply()
         }
 
+    /**
+     * Whether finished CI runs are pushed into the paired chats.
+     *
+     * On by default: a command centre that reports nothing when a build ends is only
+     * half useful. The switch exists so a noisy repository can be silenced without
+     * turning the bot off.
+     */
+    var notifyBuilds: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFY_BUILDS, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_NOTIFY_BUILDS, value).apply()
+        }
+
     /** Highest Telegram update id already handled; persisted so a restart never replays. */
     var lastUpdateId: Long
         get() = prefs.getLong(KEY_LAST_UPDATE, 0L)
@@ -146,6 +159,7 @@ class TelegramSettings private constructor(context: Context) {
         internal const val KEY_ENABLED = "enabled"
         internal const val KEY_PAIRED = "paired_chats"
         internal const val KEY_ALLOW_BUILDS = "allow_remote_builds"
+        internal const val KEY_NOTIFY_BUILDS = "notify_builds"
         internal const val KEY_LAST_UPDATE = "last_update_id"
         internal const val KEY_BOT_USERNAME = "bot_username"
         internal const val KEY_PAIR_CODE = "pairing_code"

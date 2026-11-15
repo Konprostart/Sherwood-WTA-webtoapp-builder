@@ -2,19 +2,47 @@ package com.sherwood.wta.core.agent.session
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.sherwood.wta.core.agent.files.ProjectFileManager
 import com.sherwood.wta.util.GsonProvider
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 private val Context.aicodingStore: DataStore<Preferences> by preferencesDataStore(name = "aicoding_sessions_v1")
 
+/**
+ * Persistence for agent sessions.
+ *
+ * Chat history used to live in one JSON string that held *every* session and *every*
+ * message. Each throttled streaming draft rewrote that whole string — so a turn in a
+ * long session re-serialised the entire history several times a second (write
+ * amplification), and one corrupt write could take every conversation with it.
+ *
+ * The store is now split into three kinds of entry:
+ *
+ *  - `sessions_v2` — an index of session *metadata* only (title, config, timestamps,
+ *    plan slugs). Small, so rewriting it per turn is cheap.
+ *  - `messages_v2:<sessionId>` — one blob per session, written only when that session's
+ *    committed history changes.
+ *  - `draft_v2:<sessionId>:<messageId>` — an in-flight assistant draft, written on every
+ *    streaming flush. The flush touches only the draft, never the committed history.
+ *
+ * Readers see the same [AgentSession] shape as before: [sessionsFlow] merges the index,
+ * the session's messages and any live drafts. Unchanged blobs are decoded once and
+ * reused (the cache is keyed on the raw JSON, so it cannot go stale).
+ *
+ * Legacy `sessions_v1` is split on first access. If the legacy blob cannot be parsed it
+ * is left untouched rather than replaced with an empty history.
+ */
 class SessionStore(
     private val context: Context,
     private val files: ProjectFileManager
@@ -22,15 +50,24 @@ class SessionStore(
 
     private val gson = GsonProvider.gson
 
-    val sessionsFlow: Flow<List<AgentSession>> = context.aicodingStore.data.map { decode(it[KEY_SESSIONS]) }
+    /** Fast path: after the first successful access the legacy key is gone. */
+    @Volatile
+    private var migrated = false
+
+    val sessionsFlow: Flow<List<AgentSession>> = flow {
+        migrateLegacy()
+        emitAll(context.aicodingStore.data.map { decodeAll(it) })
+    }
+
     val currentSessionIdFlow: Flow<String?> = context.aicodingStore.data.map { it[KEY_CURRENT] }
 
     suspend fun create(title: String = ""): AgentSession {
         val session = AgentSession(title = title)
         context.aicodingStore.edit { p ->
-            val list = decode(p[KEY_SESSIONS]).toMutableList()
+            migrate(p)
+            val list = decodeIndex(p[KEY_INDEX]).toMutableList()
             list.add(0, session)
-            p[KEY_SESSIONS] = gson.toJson(list)
+            p[KEY_INDEX] = encodeIndex(list)
             p[KEY_CURRENT] = session.id
         }
 
@@ -46,8 +83,11 @@ class SessionStore(
 
     suspend fun delete(id: String) {
         context.aicodingStore.edit { p ->
-            val list = decode(p[KEY_SESSIONS]).filter { it.id != id }
-            p[KEY_SESSIONS] = gson.toJson(list)
+            migrate(p)
+            val list = decodeIndex(p[KEY_INDEX]).filter { it.id != id }
+            p[KEY_INDEX] = encodeIndex(list)
+            p.remove(messagesKey(id))
+            draftKeys(p, id).forEach { p.remove(it) }
             if (p[KEY_CURRENT] == id) p.remove(KEY_CURRENT)
         }
         files.deleteSession(id)
@@ -71,7 +111,8 @@ class SessionStore(
     suspend fun appendMessage(id: String, message: AgentMessage): AgentSession? {
         var captured: AgentSession? = null
         context.aicodingStore.edit { p ->
-            val list = decode(p[KEY_SESSIONS]).toMutableList()
+            migrate(p)
+            val list = decodeIndex(p[KEY_INDEX]).toMutableList()
             val idx = list.indexOfFirst { it.id == id }
             if (idx < 0) return@edit
             var s = list[idx]
@@ -79,10 +120,18 @@ class SessionStore(
             if (s.title.isBlank() && message.role == AgentMessage.Role.USER) {
                 s = s.copy(title = message.content.take(40).trim())
             }
-            s = s.copy(messages = s.messages + message, updatedAt = System.currentTimeMillis())
-            list[idx] = s
-            captured = s
-            p[KEY_SESSIONS] = gson.toJson(list)
+            val messages = readMessages(p, id)
+            val updated = s.copy(
+                messages = messages + message,
+                updatedAt = System.currentTimeMillis()
+            )
+            list[idx] = updated
+            p[KEY_INDEX] = encodeIndex(list)
+            p[messagesKey(id)] = encodeMessages(updated.messages)
+            // A draft that outlived its turn is abandoned once a new message is appended;
+            // leaving it would re-show it above the new turn forever.
+            draftKeys(p, id).forEach { p.remove(it) }
+            captured = updated
         }
         return captured
     }
@@ -95,35 +144,61 @@ class SessionStore(
      * Insert or replace the trailing assistant [message] for a session, keyed by
      * [message.id]. Used by [com.sherwood.wta.core.agent.runtime.AgentService] to keep a
      * live "draft" of the in-flight turn so the output survives even if the UI is
-     * destroyed mid-turn. If the trailing message already has this id it is replaced
-     * in place (so the list does not grow on every throttled snapshot); otherwise the
-     * message is appended.
+     * destroyed mid-turn.
+     *
+     * The draft is written to its own key, so a streaming flush costs one message, not
+     * the session's whole history. Committed messages are only touched by
+     * [finalizeDraft].
      */
-    suspend fun upsertAssistantDraft(id: String, message: AgentMessage): AgentSession? = mutate(id) { s ->
-        val msgs = s.messages.toMutableList()
-        val draftIdx = msgs.indexOfLast { it.id == message.id }
-        if (draftIdx >= 0) {
-            msgs[draftIdx] = message
-        } else {
-            msgs += message
+    suspend fun upsertAssistantDraft(id: String, message: AgentMessage): AgentSession? {
+        var captured: AgentSession? = null
+        context.aicodingStore.edit { p ->
+            migrate(p)
+            val list = decodeIndex(p[KEY_INDEX]).toMutableList()
+            val idx = list.indexOfFirst { it.id == id }
+            if (idx < 0) return@edit
+            val updated = list[idx].copy(updatedAt = System.currentTimeMillis())
+            list[idx] = updated
+            p[KEY_INDEX] = encodeIndex(list)
+            p[draftKey(id, message.id)] = gson.toJson(message)
+            captured = updated.copy(
+                messages = mergeDrafts(readMessages(p, id), readDrafts(p, id))
+            )
         }
-        s.copy(messages = msgs)
+        return captured
     }
 
     /**
      * Finalize a draft: replace the trailing message whose id == [final.id] with
      * [final] (used when the turn ends), or append [final] if no draft with that id
-     * exists. Returns the updated session.
+     * exists. The draft key is removed in the same write, so the finished message is
+     * committed exactly once and never re-appears from a stale draft.
      */
-    suspend fun finalizeDraft(id: String, final: AgentMessage): AgentSession? = mutate(id) { s ->
-        val msgs = s.messages.toMutableList()
-        val draftIdx = msgs.indexOfLast { it.id == final.id }
-        if (draftIdx >= 0) {
-            msgs[draftIdx] = final
-        } else {
-            msgs += final
+    suspend fun finalizeDraft(id: String, final: AgentMessage): AgentSession? {
+        var captured: AgentSession? = null
+        context.aicodingStore.edit { p ->
+            migrate(p)
+            val list = decodeIndex(p[KEY_INDEX]).toMutableList()
+            val idx = list.indexOfFirst { it.id == id }
+            if (idx < 0) return@edit
+            val msgs = readMessages(p, id).toMutableList()
+            val draftIdx = msgs.indexOfLast { it.id == final.id }
+            if (draftIdx >= 0) {
+                msgs[draftIdx] = final
+            } else {
+                msgs += final
+            }
+            val updated = list[idx].copy(
+                messages = msgs,
+                updatedAt = System.currentTimeMillis()
+            )
+            list[idx] = updated
+            p[KEY_INDEX] = encodeIndex(list)
+            p[messagesKey(id)] = encodeMessages(msgs)
+            p.remove(draftKey(id, final.id))
+            captured = updated
         }
-        s.copy(messages = msgs)
+        return captured
     }
 
     /**
@@ -131,11 +206,19 @@ class SessionStore(
      * and was never finalized. Used to clean up an aborted draft that produced no
      * usable output.
      */
-    suspend fun dropDraft(sessionId: String, draftMessageId: String): AgentSession? = mutate(sessionId) { s ->
-        val msgs = s.messages.toMutableList()
-        val idx = msgs.indexOfLast { it.id == draftMessageId }
-        if (idx >= 0) msgs.removeAt(idx)
-        s.copy(messages = msgs)
+    suspend fun dropDraft(sessionId: String, draftMessageId: String): AgentSession? {
+        var captured: AgentSession? = null
+        context.aicodingStore.edit { p ->
+            migrate(p)
+            val list = decodeIndex(p[KEY_INDEX]).toMutableList()
+            val idx = list.indexOfFirst { it.id == sessionId }
+            if (idx < 0) return@edit
+            p.remove(draftKey(sessionId, draftMessageId))
+            captured = list[idx].copy(
+                messages = mergeDrafts(readMessages(p, sessionId), readDrafts(p, sessionId))
+            )
+        }
+        return captured
     }
 
     suspend fun truncateAt(id: String, messageId: String, keep: Boolean): AgentSession? = mutate(id) { s ->
@@ -154,52 +237,217 @@ class SessionStore(
         val all = sessionsFlow.first().map { it.id }
         all.forEach { files.deleteSession(it) }
         context.aicodingStore.edit { p ->
-            p.remove(KEY_SESSIONS)
+            p.asMap().keys
+                .filter { key ->
+                    // Every message blob and draft becomes unreachable once the index,
+                    // which is the only way to name a session, is gone.
+                    key.name.startsWith(MESSAGES_PREFIX) || key.name.startsWith(DRAFT_PREFIX)
+                }
+                .forEach { p.remove(stringPreferencesKey(it.name)) }
+            p.remove(KEY_INDEX)
             p.remove(KEY_CURRENT)
+            p.remove(KEY_LEGACY)
         }
+        migrated = true
     }
 
+    /**
+     * Applies [block] to the full session (metadata plus committed messages) and writes
+     * back the metadata index and that one session's messages. No other session's
+     * history is read or rewritten.
+     */
     private suspend fun mutate(id: String, block: (AgentSession) -> AgentSession): AgentSession? {
         var captured: AgentSession? = null
         context.aicodingStore.edit { p ->
-            val list = decode(p[KEY_SESSIONS]).toMutableList()
+            migrate(p)
+            val list = decodeIndex(p[KEY_INDEX]).toMutableList()
             val idx = list.indexOfFirst { it.id == id }
             if (idx < 0) return@edit
-            val updated = block(list[idx]).copy(updatedAt = System.currentTimeMillis())
+            val current = list[idx].copy(messages = readMessages(p, id))
+            val updated = block(current).copy(updatedAt = System.currentTimeMillis())
             list[idx] = updated
+            p[KEY_INDEX] = encodeIndex(list)
+            p[messagesKey(id)] = encodeMessages(updated.messages)
             captured = updated
-            p[KEY_SESSIONS] = gson.toJson(list)
         }
         return captured
     }
 
-    /**
-     * Deserialise the sessions blob. Gson bypasses Kotlin constructor defaults, so
-     * fields absent from legacy (pre-Agent-rename) session JSON deserialise as null
-     * even though the Kotlin properties are declared non-null. Every session and
-     * message is normalised here so callers can rely on empty lists instead of
-     * tripping NPEs deep in the UI/VM (issue #712: restoring a pre-Agent backup
-     * then opening Agent crashed on `userAttachments.isNotEmpty()`).
-     *
-     * Normalisation is keyed on the raw JSON so repeated decodes of an unchanged blob
-     * (sessionsFlow re-emits after every write, and [get] re-reads mid-turn) reuse the
-     * previous result instead of copying every session and message again. The blob is
-     * the source of truth; a content-keyed cache cannot go stale.
-     */
-    private fun decode(raw: String?): List<AgentSession> {
-        if (raw.isNullOrBlank()) return emptyList()
-        lastDecodeCache[raw]?.let { return it }
-        val decoded = runCatching {
-            val sessions: List<AgentSession> =
-                gson.fromJson(raw, object : TypeToken<List<AgentSession>>() {}.type)
-            sessions.map(::normalize)
-        }.getOrElse { emptyList() }
-        lastDecodeCache.clear()
-        if (decoded.isNotEmpty()) lastDecodeCache[raw] = decoded
-        return decoded
+    // ------------------------------------------------------------ migration
+
+    private suspend fun migrateLegacy() {
+        if (migrated) return
+        context.aicodingStore.edit { p -> migrate(p) }
+        migrated = true
     }
 
-    private val lastDecodeCache = HashMap<String, List<AgentSession>>()
+    /**
+     * Splits a legacy all-in-one blob into the index and per-session message blobs.
+     *
+     * A blob that cannot be parsed is deliberately left in place: replacing it with an
+     * empty index would silently destroy every conversation. The next access retries.
+     */
+    private fun migrate(p: MutablePreferences) {
+        if (p[KEY_INDEX] != null) return
+        val legacy = p[KEY_LEGACY]
+        if (legacy.isNullOrBlank()) {
+            p[KEY_INDEX] = "[]"
+            return
+        }
+        val split = SessionMigration.split(legacy, gson) ?: return
+        split.messages.forEach { (sessionId, json) -> p[messagesKey(sessionId)] = json }
+        p[KEY_INDEX] = split.index
+        p.remove(KEY_LEGACY)
+    }
+
+    // ------------------------------------------------------------ reading
+
+    private fun decodeAll(p: Preferences): List<AgentSession> {
+        val index = decodeIndex(p[KEY_INDEX])
+        if (index.isEmpty()) return emptyList()
+        return index.map { session ->
+            session.copy(
+                messages = mergeDrafts(readMessages(p, session.id), readDrafts(p, session.id))
+            )
+        }
+    }
+
+    /**
+     * Live drafts overlay the committed history. A draft whose id matches a committed
+     * message replaces it in place (that is what `finalizeDraft` guarantees), so the
+     * timeline never shows the same turn twice.
+     */
+    private fun mergeDrafts(
+        committed: List<AgentMessage>,
+        drafts: List<AgentMessage>
+    ): List<AgentMessage> {
+        if (drafts.isEmpty()) return committed
+        val merged = committed.toMutableList()
+        drafts.forEach { draft ->
+            val existing = merged.indexOfLast { it.id == draft.id }
+            if (existing >= 0) merged[existing] = draft else merged += draft
+        }
+        return merged
+    }
+
+    private fun readMessages(p: Preferences, sessionId: String): List<AgentMessage> =
+        decodeMessages(p[messagesKey(sessionId)])
+
+    private fun readDrafts(p: Preferences, sessionId: String): List<AgentMessage> =
+        draftKeys(p, sessionId)
+            .mapNotNull { key -> p[key]?.let { decodeMessage(it) } }
+            // A session may hold several drafts only if an earlier one was never
+            // finalized; order them the way they were produced.
+            .sortedWith(compareBy<AgentMessage>({ it.timestamp }, { it.id }))
+
+    private fun decodeIndex(raw: String?): List<AgentSession> {
+        if (raw.isNullOrBlank()) return emptyList()
+        synchronized(indexCache) {
+            indexCache[raw]?.let { return it }
+            val decoded = SessionMigration.decodeIndex(raw, gson)
+            putBounded(indexCache, raw, decoded, MAX_INDEX_CACHE)
+            return decoded
+        }
+    }
+
+    private fun decodeMessages(raw: String?): List<AgentMessage> {
+        if (raw.isNullOrBlank()) return emptyList()
+        synchronized(messagesCache) {
+            messagesCache[raw]?.let { return it }
+            val decoded = SessionMigration.decodeMessages(raw, gson)
+            putBounded(messagesCache, raw, decoded, MAX_MESSAGES_CACHE)
+            return decoded
+        }
+    }
+
+    private fun decodeMessage(raw: String): AgentMessage? = runCatching {
+        gson.fromJson(raw, AgentMessage::class.java)?.let(SessionMigration::normalizeMessage)
+    }.getOrNull()
+
+    private fun encodeIndex(sessions: List<AgentSession>): String =
+        gson.toJson(sessions.map { it.copy(messages = emptyList()) })
+
+    private fun encodeMessages(messages: List<AgentMessage>): String = gson.toJson(messages)
+
+    /** Bounded caches: a session blob that is no longer read costs nothing. */
+    private val indexCache = LinkedHashMap<String, List<AgentSession>>()
+    private val messagesCache = LinkedHashMap<String, List<AgentMessage>>()
+
+    private fun <K, V> putBounded(map: LinkedHashMap<K, V>, key: K, value: V, max: Int) {
+        map[key] = value
+        while (map.size > max) {
+            val oldest = map.keys.firstOrNull() ?: break
+            map.remove(oldest)
+        }
+    }
+
+    private fun messagesKey(sessionId: String) = stringPreferencesKey("$MESSAGES_PREFIX$sessionId")
+
+    private fun draftKey(sessionId: String, messageId: String) =
+        stringPreferencesKey("$DRAFT_PREFIX$sessionId:$messageId")
+
+    private fun draftKeys(p: Preferences, sessionId: String): List<Preferences.Key<String>> {
+        val prefix = "$DRAFT_PREFIX$sessionId:"
+        return p.asMap().keys
+            .filter { it.name.startsWith(prefix) }
+            .map { stringPreferencesKey(it.name) }
+    }
+
+    /** Test hook: exposes legacy-blob decoding (including normalisation) without DataStore. */
+    fun decodeForTest(raw: String): List<AgentSession> = SessionMigration.decodeSessions(raw, gson)
+
+    companion object {
+        private const val MAX_INDEX_CACHE = 8
+        private const val MAX_MESSAGES_CACHE = 32
+
+        private const val MESSAGES_PREFIX = "messages_v2:"
+        private const val DRAFT_PREFIX = "draft_v2:"
+
+        private val KEY_INDEX = stringPreferencesKey("sessions_v2")
+        private val KEY_LEGACY = stringPreferencesKey("sessions_v1")
+        private val KEY_CURRENT = stringPreferencesKey("current_v1")
+    }
+}
+
+/**
+ * Legacy-blob handling kept free of DataStore so it can be unit-tested directly.
+ *
+ * Gson bypasses Kotlin constructor defaults, so fields absent from legacy (pre-Agent
+ * rename) JSON deserialise as null even though the Kotlin properties are declared
+ * non-null. Every session and message is normalised here so callers can rely on empty
+ * lists instead of tripping NPEs deep in the UI/VM (issue #712).
+ */
+internal object SessionMigration {
+
+    data class Split(val index: String, val messages: Map<String, String>)
+
+    /** Splits a legacy blob, or null when it cannot be parsed (never destroy it then). */
+    fun split(raw: String, gson: Gson = GsonProvider.gson): Split? {
+        val sessions = decodeSessionsOrNull(raw, gson) ?: return null
+        val index = gson.toJson(sessions.map { it.copy(messages = emptyList()) })
+        val messages = sessions.associate { it.id to gson.toJson(it.messages) }
+        return Split(index, messages)
+    }
+
+    fun decodeIndex(raw: String, gson: Gson = GsonProvider.gson): List<AgentSession> =
+        decodeSessionsOrNull(raw, gson).orEmpty()
+
+    fun decodeMessages(raw: String, gson: Gson = GsonProvider.gson): List<AgentMessage> =
+        runCatching {
+            val messages: List<AgentMessage> =
+                gson.fromJson(raw, object : TypeToken<List<AgentMessage>>() {}.type)
+            messages.orEmpty().map(::normalizeMessage)
+        }.getOrElse { emptyList() }
+
+    fun decodeSessions(raw: String, gson: Gson = GsonProvider.gson): List<AgentSession> =
+        decodeSessionsOrNull(raw, gson).orEmpty()
+
+    private fun decodeSessionsOrNull(raw: String, gson: Gson): List<AgentSession>? =
+        runCatching {
+            val sessions: List<AgentSession>? =
+                gson.fromJson(raw, object : TypeToken<List<AgentSession>>() {}.type)
+            sessions?.map(::normalize)
+        }.getOrNull()
 
     private fun normalize(session: AgentSession): AgentSession = session.copy(
         config = session.config.let { c ->
@@ -210,11 +458,11 @@ class SessionStore(
                 customRules = c.customRules ?: emptyList()
             )
         },
-        messages = session.messages.map(::normalizeMessage),
+        messages = session.messages.orEmpty().map(::normalizeMessage),
         planSlugs = session.planSlugs ?: emptyList()
     )
 
-    private fun normalizeMessage(message: AgentMessage): AgentMessage = message.copy(
+    fun normalizeMessage(message: AgentMessage): AgentMessage = message.copy(
         userAttachments = message.userAttachmentsSafe,
         thinkingSegments = message.thinkingSegmentsSafe,
         toolCalls = message.toolCalls ?: emptyList(),
@@ -222,12 +470,4 @@ class SessionStore(
         attachments = message.attachments ?: emptyList(),
         mentionedFiles = message.mentionedFiles ?: emptyList()
     )
-
-    /** Test hook: exposes [decode] (including legacy-JSON normalisation) without touching DataStore. */
-    fun decodeForTest(raw: String): List<AgentSession> = decode(raw)
-
-    companion object {
-        private val KEY_SESSIONS = stringPreferencesKey("sessions_v1")
-        private val KEY_CURRENT = stringPreferencesKey("current_v1")
-    }
 }

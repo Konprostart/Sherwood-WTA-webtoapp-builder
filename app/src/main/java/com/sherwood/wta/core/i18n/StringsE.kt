@@ -20605,4 +20605,320 @@ object StringsE {
         AppLanguage.KOREAN -> "파일이 너무 커서 텍스트 diff를 표시할 수 없습니다"
     }
 
+    // ---------------------------------------------- Telegram inline controls
+
+    val telegramButtonStatus: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "状态"
+        AppLanguage.ENGLISH -> "Status"
+        AppLanguage.ARABIC -> "الحالة"
+        AppLanguage.PORTUGUESE -> "Status"
+        AppLanguage.SPANISH -> "Estado"
+        AppLanguage.FRENCH -> "Statut"
+        AppLanguage.GERMAN -> "Status"
+        AppLanguage.RUSSIAN -> "Статус"
+        AppLanguage.JAPANESE -> "ステータス"
+        AppLanguage.KOREAN -> "상태"
+    }
+
+    val telegramButtonRuns: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "最近构建"
+        AppLanguage.ENGLISH -> "Runs"
+        AppLanguage.ARABIC -> "أحدث عمليات البناء"
+        AppLanguage.PORTUGUESE -> "Execuções"
+        AppLanguage.SPANISH -> "Ejecuciones"
+        AppLanguage.FRENCH -> "Exécutions"
+        AppLanguage.GERMAN -> "Läufe"
+        AppLanguage.RUSSIAN -> "Запуски"
+        AppLanguage.JAPANESE -> "実行履歴"
+        AppLanguage.KOREAN -> "최근 실행"
+    }
+
+    val telegramButtonRepos: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "仓库"
+        AppLanguage.ENGLISH -> "Repositories"
+        AppLanguage.ARABIC -> "المستودعات"
+        AppLanguage.PORTUGUESE -> "Repositórios"
+        AppLanguage.SPANISH -> "Repositorios"
+        AppLanguage.FRENCH -> "Dépôts"
+        AppLanguage.GERMAN -> "Repositories"
+        AppLanguage.RUSSIAN -> "Репозитории"
+        AppLanguage.JAPANESE -> "リポジトリ"
+        AppLanguage.KOREAN -> "저장소"
+    }
+
+    val telegramButtonVault: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "产物库"
+        AppLanguage.ENGLISH -> "Vault"
+        AppLanguage.ARABIC -> "المخزن"
+        AppLanguage.PORTUGUESE -> "Cofre"
+        AppLanguage.SPANISH -> "Bóveda"
+        AppLanguage.FRENCH -> "Coffre"
+        AppLanguage.GERMAN -> "Tresor"
+        AppLanguage.RUSSIAN -> "Хранилище"
+        AppLanguage.JAPANESE -> "保管庫"
+        AppLanguage.KOREAN -> "보관함"
+    }
+
+    val telegramButtonApk: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "最新 APK"
+        AppLanguage.ENGLISH -> "Latest APK"
+        AppLanguage.ARABIC -> "أحدث APK"
+        AppLanguage.PORTUGUESE -> "APK mais recente"
+        AppLanguage.SPANISH -> "APK más reciente"
+        AppLanguage.FRENCH -> "Dernier APK"
+        AppLanguage.GERMAN -> "Neueste APK"
+        AppLanguage.RUSSIAN -> "Последний APK"
+        AppLanguage.JAPANESE -> "最新 APK"
+        AppLanguage.KOREAN -> "최신 APK"
+    }
+
+    val telegramButtonBuild: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "启动构建"
+        AppLanguage.ENGLISH -> "Build"
+        AppLanguage.ARABIC -> "بدء بناء"
+        AppLanguage.PORTUGUESE -> "Compilar"
+        AppLanguage.SPANISH -> "Compilar"
+        AppLanguage.FRENCH -> "Lancer le build"
+        AppLanguage.GERMAN -> "Build starten"
+        AppLanguage.RUSSIAN -> "Запустить сборку"
+        AppLanguage.JAPANESE -> "ビルド開始"
+        AppLanguage.KOREAN -> "빌드 시작"
+    }
+
+    val telegramButtonDownloadApk: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "下载 APK"
+        AppLanguage.ENGLISH -> "Download APK"
+        AppLanguage.ARABIC -> "تنزيل APK"
+        AppLanguage.PORTUGUESE -> "Baixar APK"
+        AppLanguage.SPANISH -> "Descargar APK"
+        AppLanguage.FRENCH -> "Télécharger l'APK"
+        AppLanguage.GERMAN -> "APK herunterladen"
+        AppLanguage.RUSSIAN -> "Скачать APK"
+        AppLanguage.JAPANESE -> "APK をダウンロード"
+        AppLanguage.KOREAN -> "APK 다운로드"
+    }
+
+    val telegramButtonOpenRun: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "打开运行"
+        AppLanguage.ENGLISH -> "Open run"
+        AppLanguage.ARABIC -> "فتح التشغيل"
+        AppLanguage.PORTUGUESE -> "Abrir execução"
+        AppLanguage.SPANISH -> "Abrir ejecución"
+        AppLanguage.FRENCH -> "Ouvrir l'exécution"
+        AppLanguage.GERMAN -> "Lauf öffnen"
+        AppLanguage.RUSSIAN -> "Открыть запуск"
+        AppLanguage.JAPANESE -> "実行を開く"
+        AppLanguage.KOREAN -> "실행 열기"
+    }
+
+    val telegramCallbackUnknown: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此按钮已失效，请重新发送命令"
+        AppLanguage.ENGLISH -> "That button is no longer valid — send the command again"
+        AppLanguage.ARABIC -> "هذا الزر لم يعد صالحًا — أرسل الأمر مرة أخرى"
+        AppLanguage.PORTUGUESE -> "Esse botão não é mais válido — envie o comando de novo"
+        AppLanguage.SPANISH -> "Ese botón ya no es válido: envía el comando de nuevo"
+        AppLanguage.FRENCH -> "Ce bouton n'est plus valide — renvoyez la commande"
+        AppLanguage.GERMAN -> "Diese Schaltfläche ist nicht mehr gültig — sende den Befehl erneut"
+        AppLanguage.RUSSIAN -> "Эта кнопка больше не действует — отправьте команду снова"
+        AppLanguage.JAPANESE -> "このボタンは無効です。コマンドを再送してください"
+        AppLanguage.KOREAN -> "이 버튼은 더 이상 유효하지 않습니다. 명령을 다시 보내세요"
+    }
+
+    val telegramNotifyBuilds: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建完成通知"
+        AppLanguage.ENGLISH -> "Build notifications"
+        AppLanguage.ARABIC -> "إشعارات البناء"
+        AppLanguage.PORTUGUESE -> "Notificações de build"
+        AppLanguage.SPANISH -> "Notificaciones de compilación"
+        AppLanguage.FRENCH -> "Notifications de build"
+        AppLanguage.GERMAN -> "Build-Benachrichtigungen"
+        AppLanguage.RUSSIAN -> "Уведомления о сборке"
+        AppLanguage.JAPANESE -> "ビルド通知"
+        AppLanguage.KOREAN -> "빌드 알림"
+    }
+
+    val telegramNotifyBuildsDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "CI 运行结束时发送消息，并附带 APK 下载按钮"
+        AppLanguage.ENGLISH -> "Send a message with an APK download button when a CI run finishes"
+        AppLanguage.ARABIC -> "إرسال رسالة مع زر تنزيل APK عند انتهاء تشغيل CI"
+        AppLanguage.PORTUGUESE -> "Enviar uma mensagem com botão de download do APK quando um run de CI terminar"
+        AppLanguage.SPANISH -> "Enviar un mensaje con botón de descarga del APK al terminar una ejecución de CI"
+        AppLanguage.FRENCH -> "Envoyer un message avec un bouton de téléchargement de l'APK à la fin d'une exécution CI"
+        AppLanguage.GERMAN -> "Nachricht mit APK-Download-Schaltfläche senden, wenn ein CI-Lauf endet"
+        AppLanguage.RUSSIAN -> "Отправлять сообщение с кнопкой скачивания APK по завершении CI"
+        AppLanguage.JAPANESE -> "CI 実行の終了時に APK ダウンロードボタン付きのメッセージを送信します"
+        AppLanguage.KOREAN -> "CI 실행이 끝나면 APK 다운로드 버튼이 있는 메시지를 보냅니다"
+    }
+
+    // ---------------------------------------------- Local models (Ollama)
+
+    val localModelsTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "本地模型（Ollama）"
+        AppLanguage.ENGLISH -> "Local models (Ollama)"
+        AppLanguage.ARABIC -> "النماذج المحلية (Ollama)"
+        AppLanguage.PORTUGUESE -> "Modelos locais (Ollama)"
+        AppLanguage.SPANISH -> "Modelos locales (Ollama)"
+        AppLanguage.FRENCH -> "Modèles locaux (Ollama)"
+        AppLanguage.GERMAN -> "Lokale Modelle (Ollama)"
+        AppLanguage.RUSSIAN -> "Локальные модели (Ollama)"
+        AppLanguage.JAPANESE -> "ローカルモデル（Ollama）"
+        AppLanguage.KOREAN -> "로컬 모델 (Ollama)"
+    }
+
+    val localModelsDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "让 Agent 使用手机或局域网内的模型，不经过任何云端提供商"
+        AppLanguage.ENGLISH -> "Run the agent against a model on this device or your LAN, with no cloud provider"
+        AppLanguage.ARABIC -> "شغّل الوكيل على نموذج على جهازك أو شبكتك المحلية دون مزوّد سحابي"
+        AppLanguage.PORTUGUESE -> "Execute o agente em um modelo no aparelho ou na sua LAN, sem provedor na nuvem"
+        AppLanguage.SPANISH -> "Ejecuta el agente con un modelo en el dispositivo o tu LAN, sin proveedor en la nube"
+        AppLanguage.FRENCH -> "Faites tourner l'agent sur un modèle de l'appareil ou du réseau local, sans fournisseur cloud"
+        AppLanguage.GERMAN -> "Agent mit einem Modell auf dem Gerät oder im LAN ausführen, ohne Cloud-Anbieter"
+        AppLanguage.RUSSIAN -> "Запускать агента на модели с устройства или локальной сети, без облачного провайдера"
+        AppLanguage.JAPANESE -> "端末または LAN 上のモデルでエージェントを実行します（クラウド不使用）"
+        AppLanguage.KOREAN -> "클라우드 공급자 없이 기기 또는 LAN의 모델로 에이전트를 실행합니다"
+    }
+
+    val localModelsUrl: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "服务器地址"
+        AppLanguage.ENGLISH -> "Server URL"
+        AppLanguage.ARABIC -> "عنوان الخادم"
+        AppLanguage.PORTUGUESE -> "URL do servidor"
+        AppLanguage.SPANISH -> "URL del servidor"
+        AppLanguage.FRENCH -> "URL du serveur"
+        AppLanguage.GERMAN -> "Server-URL"
+        AppLanguage.RUSSIAN -> "Адрес сервера"
+        AppLanguage.JAPANESE -> "サーバー URL"
+        AppLanguage.KOREAN -> "서버 주소"
+    }
+
+    val localModelsHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "例如 http://127.0.0.1:11434 或 http://192.168.1.20:11434，不能包含用户名或密码"
+        AppLanguage.ENGLISH -> "For example http://127.0.0.1:11434 or http://192.168.1.20:11434 — never with a username or password"
+        AppLanguage.ARABIC -> "مثال: http://127.0.0.1:11434 أو http://192.168.1.20:11434 — دون اسم مستخدم أو كلمة مرور"
+        AppLanguage.PORTUGUESE -> "Por exemplo http://127.0.0.1:11434 ou http://192.168.1.20:11434 — nunca com usuário ou senha"
+        AppLanguage.SPANISH -> "Por ejemplo http://127.0.0.1:11434 o http://192.168.1.20:11434 — nunca con usuario o contraseña"
+        AppLanguage.FRENCH -> "Par exemple http://127.0.0.1:11434 ou http://192.168.1.20:11434 — jamais avec identifiant ni mot de passe"
+        AppLanguage.GERMAN -> "Zum Beispiel http://127.0.0.1:11434 oder http://192.168.1.20:11434 — nie mit Benutzername oder Passwort"
+        AppLanguage.RUSSIAN -> "Например http://127.0.0.1:11434 или http://192.168.1.20:11434 — без логина и пароля"
+        AppLanguage.JAPANESE -> "例: http://127.0.0.1:11434 または http://192.168.1.20:11434（ユーザー名・パスワードは不可）"
+        AppLanguage.KOREAN -> "예: http://127.0.0.1:11434 또는 http://192.168.1.20:11434 (사용자 이름·비밀번호 불가)"
+    }
+
+    val localModelsProbe: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "检测连接"
+        AppLanguage.ENGLISH -> "Test connection"
+        AppLanguage.ARABIC -> "اختبار الاتصال"
+        AppLanguage.PORTUGUESE -> "Testar conexão"
+        AppLanguage.SPANISH -> "Probar conexión"
+        AppLanguage.FRENCH -> "Tester la connexion"
+        AppLanguage.GERMAN -> "Verbindung testen"
+        AppLanguage.RUSSIAN -> "Проверить подключение"
+        AppLanguage.JAPANESE -> "接続をテスト"
+        AppLanguage.KOREAN -> "연결 테스트"
+    }
+
+    fun localModelsProbeOk(version: String, count: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Ollama $version · 发现 $count 个模型"
+        AppLanguage.ENGLISH -> "Ollama $version · $count models found"
+        AppLanguage.ARABIC -> "Ollama $version · تم العثور على $count نموذجًا"
+        AppLanguage.PORTUGUESE -> "Ollama $version · $count modelos encontrados"
+        AppLanguage.SPANISH -> "Ollama $version · $count modelos encontrados"
+        AppLanguage.FRENCH -> "Ollama $version · $count modèles trouvés"
+        AppLanguage.GERMAN -> "Ollama $version · $count Modelle gefunden"
+        AppLanguage.RUSSIAN -> "Ollama $version · найдено моделей: $count"
+        AppLanguage.JAPANESE -> "Ollama $version · $count 件のモデル"
+        AppLanguage.KOREAN -> "Ollama $version · 모델 $count개 발견"
+    }
+
+    val localModelsProbeFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法连接该 Ollama 服务器，请检查地址与服务状态"
+        AppLanguage.ENGLISH -> "Could not reach that Ollama server — check the address and that it is running"
+        AppLanguage.ARABIC -> "تعذّر الوصول إلى خادم Ollama — تحقق من العنوان ومن تشغيله"
+        AppLanguage.PORTUGUESE -> "Não foi possível alcançar esse servidor Ollama — verifique o endereço e se está em execução"
+        AppLanguage.SPANISH -> "No se pudo alcanzar ese servidor Ollama: revisa la dirección y que esté en marcha"
+        AppLanguage.FRENCH -> "Serveur Ollama injoignable — vérifiez l'adresse et qu'il est démarré"
+        AppLanguage.GERMAN -> "Ollama-Server nicht erreichbar — Adresse und Betrieb prüfen"
+        AppLanguage.RUSSIAN -> "Сервер Ollama недоступен — проверьте адрес и запущен ли он"
+        AppLanguage.JAPANESE -> "Ollama サーバーに接続できません。アドレスと起動状態を確認してください"
+        AppLanguage.KOREAN -> "Ollama 서버에 연결할 수 없습니다. 주소와 실행 상태를 확인하세요"
+    }
+
+    val localModelsEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "该服务器没有安装任何模型"
+        AppLanguage.ENGLISH -> "That server has no models installed"
+        AppLanguage.ARABIC -> "لا توجد نماذج مثبتة على هذا الخادم"
+        AppLanguage.PORTUGUESE -> "Esse servidor não tem modelos instalados"
+        AppLanguage.SPANISH -> "Ese servidor no tiene modelos instalados"
+        AppLanguage.FRENCH -> "Ce serveur n'a aucun modèle installé"
+        AppLanguage.GERMAN -> "Auf diesem Server sind keine Modelle installiert"
+        AppLanguage.RUSSIAN -> "На этом сервере нет установленных моделей"
+        AppLanguage.JAPANESE -> "このサーバーにはモデルがありません"
+        AppLanguage.KOREAN -> "이 서버에는 설치된 모델이 없습니다"
+    }
+
+    fun localModelsActive(model: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Agent 正在使用：$model"
+        AppLanguage.ENGLISH -> "Agent is using: $model"
+        AppLanguage.ARABIC -> "الوكيل يستخدم: $model"
+        AppLanguage.PORTUGUESE -> "O agente está usando: $model"
+        AppLanguage.SPANISH -> "El agente usa: $model"
+        AppLanguage.FRENCH -> "L'agent utilise : $model"
+        AppLanguage.GERMAN -> "Agent verwendet: $model"
+        AppLanguage.RUSSIAN -> "Агент использует: $model"
+        AppLanguage.JAPANESE -> "エージェント使用中: $model"
+        AppLanguage.KOREAN -> "에이전트 사용 중: $model"
+    }
+
+    val localModelsNone: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Agent 使用 AI 设置中选择的模型"
+        AppLanguage.ENGLISH -> "The agent uses the model selected in AI settings"
+        AppLanguage.ARABIC -> "يستخدم الوكيل النموذج المحدد في إعدادات الذكاء الاصطناعي"
+        AppLanguage.PORTUGUESE -> "O agente usa o modelo selecionado nas configurações de IA"
+        AppLanguage.SPANISH -> "El agente usa el modelo seleccionado en los ajustes de IA"
+        AppLanguage.FRENCH -> "L'agent utilise le modèle choisi dans les réglages IA"
+        AppLanguage.GERMAN -> "Der Agent nutzt das in den KI-Einstellungen gewählte Modell"
+        AppLanguage.RUSSIAN -> "Агент использует модель, выбранную в настройках ИИ"
+        AppLanguage.JAPANESE -> "エージェントは AI 設定で選択したモデルを使用します"
+        AppLanguage.KOREAN -> "에이전트는 AI 설정에서 선택한 모델을 사용합니다"
+    }
+
+    val localModelsReset: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "恢复默认模型"
+        AppLanguage.ENGLISH -> "Use the default model"
+        AppLanguage.ARABIC -> "استخدام النموذج الافتراضي"
+        AppLanguage.PORTUGUESE -> "Usar o modelo padrão"
+        AppLanguage.SPANISH -> "Usar el modelo predeterminado"
+        AppLanguage.FRENCH -> "Utiliser le modèle par défaut"
+        AppLanguage.GERMAN -> "Standardmodell verwenden"
+        AppLanguage.RUSSIAN -> "Использовать модель по умолчанию"
+        AppLanguage.JAPANESE -> "既定のモデルに戻す"
+        AppLanguage.KOREAN -> "기본 모델 사용"
+    }
+
+    fun localModelsAdded(model: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已切换 Agent 到本地模型：$model"
+        AppLanguage.ENGLISH -> "Agent switched to the local model: $model"
+        AppLanguage.ARABIC -> "تم تحويل الوكيل إلى النموذج المحلي: $model"
+        AppLanguage.PORTUGUESE -> "Agente alterado para o modelo local: $model"
+        AppLanguage.SPANISH -> "Agente cambiado al modelo local: $model"
+        AppLanguage.FRENCH -> "Agent basculé sur le modèle local : $model"
+        AppLanguage.GERMAN -> "Agent auf lokales Modell umgestellt: $model"
+        AppLanguage.RUSSIAN -> "Агент переключён на локальную модель: $model"
+        AppLanguage.JAPANESE -> "エージェントをローカルモデルに切り替えました: $model"
+        AppLanguage.KOREAN -> "에이전트를 로컬 모델로 전환했습니다: $model"
+    }
+
+    val localModelsBindFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法保存本地模型设置"
+        AppLanguage.ENGLISH -> "Could not save the local model settings"
+        AppLanguage.ARABIC -> "تعذّر حفظ إعدادات النموذج المحلي"
+        AppLanguage.PORTUGUESE -> "Não foi possível salvar as configurações do modelo local"
+        AppLanguage.SPANISH -> "No se pudo guardar la configuración del modelo local"
+        AppLanguage.FRENCH -> "Impossible d'enregistrer les réglages du modèle local"
+        AppLanguage.GERMAN -> "Einstellungen für das lokale Modell konnten nicht gespeichert werden"
+        AppLanguage.RUSSIAN -> "Не удалось сохранить настройки локальной модели"
+        AppLanguage.JAPANESE -> "ローカルモデルの設定を保存できませんでした"
+        AppLanguage.KOREAN -> "로컬 모델 설정을 저장할 수 없습니다"
+    }
+
 }

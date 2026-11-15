@@ -57,7 +57,9 @@ internal fun StudioInspectorTab(context: Context, snackbarHostState: SnackbarHos
     var report by remember { mutableStateOf<ArtifactInspector.Report?>(null) }
     var loading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { artifacts = vault.list() }
+    LaunchedEffect(Unit) {
+        artifacts = withContext(Dispatchers.IO) { vault.list() }
+    }
 
     fun inspect(artifact: VaultArtifact) {
         selectedId = artifact.id

@@ -240,8 +240,60 @@ private fun StudioSettingsScreen(
     var telegramProtection by remember { mutableStateOf(telegramTokens.protection()) }
     var telegramPaired by remember { mutableStateOf(telegramSettings.pairedChats) }
     var telegramAllowBuilds by remember { mutableStateOf(telegramSettings.allowRemoteBuilds) }
+    var telegramNotifyBuilds by remember { mutableStateOf(telegramSettings.notifyBuilds) }
     var telegramPairingCode by remember { mutableStateOf(telegramSettings.pairingCode) }
     var telegramBusy by remember { mutableStateOf(false) }
+
+    // ---- local models (Ollama): offline agent driver -------------------------
+    val localModels = remember { com.sherwood.wta.core.agent.local.LocalAgentModels(context) }
+    val localClient = remember { com.sherwood.wta.core.agent.local.OllamaLocalClient() }
+    var localUrl by remember { mutableStateOf(localModels.lastBaseUrl()) }
+    var localBusy by remember { mutableStateOf(false) }
+    var localMessage by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf(false) }
+    var localFound by remember {
+        mutableStateOf<List<com.sherwood.wta.core.agent.local.OllamaModel>>(emptyList())
+    }
+    var localActive by remember { mutableStateOf(localModels.activeModelName()) }
+
+    fun probeLocal() {
+        localBusy = true
+        // A LAN probe is a network round trip; it never runs on the composition thread.
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { localClient.probe(localUrl) }
+            localBusy = false
+            result.onSuccess { server ->
+                localFound = server.models
+                localError = false
+                localMessage = if (server.models.isEmpty()) {
+                    Strings.localModelsEmpty
+                } else {
+                    Strings.localModelsProbeOk(server.version ?: "?", server.models.size)
+                }
+                localModels.rememberBaseUrl(localUrl)
+            }.onFailure {
+                localFound = emptyList()
+                localError = true
+                localMessage = Strings.localModelsProbeFailed
+            }
+        }
+    }
+
+    fun useLocalModel(model: com.sherwood.wta.core.agent.local.OllamaModel) {
+        localBusy = true
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { localModels.bind(localUrl, model) }
+            localBusy = false
+            result.onSuccess { binding ->
+                localActive = binding.modelName
+                localError = false
+                localMessage = Strings.localModelsAdded(binding.modelName)
+            }.onFailure {
+                localError = true
+                localMessage = Strings.localModelsBindFailed
+            }
+        }
+    }
 
     fun applyTelegramEnabled(enabled: Boolean) {
         telegramEnabled = enabled
@@ -688,6 +740,106 @@ private fun StudioSettingsScreen(
             }
             }
 
+            // The offline path: the agent runs on a model the user hosts, and the
+            // active profile is what actually switches it over.
+            WtaSection(title = Strings.localModelsTitle, description = Strings.localModelsDesc) {
+                WtaSettingCard {
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = WtaSpacing.RowHorizontal,
+                            vertical = WtaSpacing.ContentGap
+                        )
+                    ) {
+                        OutlinedTextField(
+                            value = localUrl,
+                            onValueChange = { localUrl = it.trim() },
+                            label = { Text(Strings.localModelsUrl) },
+                            singleLine = true,
+                            isError = localError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (LocalShowDescriptions.current) {
+                            Text(
+                                Strings.localModelsHint,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        localMessage?.let { message ->
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (localError) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            WtaButton(
+                                onClick = { probeLocal() },
+                                text = Strings.localModelsProbe,
+                                variant = WtaButtonVariant.Outlined,
+                                enabled = !localBusy
+                            )
+                        }
+                    }
+                    WtaSectionDivider()
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = WtaSpacing.RowHorizontal,
+                            vertical = WtaSpacing.ContentGap
+                        )
+                    ) {
+                        val activeModel = localActive
+                        if (activeModel == null) {
+                            Text(
+                                Strings.localModelsNone,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Text(
+                                Strings.localModelsActive(activeModel),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                WtaButton(
+                                    onClick = {
+                                        localModels.resetToDefault()
+                                        localActive = null
+                                        localMessage = null
+                                    },
+                                    text = Strings.localModelsReset,
+                                    variant = WtaButtonVariant.Outlined
+                                )
+                            }
+                        }
+                    }
+                    localFound.forEach { model ->
+                        WtaSectionDivider()
+                        WtaSettingRow(
+                            title = model.name,
+                            subtitle = listOfNotNull(
+                                model.parameterSize,
+                                model.quantization,
+                                model.displaySize.takeIf { it.isNotBlank() }
+                            ).joinToString(" · ").ifBlank { null },
+                            onClick = { useLocalModel(model) }
+                        )
+                    }
+                }
+            }
+
             WtaSection(title = Strings.telegramBot, description = Strings.telegramDesc) {
                 WtaSettingCard {
                     WtaToggleRow(
@@ -830,6 +982,16 @@ private fun StudioSettingsScreen(
                         onCheckedChange = {
                             telegramAllowBuilds = it
                             telegramSettings.allowRemoteBuilds = it
+                        }
+                    )
+                    WtaSectionDivider()
+                    WtaToggleRow(
+                        title = Strings.telegramNotifyBuilds,
+                        checked = telegramNotifyBuilds,
+                        subtitle = Strings.telegramNotifyBuildsDesc.ifDescriptionsShown(),
+                        onCheckedChange = {
+                            telegramNotifyBuilds = it
+                            telegramSettings.notifyBuilds = it
                         }
                     )
                 }

@@ -227,7 +227,8 @@ class BuildStudio(private val context: Context) {
                 conclusion = current.conclusion,
                 succeeded = succeeded,
                 artifactNames = artifacts.records.map { it.fileName },
-                downloadError = downloadError
+                downloadError = downloadError,
+                runUrl = current.htmlUrl
             )
         )
         Result.success(

@@ -149,4 +149,30 @@ class SessionStoreDraftTest {
         assertThat(session.config.builtApksSafe).isNotNull()
         assertThat(session.config.builtApksSafe).isEmpty()
     }
+
+    @Test
+    fun `a live draft on one session does not disturb another session`() = runBlocking {
+        val other = store.create("other-session")
+        store.appendMessage(
+            other.id,
+            AgentMessage(role = AgentMessage.Role.USER, content = "other message")
+        )
+        store.upsertAssistantDraft(sessionId, makeMessage("draft-isolated", "partial output"))
+
+        val reloaded = store.get(other.id)!!
+        assertThat(reloaded.messages).hasSize(1)
+        assertThat(reloaded.messages[0].content).isEqualTo("other message")
+    }
+
+    @Test
+    fun `finalising a draft leaves no live draft to resurrect`() = runBlocking {
+        val id = "draft-to-finalise"
+        store.upsertAssistantDraft(sessionId, makeMessage(id, "partial"))
+        store.finalizeDraft(sessionId, makeMessage(id, "complete"))
+
+        // If the draft key outlived finalizeDraft, clearing the committed history
+        // would bring the finished turn back from nowhere.
+        store.replaceMessages(sessionId, emptyList())
+        assertThat(store.get(sessionId)!!.messages).isEmpty()
+    }
 }

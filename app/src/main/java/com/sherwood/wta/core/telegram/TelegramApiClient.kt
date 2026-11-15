@@ -57,7 +57,22 @@ data class TelegramMessage(
 
 data class TelegramUpdate(
     @SerializedName("update_id") val updateId: Long = 0,
-    @SerializedName("message") val message: TelegramMessage? = null
+    @SerializedName("message") val message: TelegramMessage? = null,
+    @SerializedName("callback_query") val callbackQuery: TelegramCallbackQuery? = null
+)
+
+/**
+ * A tap on an inline-keyboard button.
+ *
+ * The tap is delivered as its own update type, not as a message. [message] is the bot's
+ * message the keyboard is attached to, which is where the chat id (and therefore the
+ * pairing check) comes from.
+ */
+data class TelegramCallbackQuery(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("from") val from: TelegramUser? = null,
+    @SerializedName("message") val message: TelegramMessage? = null,
+    @SerializedName("data") val data: String? = null
 )
 
 // ---------------------------------------------------------------- failures
@@ -152,9 +167,9 @@ class TelegramApiClient(
             put("offset", offset.toString())
             put("timeout", timeoutSeconds.toString())
             put("limit", "20")
-            // Only messages: edited messages, channel posts and callbacks are not part
-            // of the command surface, and asking for them would widen the parse surface.
-            put("allowed_updates", "[\"message\"]")
+            // Messages carry slash commands; callback queries carry inline-button taps.
+            // Nothing else is parsed, so asking for less keeps the parse surface small.
+            put("allowed_updates", "[\"message\",\"callback_query\"]")
         },
         parse = { element ->
             element.asJsonArray.mapNotNull { item ->
@@ -166,24 +181,68 @@ class TelegramApiClient(
     suspend fun sendMessage(
         chatId: Long,
         text: String,
-        disablePreview: Boolean = true
+        disablePreview: Boolean = true,
+        keyboard: List<List<TelegramButton>> = emptyList()
     ): Result<Unit> = request(
         method = "sendMessage",
         form = buildMap {
             put("chat_id", chatId.toString())
             put("text", text.take(MAX_MESSAGE_CHARS))
             if (disablePreview) put("disable_web_page_preview", "true")
+            replyMarkup(keyboard)?.let { put("reply_markup", it) }
             // The harness never uses Markdown: every reply embeds user and repository
             // strings, and Telegram would reject the message on any stray '_' or '*'.
         },
         parse = { }
     )
 
+    /**
+     * Acknowledges a button tap.
+     *
+     * Telegram keeps the client-side spinner until this call arrives, so it is sent even
+     * when the tap is refused. [text], when given, is shown as a one-line toast.
+     */
+    suspend fun answerCallbackQuery(
+        callbackQueryId: String,
+        text: String? = null
+    ): Result<Unit> = request(
+        method = "answerCallbackQuery",
+        form = buildMap {
+            put("callback_query_id", callbackQueryId)
+            if (!text.isNullOrBlank()) put("text", text.take(180))
+        },
+        parse = { }
+    )
+
+    /**
+     * Serialises an inline keyboard. Buttons that would exceed Telegram's callback-data
+     * limit are dropped instead of making the whole send fail.
+     */
+    private fun replyMarkup(keyboard: List<List<TelegramButton>>): String? {
+        val rows = keyboard
+            .map { row -> row.filter { it.isValid } }
+            .filter { it.isNotEmpty() }
+        if (rows.isEmpty()) return null
+        val payload = mapOf(
+            "inline_keyboard" to rows.map { row ->
+                row.map { button ->
+                    if (!button.url.isNullOrBlank()) {
+                        mapOf("text" to button.label, "url" to button.url)
+                    } else {
+                        mapOf("text" to button.label, "callback_data" to button.data)
+                    }
+                }
+            }
+        )
+        return gson.toJson(payload)
+    }
+
     /** Sends a local file (e.g. an APK from the vault) as a chat document. */
     suspend fun sendDocument(
         chatId: Long,
         file: java.io.File,
-        caption: String? = null
+        caption: String? = null,
+        keyboard: List<List<TelegramButton>> = emptyList()
     ): Result<Unit> {
         if (!file.isFile || file.length() == 0L) {
             return Result.failure(TelegramException(TelegramFailure.Network("File is missing")))
@@ -196,7 +255,10 @@ class TelegramApiClient(
                 file.name,
                 file.asRequestBody("application/octet-stream".toMediaTypeOrNull())
             )
-            .apply { if (!caption.isNullOrBlank()) addFormDataPart("caption", caption.take(900)) }
+            .apply {
+                if (!caption.isNullOrBlank()) addFormDataPart("caption", caption.take(900))
+                replyMarkup(keyboard)?.let { addFormDataPart("reply_markup", it) }
+            }
             .build()
         return execute(
             Request.Builder().url(baseUrl + "sendDocument").post(body).build(),

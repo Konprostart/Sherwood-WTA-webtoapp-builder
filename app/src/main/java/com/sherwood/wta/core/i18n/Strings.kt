@@ -5587,6 +5587,30 @@ object Strings {
     fun telegramBuildFailed(reason: String): String = StringsE.telegramBuildFailed(reason)
     fun telegramNotifyBuild(repository: String, branch: String, conclusion: String, runId: Long): String = StringsE.telegramNotifyBuild(repository, branch, conclusion, runId)
     fun telegramNotifyArtifacts(count: Int): String = StringsE.telegramNotifyArtifacts(count)
+    val localModelsTitle: String get() = StringsE.localModelsTitle
+    val localModelsDesc: String get() = StringsE.localModelsDesc
+    val localModelsUrl: String get() = StringsE.localModelsUrl
+    val localModelsHint: String get() = StringsE.localModelsHint
+    val localModelsProbe: String get() = StringsE.localModelsProbe
+    val localModelsProbeFailed: String get() = StringsE.localModelsProbeFailed
+    val localModelsEmpty: String get() = StringsE.localModelsEmpty
+    val localModelsNone: String get() = StringsE.localModelsNone
+    val localModelsReset: String get() = StringsE.localModelsReset
+    val localModelsBindFailed: String get() = StringsE.localModelsBindFailed
+    fun localModelsProbeOk(version: String, count: Int): String = StringsE.localModelsProbeOk(version, count)
+    fun localModelsActive(model: String): String = StringsE.localModelsActive(model)
+    fun localModelsAdded(model: String): String = StringsE.localModelsAdded(model)
+    val telegramButtonStatus: String get() = StringsE.telegramButtonStatus
+    val telegramButtonRuns: String get() = StringsE.telegramButtonRuns
+    val telegramButtonRepos: String get() = StringsE.telegramButtonRepos
+    val telegramButtonVault: String get() = StringsE.telegramButtonVault
+    val telegramButtonApk: String get() = StringsE.telegramButtonApk
+    val telegramButtonBuild: String get() = StringsE.telegramButtonBuild
+    val telegramButtonDownloadApk: String get() = StringsE.telegramButtonDownloadApk
+    val telegramButtonOpenRun: String get() = StringsE.telegramButtonOpenRun
+    val telegramCallbackUnknown: String get() = StringsE.telegramCallbackUnknown
+    val telegramNotifyBuilds: String get() = StringsE.telegramNotifyBuilds
+    val telegramNotifyBuildsDesc: String get() = StringsE.telegramNotifyBuildsDesc
 }
 
 

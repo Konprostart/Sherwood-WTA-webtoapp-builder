@@ -135,6 +135,17 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
                 AppLogger.w("Application", "Telegram bot restore failed: ${it.message}")
             }
         }
+
+        // Interrupted downloads, abandoned imports and old session sandboxes otherwise
+        // accumulate forever. Runs at most once a day, on IO, and must never affect start.
+        appScope.launch {
+            runCatching {
+                com.sherwood.wta.core.studio.StudioStorageMaintenance(this@WebToAppApplication)
+                    .runIfDue()
+            }.onFailure {
+                AppLogger.w("Application", "Studio storage maintenance failed: ${it.message}")
+            }
+        }
     }
 
     override fun onTerminate() {

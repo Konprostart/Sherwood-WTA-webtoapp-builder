@@ -17,7 +17,9 @@ data class BuildFinishedEvent(
     val conclusion: String?,
     val succeeded: Boolean,
     val artifactNames: List<String>,
-    val downloadError: String?
+    val downloadError: String?,
+    /** Web page of the run, when the host reports one. */
+    val runUrl: String? = null
 ) {
     val repository: String get() = "$owner/$repo"
 }

@@ -68,21 +68,84 @@ class TelegramCommandRouter(
         }
 
         return when (command.name) {
-            "start", "help" -> TelegramReply.Text(Strings.telegramHelp(botMention()))
-            "version" -> TelegramReply.Text(
-                "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+            "start", "help" -> TelegramReply.Text(
+                Strings.telegramHelp(botMention()),
+                controlsKeyboard()
             )
-            "status" -> TelegramReply.Text(status())
-            "repos" -> TelegramReply.Text(repositories())
-            "repo" -> TelegramReply.Text(selectRepository(command.firstArg))
-            "runs" -> TelegramReply.Text(runs(command.firstArg))
+            "version" -> TelegramReply.Text(
+                "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                controlsKeyboard()
+            )
+            "status" -> TelegramReply.Text(status(), controlsKeyboard())
+            "repos" -> TelegramReply.Text(repositories(), controlsKeyboard())
+            "repo" -> TelegramReply.Text(selectRepository(command.firstArg), controlsKeyboard())
+            "runs" -> TelegramReply.Text(runs(command.firstArg), controlsKeyboard())
             "build" -> startBuild(command.firstArg, command.arg(1))
-            "vault" -> TelegramReply.Text(vaultSummary())
+            "vault" -> TelegramReply.Text(vaultSummary(), vaultKeyboard())
             "apk" -> latestApk()
             else -> TelegramReply.Text(
-                Strings.telegramUnknownCommand(command.name)
+                Strings.telegramUnknownCommand(command.name),
+                controlsKeyboard()
             )
         }
+    }
+
+    /**
+     * Handles a tap on an inline button.
+     *
+     * Authorisation runs here too, and in the same order as a typed command: an unpaired
+     * chat learns nothing, and taps share the same per-chat rate limit. The button data
+     * is matched against a whitelist — it is never used to build a path, a URL or a
+     * command string.
+     */
+    suspend fun routeCallback(query: TelegramCallbackQuery): TelegramReply {
+        // The pairing allowlist is keyed on a chat id; a user id is never an acceptable
+        // substitute, so a callback without its message is ignored.
+        val chatId = query.message?.chat?.id ?: return TelegramReply.Ignore
+        if (chatId !in settings.pairedChats) {
+            return TelegramReply.Text(Strings.telegramNotPaired)
+        }
+        if (!allow(chatId)) {
+            return TelegramReply.Text(Strings.telegramRateLimited)
+        }
+        val data = query.data.orEmpty()
+        if (!TelegramControls.isValid(data)) {
+            return TelegramReply.Text(Strings.telegramCallbackUnknown, controlsKeyboard())
+        }
+        return when {
+            data == TelegramControls.STATUS -> TelegramReply.Text(status(), controlsKeyboard())
+            data == TelegramControls.RUNS -> TelegramReply.Text(runs(null), controlsKeyboard())
+            data == TelegramControls.REPOS -> TelegramReply.Text(repositories(), controlsKeyboard())
+            data == TelegramControls.VAULT -> TelegramReply.Text(vaultSummary(), vaultKeyboard())
+            data == TelegramControls.APK -> latestApk()
+            data == TelegramControls.BUILD -> startBuildFromButton(null)
+            data.startsWith(TelegramControls.BUILD_PREFIX) ->
+                startBuildFromButton(data.removePrefix(TelegramControls.BUILD_PREFIX))
+            else -> TelegramReply.Text(Strings.telegramCallbackUnknown, controlsKeyboard())
+        }
+    }
+
+    /**
+     * Builds the repository's default branch from a button tap. The workflow is chosen by
+     * [startBuild] (single workflow, or an explanatory reply when there are several);
+     * a workflow id carried in the button is validated before it is used.
+     */
+    private suspend fun startBuildFromButton(workflowId: String?): TelegramReply {
+        if (!settings.allowRemoteBuilds) {
+            return TelegramReply.Text(Strings.telegramBuildOff, controlsKeyboard())
+        }
+        val lookup = GitProviderRegistry.active(context)
+        if (lookup !is GitProviderLookup.Available) {
+            return TelegramReply.Text(Strings.telegramNoProvider)
+        }
+        val ref = currentRepositoryRef()
+            ?: return TelegramReply.Text(Strings.telegramNoRepository)
+        val branch = when (val repository = lookup.provider.repository(ref)) {
+            is GitResult.Failure -> return TelegramReply.Text(descriptionOf(repository.kind))
+            is GitResult.Success -> repository.value.defaultBranch
+        }
+        val requested = workflowId?.takeIf { TelegramControls.isValidWorkflowId(it) }
+        return startBuild(branch, requested)
     }
 
     // ------------------------------------------------------------------ pairing
@@ -241,6 +304,9 @@ class TelegramCommandRouter(
                 Result.failure(e)
             }
             result.onSuccess { finished ->
+                val hasApk = finished.artifacts.records.any {
+                    it.kindEnum == com.sherwood.wta.core.studio.ArtifactKind.APK
+                }
                 TelegramNotifications.publish(
                     TelegramReply.Text(
                         buildCompletionText(
@@ -249,8 +315,10 @@ class TelegramCommandRouter(
                             run = finished.run,
                             succeeded = finished.succeeded,
                             artifactCount = finished.artifacts.records.size,
-                            error = finished.downloadError
-                        )
+                            error = finished.downloadError,
+                            runUrl = finished.run.htmlUrl
+                        ),
+                        TelegramKeyboards.buildResult(finished.run.htmlUrl, hasApk)
                     )
                 )
             }.onFailure { error ->
@@ -285,7 +353,8 @@ class TelegramCommandRouter(
         run: GitPipelineRun,
         succeeded: Boolean,
         artifactCount: Int,
-        error: String?
+        error: String?,
+        runUrl: String? = null
     ): String {
         val conclusion = run.conclusion ?: if (succeeded) "success" else "failure"
         return buildString {
@@ -298,8 +367,40 @@ class TelegramCommandRouter(
                 append('\n')
                 append(error)
             }
+            if (!runUrl.isNullOrBlank()) {
+                append('\n')
+                append(runUrl)
+            }
         }
     }
+
+    // --------------------------------------------------------------- buttons
+
+    private fun controlsKeyboard(): List<List<TelegramButton>> = buildList {
+        add(
+            listOf(
+                TelegramButton.callback(Strings.telegramButtonStatus, TelegramControls.STATUS),
+                TelegramButton.callback(Strings.telegramButtonRuns, TelegramControls.RUNS)
+            )
+        )
+        add(
+            listOf(
+                TelegramButton.callback(Strings.telegramButtonRepos, TelegramControls.REPOS),
+                TelegramButton.callback(Strings.telegramButtonVault, TelegramControls.VAULT)
+            )
+        )
+        add(listOf(TelegramButton.callback(Strings.telegramButtonApk, TelegramControls.APK)))
+        // Offering "build" on a server that cannot dispatch, or with the switch off,
+        // would be a button that always fails.
+        if (settings.allowRemoteBuilds && currentRepository() != null) {
+            add(listOf(TelegramButton.callback(Strings.telegramButtonBuild, TelegramControls.BUILD)))
+        }
+    }
+
+    private fun vaultKeyboard(): List<List<TelegramButton>> = listOf(
+        listOf(TelegramButton.callback(Strings.telegramButtonApk, TelegramControls.APK)),
+        listOf(TelegramButton.callback(Strings.telegramButtonStatus, TelegramControls.STATUS))
+    )
 
     // --------------------------------------------------------------- plumbing
 

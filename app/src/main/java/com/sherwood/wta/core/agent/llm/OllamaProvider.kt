@@ -1,5 +1,6 @@
 package com.sherwood.wta.core.agent.llm
 
+import android.util.Base64
 import android.content.Context
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -10,46 +11,209 @@ import com.sherwood.wta.util.GsonProvider
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import okhttp3.*
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.io.IOException
 import java.util.UUID
 
+/**
+ * Local Ollama driver (`POST /api/chat`, NDJSON streaming).
+ *
+ * Ollama is the offline path for the agent, so this provider is deliberately strict about
+ * failure: a streamed `{"error": ...}` (unknown model, model not loaded, out of memory)
+ * becomes an [LlmEvent.Error] instead of an empty successful turn. Before this, a missing
+ * model looked like a model that answered nothing.
+ *
+ * `num_ctx` is sent explicitly so the server allocates the context the app's token
+ * estimator assumes; without it Ollama silently uses a small default and the tail of a
+ * long conversation is dropped server-side.
+ */
 internal class OllamaProvider(@Suppress("UNUSED_PARAMETER") context: Context) : LlmProvider {
-    private val gson = GsonProvider.gson; private val client get() = NetworkModule.streamingClient
+
+    private val gson = GsonProvider.gson
+    private val client get() = NetworkModule.streamingClient
+
     override fun supports(provider: AiProvider) = provider == AiProvider.OLLAMA
+
     override fun chatStream(req: ChatRequest): Flow<LlmEvent> = callbackFlow {
         val url = HttpHelpers.joinUrl(HttpHelpers.baseUrl(req.apiKey), "/api/chat")
-        val body = JsonObject().apply {
-            addProperty("model",req.model.id); addProperty("stream",true)
-            add("messages",JsonArray().apply{req.messages.forEach{m->add(JsonObject().apply{addProperty("role",when(m.role){LlmMessage.Role.SYSTEM->"system";LlmMessage.Role.USER->"user";LlmMessage.Role.ASSISTANT->"assistant";LlmMessage.Role.TOOL->"tool"});addProperty("content",m.content); if (m.images.isNotEmpty()) add("images", JsonArray().apply { m.images.forEach { add(com.google.gson.JsonPrimitive(android.util.Base64.encodeToString(it.bytes, android.util.Base64.NO_WRAP))) } })})}})
-            add("options",JsonObject().apply{addProperty("temperature",req.temperature)})
-            if(req.useTools&&req.tools.isNotEmpty()) add("tools",JsonArray().apply{req.tools.forEach{t->add(JsonObject().apply{addProperty("type","function");add("function",JsonObject().apply{addProperty("name",t.name);addProperty("description",t.description);add("parameters",t.parametersSchema)})})}})
-        }
-        val b = Request.Builder().url(url).header("Content-Type","application/json").post(gson.toJson(body).toRequestBody("application/json".toMediaType()))
-        HttpHelpers.applyAuth(b, req.apiKey); trySend(LlmEvent.Started)
-        val call = client.newCall(b.build())
+        val body = buildRequestBody(req)
+        val request = Request.Builder()
+            .url(url)
+            .header("Content-Type", "application/json")
+            .post(gson.toJson(body).toRequestBody("application/json".toMediaType()))
+
+        HttpHelpers.applyAuth(request, req.apiKey)
+        trySend(LlmEvent.Started)
+        // Captured so the streaming reader keeps the ProducerScope receiver when it runs
+        // inside OkHttp's callback thread.
+        val channel = this
+        val call = client.newCall(request.build())
         call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) { trySend(LlmEvent.Error(e.message?:"Network error")); close() }
-            override fun onResponse(call: Call, response: Response) {
-                if(!response.isSuccessful){val eb=runCatching{response.body?.string()}.getOrNull().orEmpty();val ra=response.header("Retry-After");val ram=response.header("retry-after-ms");response.body?.close();trySend(HttpHelpers.llmHttpError(response.code,eb,ra,ram));close();return}
-                try {
-                    val source = response.body?.source() ?: run{trySend(LlmEvent.Error("Empty response body"));close();return}
-                    var hasTools=false; var done=false
-                    while(!source.exhausted()){
-                        val line=source.readUtf8Line()?:break; if(line.isBlank()) continue
-                        try { val json=JsonParser.parseString(line).asJsonObject
-                            json.getAsJsonObject("message")?.let{msg->
-                                msg.get("content")?.asString?.takeIf{it.isNotEmpty()}?.let{trySend(LlmEvent.TextDelta(it))}
-                                msg.getAsJsonArray("tool_calls")?.forEach{tcEl->val tc=tcEl.asJsonObject;val func=tc.getAsJsonObject("function")?:return@forEach;val nm=func.get("name")?.asString?:return@forEach;val args=func.get("arguments")?.let{gson.toJson(it)}.orEmpty();val id="oll_${UUID.randomUUID()}";hasTools=true;trySend(LlmEvent.ToolCallBegin(id,nm));if(args.isNotEmpty())trySend(LlmEvent.ToolCallArgsDelta(id,args));trySend(LlmEvent.ToolCallEnd(id,nm,args))}
-                            }
-                            if(json.get("done")?.asBoolean==true&&!done){done=true;trySend(LlmEvent.Done(if(hasTools)FinishReason.TOOL_CALLS else FinishReason.STOP))}
-                        }catch(_:Exception){}
-                    }
-                    if(!done) trySend(LlmEvent.Done(if(hasTools)FinishReason.TOOL_CALLS else FinishReason.STOP))
-                } finally { runCatching{response.body?.close()};close() }
+            override fun onFailure(call: Call, e: IOException) {
+                trySend(LlmEvent.Error(e.message ?: "Network error"))
+                close()
             }
-        }); awaitClose{call.cancel()}
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    val errorBody = runCatching { response.body?.string() }.getOrNull().orEmpty()
+                    val error = HttpHelpers.llmHttpError(
+                        response.code,
+                        errorBody,
+                        response.header("Retry-After"),
+                        response.header("retry-after-ms")
+                    )
+                    response.body?.close()
+                    trySend(error)
+                    close()
+                    return
+                }
+                try {
+                    channel.readStream(response)
+                } finally {
+                    runCatching { response.body?.close() }
+                    close()
+                }
+            }
+        })
+        awaitClose { call.cancel() }
+    }
+
+    private fun kotlinx.coroutines.channels.ProducerScope<LlmEvent>.readStream(
+        response: Response
+    ) {
+        val source = response.body?.source()
+        if (source == null) {
+            trySend(LlmEvent.Error("Empty response body"))
+            return
+        }
+        var hasTools = false
+        var done = false
+        while (!source.exhausted()) {
+            val line = source.readUtf8Line() ?: break
+            if (line.isBlank()) continue
+            val json = runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull()
+            if (json == null) {
+                // A keep-alive or a server-side notice that is not JSON; the next line
+                // still carries the stream.
+                continue
+            }
+            val streamError = json.get("error")?.takeIf { !it.isJsonNull }?.asString
+            if (!streamError.isNullOrBlank()) {
+                // Ollama reports model/loading failures mid-stream, after a 200.
+                trySend(LlmEvent.Error(streamError))
+                return
+            }
+            json.getAsJsonObject("message")?.let { message ->
+                message.get("content")?.asString
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { trySend(LlmEvent.TextDelta(it)) }
+                message.getAsJsonArray("tool_calls")?.forEach { element ->
+                    val call = parseToolCall(element) ?: return@forEach
+                    hasTools = true
+                    trySend(LlmEvent.ToolCallBegin(call.first, call.second))
+                    if (call.third.isNotEmpty()) trySend(LlmEvent.ToolCallArgsDelta(call.first, call.third))
+                    trySend(LlmEvent.ToolCallEnd(call.first, call.second, call.third))
+                }
+            }
+            if (json.get("done")?.asBoolean == true && !done) {
+                done = true
+                trySend(LlmEvent.Done(if (hasTools) FinishReason.TOOL_CALLS else FinishReason.STOP))
+            }
+        }
+        if (!done) {
+            trySend(LlmEvent.Done(if (hasTools) FinishReason.TOOL_CALLS else FinishReason.STOP))
+        }
+    }
+
+    /** `(id, name, argumentsJson)` for one tool call, or null when it is malformed. */
+    private fun parseToolCall(element: com.google.gson.JsonElement): Triple<String, String, String>? {
+        val obj = runCatching { element.asJsonObject }.getOrNull() ?: return null
+        val function = obj.getAsJsonObject("function") ?: return null
+        val name = function.get("name")?.asString ?: return null
+        val arguments = function.get("arguments")
+        val argumentsJson = when {
+            arguments == null || arguments.isJsonNull -> "{}"
+            arguments.isJsonPrimitive -> arguments.asString.ifBlank { "{}" }
+            else -> gson.toJson(arguments)
+        }
+        // Ollama does not assign tool-call ids; the engine needs a stable one to match
+        // the result back to the call.
+        val id = obj.get("id")?.asString?.takeIf { it.isNotBlank() } ?: "oll_${UUID.randomUUID()}"
+        return Triple(id, name, argumentsJson)
+    }
+
+    private fun buildRequestBody(req: ChatRequest): JsonObject = JsonObject().apply {
+        addProperty("model", req.model.id)
+        addProperty("stream", true)
+        add("messages", JsonArray().apply {
+            req.messages.forEach { message ->
+                add(JsonObject().apply {
+                    addProperty(
+                        "role",
+                        when (message.role) {
+                            LlmMessage.Role.SYSTEM -> "system"
+                            LlmMessage.Role.USER -> "user"
+                            LlmMessage.Role.ASSISTANT -> "assistant"
+                            LlmMessage.Role.TOOL -> "tool"
+                        }
+                    )
+                    addProperty("content", message.content)
+                    if (message.images.isNotEmpty()) {
+                        add("images", JsonArray().apply {
+                            message.images.forEach {
+                                add(
+                                    com.google.gson.JsonPrimitive(
+                                        Base64.encodeToString(it.bytes, Base64.NO_WRAP)
+                                    )
+                                )
+                            }
+                        })
+                    }
+                    if (message.toolCalls.isNotEmpty()) {
+                        add("tool_calls", JsonArray().apply {
+                            message.toolCalls.forEach { call ->
+                                add(JsonObject().apply {
+                                    add("function", JsonObject().apply {
+                                        addProperty("name", call.name)
+                                        add("arguments", runCatching {
+                                            JsonParser.parseString(call.argumentsJson)
+                                        }.getOrElse { JsonObject() })
+                                    })
+                                })
+                            }
+                        })
+                    }
+                })
+            }
+        })
+        add("options", JsonObject().apply {
+            addProperty("temperature", req.temperature)
+            // The context the app budgets for, clamped to what a local model can hold.
+            addProperty("num_ctx", req.model.contextLength.coerceIn(1024, 32768))
+            req.maxTokens?.let { addProperty("num_predict", it.coerceAtLeast(1)) }
+        })
+        // Keep the model resident between turns: unloading it on every request would
+        // make a local loop unusably slow.
+        addProperty("keep_alive", "5m")
+        if (req.useTools && req.tools.isNotEmpty()) {
+            add("tools", JsonArray().apply {
+                req.tools.forEach { tool ->
+                    add(JsonObject().apply {
+                        addProperty("type", "function")
+                        add("function", JsonObject().apply {
+                            addProperty("name", tool.name)
+                            addProperty("description", tool.description)
+                            add("parameters", tool.parametersSchema)
+                        })
+                    })
+                }
+            })
+        }
     }
 }

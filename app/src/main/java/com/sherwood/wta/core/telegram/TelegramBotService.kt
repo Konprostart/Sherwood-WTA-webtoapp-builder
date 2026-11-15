@@ -93,6 +93,9 @@ class TelegramBotService : Service() {
             launch {
                 BuildEvents.events.collect { event -> notifyBuildFinished(event) }
             }
+            // Runs started outside the app (a push, a PR, another machine) never reach
+            // BuildEvents, so the harness watches the recent-run page as well.
+            launch { watchRuns() }
             pollLoop()
         }
     }
@@ -174,11 +177,17 @@ class TelegramBotService : Service() {
         router: TelegramCommandRouter,
         update: TelegramUpdate
     ) {
+        // A button tap arrives as its own update type, without a message body.
+        update.callbackQuery?.let { query ->
+            handleCallback(api, router, query)
+            return
+        }
         val message = update.message ?: return
         // Ignore the bot itself and other bots: a bot account can post to a paired chat,
         // and echoing our own reply back would loop.
         val from = message.from
-        if (from != null && from.username == settings.botUsername) return
+        val bot = settings.botUsername
+        if (!bot.isNullOrBlank() && from?.username == bot) return
         if (message.text?.isBlank() == true) return
         val chatId = message.chat?.id ?: return
         val reply = try {
@@ -187,6 +196,28 @@ class TelegramBotService : Service() {
             AppLogger.e(TAG, "Command handler failed", e)
             TelegramReply.Text(Strings.telegramNetworkError)
         }
+        send(api, chatId, reply)
+    }
+
+    private suspend fun handleCallback(
+        api: TelegramApiClient,
+        router: TelegramCommandRouter,
+        query: TelegramCallbackQuery
+    ) {
+        val bot = settings.botUsername
+        if (!bot.isNullOrBlank() && query.from?.username == bot) return
+        // The pairing allowlist is keyed on the chat id; a callback always carries the
+        // message the keyboard is attached to, so the user id is never used as a fallback.
+        val chatId = query.message?.chat?.id ?: return
+        val reply = try {
+            router.routeCallback(query)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Callback handler failed", e)
+            TelegramReply.Text(Strings.telegramNetworkError)
+        }
+        // Telegram keeps the tap spinner alive until the query is answered, even when
+        // the answer is "you are not paired"; not answering looks like a hung bot.
+        dispatch(api.answerCallbackQuery(query.id))
         send(api, chatId, reply)
     }
 
@@ -203,17 +234,23 @@ class TelegramBotService : Service() {
         when (reply) {
             is TelegramReply.Ignore -> Unit
             is TelegramReply.Text -> {
-                dispatch(api.sendMessage(chatId, reply.text))
+                dispatch(api.sendMessage(chatId, reply.text, keyboard = reply.keyboard))
             }
             is TelegramReply.Document -> {
-                val sent = api.sendDocument(chatId, reply.file, reply.caption)
+                val sent = api.sendDocument(
+                    chatId,
+                    reply.file,
+                    reply.caption,
+                    reply.keyboard
+                )
                 if (sent.isFailure) {
                     // Uploads fail for reasons a chat can act on (too large, blocked),
                     // and a silent failure would look like the command was ignored.
                     dispatch(
                         api.sendMessage(
                             chatId,
-                            reply.caption.ifBlank { reply.file.name }
+                            reply.caption.ifBlank { reply.file.name },
+                            keyboard = reply.keyboard
                         )
                     )
                 }
@@ -230,9 +267,13 @@ class TelegramBotService : Service() {
 
     // ------------------------------------------------------------ notifications
 
-    private fun notifyBuildFinished(event: BuildFinishedEvent) {
+    private suspend fun notifyBuildFinished(event: BuildFinishedEvent) {
+        if (!settings.notifyBuilds) return
         val chats = settings.pairedChats
         if (chats.isEmpty()) return
+        // A dispatch the app started is also visible to the run watcher; announce each
+        // run once.
+        if (!TelegramBuildNotifier.markNotified(event.runId)) return
         val conclusion = event.conclusion ?: if (event.succeeded) "success" else "failure"
         val text = buildString {
             append(Strings.telegramNotifyBuild(event.repository, event.branch, conclusion, event.runId))
@@ -244,11 +285,82 @@ class TelegramBotService : Service() {
                 append('\n')
                 append(event.downloadError)
             }
+            if (!event.runUrl.isNullOrBlank()) {
+                append('\n')
+                append(event.runUrl)
+            }
         }
+        val hasApk = event.succeeded && event.artifactNames.isNotEmpty() && vaultHasApk()
         // The collector on TelegramNotifications already owns delivery; pushing through
         // it keeps one send path instead of two racing ones.
-        TelegramNotifications.publish(TelegramReply.Text(text))
+        TelegramNotifications.publish(
+            TelegramReply.Text(text, TelegramKeyboards.buildResult(event.runUrl, hasApk))
+        )
     }
+
+    // -------------------------------------------------------------- CI watcher
+
+    /**
+     * Announces runs this app did not start.
+     *
+     * The sweep is deliberately cheap: only the most recent runs of the selected
+     * repository, once a minute. A run that was already finished on the first sweep is
+     * recorded but not announced, so switching the bot on does not replay old builds.
+     */
+    private suspend fun watchRuns() {
+        val gitSettings = com.sherwood.wta.core.studio.git.GitProviderSettings.getInstance(this)
+        val studioSettings = com.sherwood.wta.core.studio.StudioSettingsStore.getInstance(this)
+        var previous: Map<Long, String> = emptyMap()
+
+        while (scope.isActive) {
+            delay(RUN_WATCH_INTERVAL_MS)
+            if (!settings.enabled) return
+            if (!settings.notifyBuilds) continue
+            if (settings.pairedChats.isEmpty()) continue
+
+            val providerId = gitSettings.activeProvider
+            val path = studioSettings.lastRepository(providerId)?.takeIf { it.contains('/') }
+                ?: continue
+            val ref = com.sherwood.wta.core.studio.git.GitRepoRef.parse(path) ?: continue
+            val lookup = com.sherwood.wta.core.studio.git.GitProviderRegistry.active(this)
+            if (lookup !is com.sherwood.wta.core.studio.git.GitProviderLookup.Available) continue
+
+            val runs = when (val result = lookup.provider.runs(ref, null, WATCH_RUN_LIMIT)) {
+                is com.sherwood.wta.core.studio.git.GitResult.Success -> result.value
+                is com.sherwood.wta.core.studio.git.GitResult.Failure -> continue
+            }
+            val (finished, next) = TelegramRunWatch.sweep(previous, runs)
+            previous = next
+            finished.forEach { run ->
+                if (!TelegramBuildNotifier.markNotified(run.id)) return@forEach
+                val conclusion = run.conclusion ?: run.status
+                val text = buildString {
+                    append(
+                        Strings.telegramNotifyBuild(
+                            repository = ref.path,
+                            branch = run.branch.orEmpty(),
+                            conclusion = conclusion,
+                            runId = run.id
+                        )
+                    )
+                    if (!run.htmlUrl.isNullOrBlank()) {
+                        append('\n')
+                        append(run.htmlUrl)
+                    }
+                }
+                val hasApk = run.isSuccessful && vaultHasApk()
+                TelegramNotifications.publish(
+                    TelegramReply.Text(text, TelegramKeyboards.buildResult(run.htmlUrl, hasApk))
+                )
+            }
+        }
+    }
+
+    private suspend fun vaultHasApk(): Boolean =
+        runCatching {
+            com.sherwood.wta.core.studio.ArtifactVault.getInstance(this).list()
+                .any { it.kindEnum == com.sherwood.wta.core.studio.ArtifactKind.APK }
+        }.getOrDefault(false)
 
     private fun publishStatus(text: String) {
         TelegramNotifications.publish(TelegramReply.Text(text))
@@ -307,6 +419,8 @@ class TelegramBotService : Service() {
         private const val INITIAL_BACKOFF_MS = 5_000L
         private const val MAX_BACKOFF_MS = 60_000L
         private const val CONFLICT_BACKOFF_MS = 30_000L
+        private const val RUN_WATCH_INTERVAL_MS = 60_000L
+        private const val WATCH_RUN_LIMIT = 8
 
         @Volatile
         private var running = false
