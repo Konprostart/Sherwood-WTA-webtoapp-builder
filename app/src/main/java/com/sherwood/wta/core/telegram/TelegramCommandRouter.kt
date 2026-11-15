@@ -319,8 +319,10 @@ class TelegramCommandRouter(
         return studioSettings.lastRepository(providerId)?.takeIf { it.contains('/') }
     }
 
-    private fun currentRepositoryRef(): GitRepoRef? =
-        GitRepoRef.parse(currentRepository() ?: return null)
+    private fun currentRepositoryRef(): GitRepoRef? {
+        val current = currentRepository() ?: return null
+        return GitRepoRef.parse(current)
+    }
 
     private suspend fun withProvider(block: suspend (GitProvider, GitRepoRef?) -> String): String {
         val lookup = GitProviderRegistry.active(context)

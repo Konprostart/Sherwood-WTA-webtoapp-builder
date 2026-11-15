@@ -20482,7 +20482,7 @@ object StringsE {
         AppLanguage.GERMAN -> "Code $code, $minutes Minuten gültig"
         AppLanguage.RUSSIAN -> "Код $code, действует $minutes мин."
         AppLanguage.JAPANESE -> "コード $code（$minutes 分間有効）"
-        AppLanguage.KOREAN -> "코드 $code ($minutes분 유효)"
+        AppLanguage.KOREAN -> "코드 $code (${minutes}분 유효)"
     }
 
     fun telegramConnected(username: String): String = when (Strings.lang) {
@@ -20586,7 +20586,7 @@ object StringsE {
         AppLanguage.GERMAN -> "$count Artefakte im Studio importiert"
         AppLanguage.RUSSIAN -> "Импортировано артефактов: $count"
         AppLanguage.JAPANESE -> "$count 件の成果物を Studio に取り込みました"
-        AppLanguage.KOREAN -> "$count개 산출물을 Studio로 가져왔습니다"
+        AppLanguage.KOREAN -> "${count}개 산출물을 Studio로 가져왔습니다"
     }
 
 

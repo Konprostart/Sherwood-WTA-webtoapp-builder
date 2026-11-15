@@ -85,10 +85,10 @@ class TelegramSettings private constructor(context: Context) {
         val code = PairingCode.generate()
         val expiresAt = now + PAIRING_WINDOW_MS
         prefs.edit()
-            .putString(KEY_PAIR_CODE, code.value)
+            .putString(KEY_PAIR_CODE, code)
             .putLong(KEY_PAIR_EXPIRES, expiresAt)
             .apply()
-        return PairingCode(code.value, expiresAt)
+        return PairingCode(code, expiresAt)
     }
 
     fun clearPairingCode() {
