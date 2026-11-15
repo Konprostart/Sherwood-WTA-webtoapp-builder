@@ -742,7 +742,10 @@ private fun StudioSettingsScreen(
 
             // The offline path: the agent runs on a model the user hosts, and the
             // active profile is what actually switches it over.
-            WtaSection(title = Strings.localModelsTitle, description = Strings.localModelsDesc) {
+            WtaSection(
+                title = Strings.localModelsTitle,
+                description = Strings.localModelsDesc.ifDescriptionsShown()
+            ) {
                 WtaSettingCard {
                     Column(
                         modifier = Modifier.padding(

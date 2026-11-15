@@ -152,10 +152,11 @@ class StudioStoragePrunerTest {
     }
 
     @Test
-    fun `a recent working copy is never pruned`() {
+    fun `copies inside the retention window are never pruned`() {
         val root = temp.newFolder("git_imports")
-        repeat(3) { i -> importCopy(root, "app-old-$i", importedAgeMs = day * 40L) }
-        val recent = importCopy(root, "app-recent", importedAgeMs = day)
+        // Five copies, all imported ten days ago: beyond the three-copy cap, but still
+        // inside the retention window, so none may be treated as garbage.
+        repeat(5) { i -> importCopy(root, "app-recent-$i", importedAgeMs = day * 10L) }
 
         val report = StudioStoragePruner.pruneImports(
             roots = listOf(root),
@@ -163,8 +164,8 @@ class StudioStoragePrunerTest {
             now = now
         )
 
-        assertThat(recent.exists()).isTrue()
         assertThat(report.importsDeleted).isEqualTo(0)
+        assertThat(root.listFiles()!!.count { it.isDirectory }).isEqualTo(5)
     }
 
     @Test

@@ -195,7 +195,10 @@ object OllamaEndpoint {
 object OllamaResponseParser {
 
     fun parseModels(json: JsonObject): List<OllamaModel> {
-        val array = json.getAsJsonArray("models") ?: return emptyList()
+        // A server that answers `{"models": "..."}` (or an error body behind a 200) must
+        // not throw: an unreadable list means "no models", never an invented catalogue.
+        val array = runCatching { json.getAsJsonArray("models") }.getOrNull()
+            ?: return emptyList()
         return array.mapNotNull { element ->
             runCatching {
                 val obj = element.asJsonObject
