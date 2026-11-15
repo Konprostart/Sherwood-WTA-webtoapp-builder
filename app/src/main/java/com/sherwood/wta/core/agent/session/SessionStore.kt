@@ -11,10 +11,12 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.sherwood.wta.core.agent.files.ProjectFileManager
 import com.sherwood.wta.util.GsonProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 private val Context.aicodingStore: DataStore<Preferences> by preferencesDataStore(name = "aicoding_sessions_v1")
@@ -57,7 +59,9 @@ class SessionStore(
     val sessionsFlow: Flow<List<AgentSession>> = flow {
         migrateLegacy()
         emitAll(context.aicodingStore.data.map { decodeAll(it) })
-    }
+        // Decoding and merging a session list is CPU work; keeping it off the main
+        // dispatcher is what makes a streaming flush (every 500 ms) cost the UI nothing.
+    }.flowOn(Dispatchers.Default)
 
     val currentSessionIdFlow: Flow<String?> = context.aicodingStore.data.map { it[KEY_CURRENT] }
 
@@ -458,18 +462,22 @@ internal object SessionMigration {
             sessions?.map(::normalize)
         }.getOrNull()
 
-    private fun normalize(session: AgentSession): AgentSession = session.copy(
-        config = session.config.let { c ->
-            c.copy(
-                contextAppIds = c.contextAppIdsSafe,
-                contextModuleIds = c.contextModuleIdsSafe,
-                builtApks = c.builtApksSafe,
-                customRules = c.customRules ?: emptyList()
-            )
-        },
-        messages = session.messages.orEmpty().map(::normalizeMessage),
-        planSlugs = session.planSlugs ?: emptyList()
-    )
+    private fun normalize(session: AgentSession): AgentSession {
+        // Gson bypasses the constructor, so *any* missing field can arrive as null even
+        // though the Kotlin type is non-null. A blob with no `config` used to crash the
+        // whole decode; defaulting it keeps the rest of the history readable.
+        val config = (session.config as SessionConfig?) ?: SessionConfig()
+        return session.copy(
+            config = config.copy(
+                contextAppIds = config.contextAppIdsSafe,
+                contextModuleIds = config.contextModuleIdsSafe,
+                builtApks = config.builtApksSafe,
+                customRules = config.customRules ?: emptyList()
+            ),
+            messages = session.messages.orEmpty().map(::normalizeMessage),
+            planSlugs = session.planSlugs ?: emptyList()
+        )
+    }
 
     fun normalizeMessage(message: AgentMessage): AgentMessage = message.copy(
         userAttachments = message.userAttachmentsSafe,

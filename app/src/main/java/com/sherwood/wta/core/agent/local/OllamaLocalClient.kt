@@ -100,9 +100,9 @@ class OllamaLocalClient(
                 OllamaProbeFailure.InvalidUrl(rawUrl.trim())
             )
 
-        val version = runCatching { getJson("${endpoint.baseUrl}/api/version", endpoint) }
+        val version = runCatching { getJson("${endpoint.baseUrl}/api/version") }
             .getOrElse { return@withContext Result.failure(it) }
-        val tags = runCatching { getJson("${endpoint.baseUrl}/api/tags", endpoint) }
+        val tags = runCatching { getJson("${endpoint.baseUrl}/api/tags") }
             .getOrElse { return@withContext Result.failure(it) }
 
         val models = OllamaResponseParser.parseModels(tags)
@@ -114,7 +114,7 @@ class OllamaLocalClient(
         )
     }
 
-    private fun getJson(url: String, endpoint: OllamaEndpoint): JsonObject {
+    private fun getJson(url: String): JsonObject {
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")

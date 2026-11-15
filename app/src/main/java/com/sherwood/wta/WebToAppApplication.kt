@@ -139,6 +139,9 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
         // Interrupted downloads, abandoned imports and old session sandboxes otherwise
         // accumulate forever. Runs at most once a day, on IO, and must never affect start.
         appScope.launch {
+            // Let startup finish first: housekeeping must never compete with the first
+            // screen, and a short-lived process (a test harness) never reaches it.
+            kotlinx.coroutines.delay(MAINTENANCE_DELAY_MS)
             runCatching {
                 com.sherwood.wta.core.studio.StudioStorageMaintenance(this@WebToAppApplication)
                     .runIfDue()
@@ -249,6 +252,8 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader = OptimizedImageLoader.get(this)
 
     companion object {
+        private const val MAINTENANCE_DELAY_MS = 60_000L
+
         private lateinit var instance: WebToAppApplication
 
         fun getInstance(): WebToAppApplication = instance

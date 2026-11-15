@@ -20827,7 +20827,7 @@ object StringsE {
         AppLanguage.GERMAN -> "Ollama $version · $count Modelle gefunden"
         AppLanguage.RUSSIAN -> "Ollama $version · найдено моделей: $count"
         AppLanguage.JAPANESE -> "Ollama $version · $count 件のモデル"
-        AppLanguage.KOREAN -> "Ollama $version · 모델 $count개 발견"
+        AppLanguage.KOREAN -> "Ollama $version · 모델 ${count}개 발견"
     }
 
     val localModelsProbeFailed: String get() = when (Strings.lang) {

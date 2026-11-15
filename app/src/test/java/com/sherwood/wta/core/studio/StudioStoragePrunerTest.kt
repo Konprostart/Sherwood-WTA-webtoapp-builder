@@ -61,12 +61,15 @@ class StudioStoragePrunerTest {
         val stale = file(cache, "studio-artifact-1.tmp", day * 2)
         val recent = file(cache, "studio-artifact-2.tmp", 60_000)
         val unrelated = file(cache, "keep.log", day * 2)
+        val foreign = file(cache, "other-component.tmp", day * 2)
 
-        val report = StudioStoragePruner.pruneTempFiles(cache, now)
+        val report = StudioStoragePruner.pruneTempFiles(cache, now, namePrefix = "studio-")
 
         assertThat(stale.exists()).isFalse()
         assertThat(recent.exists()).isTrue()
         assertThat(unrelated.exists()).isTrue()
+        // Another subsystem's temp file is not Studio's to delete.
+        assertThat(foreign.exists()).isTrue()
         assertThat(report.tempFilesDeleted).isEqualTo(1)
         assertThat(report.bytesFreed).isEqualTo(32L)
     }

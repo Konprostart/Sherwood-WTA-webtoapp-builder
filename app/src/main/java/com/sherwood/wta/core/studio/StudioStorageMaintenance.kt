@@ -62,12 +62,19 @@ object StudioStoragePruner {
     const val ORPHAN_SESSION_MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000
     const val MAX_IMPORTS_PER_REPO = 3
 
-    /** Deletes stale temp/partial files directly inside [dir] (not recursively). */
+    /**
+     * Deletes stale temp/partial files directly inside [dir] (not recursively).
+     *
+     * [namePrefix] limits the sweep to one subsystem's scratch files; without it a
+     * shared cache directory would let housekeeping delete another component's
+     * in-progress temp file.
+     */
     fun pruneTempFiles(
         dir: File?,
         now: Long,
         maxAgeMs: Long = TEMP_MAX_AGE_MS,
-        suffixes: List<String> = listOf(".tmp", ".part")
+        suffixes: List<String> = listOf(".tmp", ".part"),
+        namePrefix: String? = null
     ): StorageReport {
         if (dir == null || !dir.isDirectory) return StorageReport()
         var count = 0
@@ -75,6 +82,7 @@ object StudioStoragePruner {
         var failures = 0
         dir.listFiles().orEmpty().forEach { file ->
             if (!file.isFile || file.lastModified() > now - maxAgeMs) return@forEach
+            if (namePrefix != null && !file.name.startsWith(namePrefix)) return@forEach
             if (suffixes.none { file.name.endsWith(it) }) return@forEach
             val size = file.length()
             if (file.delete()) {
@@ -293,7 +301,12 @@ class StudioStorageMaintenance(private val context: Context) {
         val referenced = runCatching { vault.list().map { it.fileName }.toSet() }
             .getOrDefault(emptySet())
 
-        return StudioStoragePruner.pruneTempFiles(context.cacheDir, now) +
+        return StudioStoragePruner.pruneTempFiles(
+            dir = context.cacheDir,
+            now = now,
+            // Only this module's scratch files: cacheDir is shared with the whole app.
+            namePrefix = "studio-"
+        ) +
             StudioStoragePruner.pruneVaultPartials(vault.directory(), referenced, now) +
             StudioStoragePruner.pruneImports(
                 roots = RepoImportStorage.roots(filesDir),
