@@ -160,7 +160,9 @@ class GitHubCreateRepositoryTest {
 
             // A dropped file would make the copy silently look complete.
             assertThat(scan.refusal).contains("big.bin")
-            assertThat(scan.files).isEmpty()
+            // Asserted by path, not by emptiness: the directory walk order is arbitrary, so
+            // a small file may already have been measured before the cap is hit.
+            assertThat(scan.files.map { it.path }).doesNotContain("big.bin")
         } finally {
             root.deleteRecursively()
         }
