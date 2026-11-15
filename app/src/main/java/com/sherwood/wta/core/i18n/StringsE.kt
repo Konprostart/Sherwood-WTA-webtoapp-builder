@@ -20499,106 +20499,16 @@ object StringsE {
     }
 
     fun telegramHelp(prefix: String): String = when (Strings.lang) {
-        AppLanguage.CHINESE -> "${prefix}Sherwood Studio 命令中心：
-/status 提供商、账户、仓库
-/repos 仓库列表
-/repo owner/name 选择仓库
-/runs [分支] 最近构建
-/build 分支 [工作流] 启动构建
-/vault 最近产物
-/apk 最新 APK 文件
-/version 应用版本
-/help 本列表"
-        AppLanguage.ENGLISH -> "${prefix}Sherwood Studio command centre:
-/status provider, account, repository
-/repos repositories
-/repo owner/name select repository
-/runs [branch] recent runs
-/build <branch> [workflow] start a build
-/vault recent artifacts
-/apk latest APK as a file
-/version app version
-/help this list"
-        AppLanguage.ARABIC -> "${prefix}مركز أوامر Sherwood Studio:
-/status المزوّد والحساب والمستودع
-/repos المستودعات
-/repo owner/name اختيار مستودع
-/runs [فرع] أحدث عمليات البناء
-/build فرع [سير العمل] بدء بناء
-/vault أحدث الملفات
-/apk أحدث APK كملف
-/version إصدار التطبيق
-/help هذه القائمة"
-        AppLanguage.PORTUGUESE -> "${prefix}Central de comandos do Sherwood Studio:
-/status provedor, conta, repositório
-/repos repositórios
-/repo owner/name selecionar repositório
-/runs [branch] builds recentes
-/build <branch> [workflow] iniciar um build
-/vault artefatos recentes
-/apk APK mais recente como arquivo
-/version versão do app
-/help esta lista"
-        AppLanguage.SPANISH -> "${prefix}Centro de comandos de Sherwood Studio:
-/status proveedor, cuenta, repositorio
-/repos repositorios
-/repo owner/name seleccionar repositorio
-/runs [rama] compilaciones recientes
-/build <rama> [workflow] iniciar compilación
-/vault artefactos recientes
-/apk APK más reciente como archivo
-/version versión de la app
-/help esta lista"
-        AppLanguage.FRENCH -> "${prefix}Centre de commandes Sherwood Studio :
-/status fournisseur, compte, dépôt
-/repos dépôts
-/repo owner/name choisir un dépôt
-/runs [branche] builds récents
-/build <branche> [workflow] lancer un build
-/vault artefacts récents
-/apk dernier APK en fichier
-/version version de l'app
-/help cette liste"
-        AppLanguage.GERMAN -> "${prefix}Sherwood-Studio-Kommandozentrale:
-/status Anbieter, Konto, Repository
-/repos Repositories
-/repo owner/name Repository wählen
-/runs [Branch] letzte Builds
-/build <Branch> [Workflow] Build starten
-/vault letzte Artefakte
-/apk neueste APK als Datei
-/version App-Version
-/help diese Liste"
-        AppLanguage.RUSSIAN -> "${prefix}Центр команд Sherwood Studio:
-/status провайдер, аккаунт, репозиторий
-/repos репозитории
-/repo owner/name выбрать репозиторий
-/runs [ветка] последние сборки
-/build <ветка> [workflow] запустить сборку
-/vault последние артефакты
-/apk последний APK файлом
-/version версия приложения
-/help этот список"
-        AppLanguage.JAPANESE -> "${prefix}Sherwood Studio コマンドセンター:
-/status プロバイダー・アカウント・リポジトリ
-/repos リポジトリ一覧
-/repo owner/name リポジトリ選択
-/runs [ブランチ] 最近の実行
-/build <ブランチ> [ワークフロー] ビルド開始
-/vault 最近の成果物
-/apk 最新 APK をファイルで取得
-/version アプリのバージョン
-/help この一覧"
-        AppLanguage.KOREAN -> "${prefix}Sherwood Studio 명령 센터:
-/status 공급자, 계정, 저장소
-/repos 저장소 목록
-/repo owner/name 저장소 선택
-/runs [브랜치] 최근 실행
-/build <브랜치> [워크플로] 빌드 시작
-/vault 최근 산출물
-/apk 최신 APK 파일
-/version 앱 버전
-/help 이 목록"
+        AppLanguage.CHINESE -> "${prefix}Sherwood Studio 命令中心：\n/status 提供商、账户、仓库\n/repos 仓库列表\n/repo owner/name 选择仓库\n/runs [分支] 最近构建\n/build 分支 [工作流] 启动构建\n/vault 最近产物\n/apk 最新 APK 文件\n/version 应用版本\n/help 本列表"
+        AppLanguage.ENGLISH -> "${prefix}Sherwood Studio command centre:\n/status provider, account, repository\n/repos repositories\n/repo owner/name select repository\n/runs [branch] recent runs\n/build <branch> [workflow] start a build\n/vault recent artifacts\n/apk latest APK as a file\n/version app version\n/help this list"
+        AppLanguage.ARABIC -> "${prefix}مركز أوامر Sherwood Studio:\n/status المزوّد والحساب والمستودع\n/repos المستودعات\n/repo owner/name اختيار مستودع\n/runs [فرع] أحدث عمليات البناء\n/build فرع [سير العمل] بدء بناء\n/vault أحدث الملفات\n/apk أحدث APK كملف\n/version إصدار التطبيق\n/help هذه القائمة"
+        AppLanguage.PORTUGUESE -> "${prefix}Central de comandos do Sherwood Studio:\n/status provedor, conta, repositório\n/repos repositórios\n/repo owner/name selecionar repositório\n/runs [branch] builds recentes\n/build <branch> [workflow] iniciar um build\n/vault artefatos recentes\n/apk APK mais recente como arquivo\n/version versão do app\n/help esta lista"
+        AppLanguage.SPANISH -> "${prefix}Centro de comandos de Sherwood Studio:\n/status proveedor, cuenta, repositorio\n/repos repositorios\n/repo owner/name seleccionar repositorio\n/runs [rama] compilaciones recientes\n/build <rama> [workflow] iniciar compilación\n/vault artefactos recientes\n/apk APK más reciente como archivo\n/version versión de la app\n/help esta lista"
+        AppLanguage.FRENCH -> "${prefix}Centre de commandes Sherwood Studio :\n/status fournisseur, compte, dépôt\n/repos dépôts\n/repo owner/name choisir un dépôt\n/runs [branche] builds récents\n/build <branche> [workflow] lancer un build\n/vault artefacts récents\n/apk dernier APK en fichier\n/version version de l'app\n/help cette liste"
+        AppLanguage.GERMAN -> "${prefix}Sherwood-Studio-Kommandozentrale:\n/status Anbieter, Konto, Repository\n/repos Repositories\n/repo owner/name Repository wählen\n/runs [Branch] letzte Builds\n/build <Branch> [Workflow] Build starten\n/vault letzte Artefakte\n/apk neueste APK als Datei\n/version App-Version\n/help diese Liste"
+        AppLanguage.RUSSIAN -> "${prefix}Центр команд Sherwood Studio:\n/status провайдер, аккаунт, репозиторий\n/repos репозитории\n/repo owner/name выбрать репозиторий\n/runs [ветка] последние сборки\n/build <ветка> [workflow] запустить сборку\n/vault последние артефакты\n/apk последний APK файлом\n/version версия приложения\n/help этот список"
+        AppLanguage.JAPANESE -> "${prefix}Sherwood Studio コマンドセンター:\n/status プロバイダー・アカウント・リポジトリ\n/repos リポジトリ一覧\n/repo owner/name リポジトリ選択\n/runs [ブランチ] 最近の実行\n/build <ブランチ> [ワークフロー] ビルド開始\n/vault 最近の成果物\n/apk 最新 APK をファイルで取得\n/version アプリのバージョン\n/help この一覧"
+        AppLanguage.KOREAN -> "${prefix}Sherwood Studio 명령 센터:\n/status 공급자, 계정, 저장소\n/repos 저장소 목록\n/repo owner/name 저장소 선택\n/runs [브랜치] 최근 실행\n/build <브랜치> [워크플로] 빌드 시작\n/vault 최근 산출물\n/apk 최신 APK 파일\n/version 앱 버전\n/help 이 목록"
     }
 
     fun telegramUnknownCommand(command: String): String = when (Strings.lang) {
