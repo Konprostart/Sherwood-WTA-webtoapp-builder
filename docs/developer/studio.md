@@ -31,12 +31,16 @@ Everything still ships as **one APK**. Studio is not a second app.
 ## Provider seam
 
 The Studio talks to a hosting platform through one interface,
-`com.sherwood.wta.core.studio.git.GitProvider`. Everything the screens, the build
-pipeline and the agent need — account, repositories, branches, change requests,
-checks, commits, pipelines, artifacts, releases and the commit writer — is declared
-there with provider-neutral models (`GitRepository`, `GitChangeRequest`,
-`GitPipelineRun`, …). `BuildStudio` and `WorkspaceService` call that interface; they
-no longer name a host.
+`com.sherwood.wta.core.studio.git.GitProvider`. Everything a hosting platform has to
+answer — account, repositories, branches, change requests, checks, commits, pipelines,
+artifacts, releases and the commit writer — is declared there with provider-neutral
+models (`GitRepository`, `GitChangeRequest`, `GitPipelineRun`, …). `BuildStudio` and
+`WorkspaceService` call that interface; they no longer name a host.
+
+The Studio's **agent tools are the exception in this release**: they are still named
+`GitHub*` and still construct `GitHubApiClient`, because renaming them is the release
+that also makes them work against a second host. Until then they keep their
+GitHub-specific wording and behaviour unchanged.
 
 - **Which host answers** is decided in one place, `GitProviderRegistry`. An id that
   has no driver in this build is reported as `GitProviderLookup.Unavailable` with a
