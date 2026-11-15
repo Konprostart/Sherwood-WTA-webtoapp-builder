@@ -825,7 +825,10 @@ internal fun StudioReposTab(
                         Text(diffError.orEmpty(), color = MaterialTheme.colorScheme.error)
                     } else {
                         Text(
-                            diff?.unified?.ifBlank { Strings.studioDiff } ?: "",
+                            when {
+                                diff?.tooLarge == true -> Strings.studioDiffTooLarge
+                                else -> diff?.unified?.ifBlank { Strings.studioDiff } ?: ""
+                            },
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

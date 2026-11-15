@@ -33,8 +33,12 @@ object GitCommitWriterResolver {
             metadata.providerId,
             metadata.host
         )
+        // A recorded provider that cannot be built (missing server URL, non-HTTPS server)
+        // must never fall through to the GitHub writer: that would push a copy imported
+        // from `git.example.com` to `github.com/<owner>/<repo>`. Refusing is the only safe
+        // answer — the user fixes the server URL and publishing works again.
         val provider = (lookup as? GitProviderLookup.Available)?.provider
-            ?: return GitWriterResolution.Ok(GitHubCommitWriter(GitDataApiClient(context)))
+            ?: return GitWriterResolution.ReadOnly(metadata.providerId)
         val writer = provider.commitWriter()
             ?: return GitWriterResolution.ReadOnly(metadata.providerId)
         return GitWriterResolution.Ok(writer)

@@ -119,15 +119,28 @@ class ArtifactVault private constructor(private val context: Context) {
 
     @Synchronized
     fun list(): List<VaultArtifact> {
+        val primary = readIndex(indexFile)
+        if (primary != null) return primary
         if (!indexFile.isFile) return emptyList()
-        return runCatching {
-            val index = gson.fromJson(indexFile.readText(Charsets.UTF_8), VaultIndex::class.java)
-            index?.artifacts?.filter { it.sha256.length == 64 }?.sortedByDescending { it.savedAtEpochMs }
-                ?: emptyList()
-        }.getOrElse { error ->
-            AppLogger.w(TAG, "Could not read vault index: ${error.javaClass.simpleName}")
-            emptyList()
+        // A truncated index (power loss mid-write on a device without fsync) must not
+        // silently present an empty vault; the previous index is kept as `.bak`.
+        val backup = readIndex(File(vaultDir, "$INDEX_FILE.bak"))
+        if (backup != null) {
+            AppLogger.w(TAG, "Vault index was unreadable; recovered from the backup")
+            return backup
         }
+        AppLogger.w(TAG, "Could not read the vault index")
+        return emptyList()
+    }
+
+    private fun readIndex(file: File): List<VaultArtifact>? {
+        if (!file.isFile) return null
+        return runCatching {
+            val index = gson.fromJson(file.readText(Charsets.UTF_8), VaultIndex::class.java)
+            index?.artifacts
+                ?.filter { it.sha256.length == 64 }
+                ?.sortedByDescending { it.savedAtEpochMs }
+        }.getOrNull()
     }
 
     /**
@@ -147,12 +160,57 @@ class ArtifactVault private constructor(private val context: Context) {
         return runCatching {
             val bytesHash = sha256(source)
             val existing = list().firstOrNull { it.sha256 == bytesHash }
-            if (existing != null) return@runCatching existing
+            if (existing != null) {
+                // Same bytes, new provenance: keep the file, refresh where it came from.
+                // Returning the stale record would silently attribute a rebuild to the
+                // previous run.
+                val sameOrigin = existing.sourceOwner == artifactSource.owner &&
+                    existing.sourceRepo == artifactSource.repo &&
+                    existing.runId == artifactSource.runId &&
+                    existing.releaseTag == artifactSource.releaseTag
+                if (fileFor(existing).isFile && sameOrigin) return@runCatching existing
+                val refreshed = existing.copy(
+                    sourceOwner = artifactSource.owner.ifBlank { existing.sourceOwner },
+                    sourceRepo = artifactSource.repo.ifBlank { existing.sourceRepo },
+                    branch = artifactSource.branch ?: existing.branch,
+                    commitSha = artifactSource.commitSha ?: existing.commitSha,
+                    workflowName = artifactSource.workflowName ?: existing.workflowName,
+                    runId = artifactSource.runId ?: existing.runId,
+                    runNumber = artifactSource.runNumber ?: existing.runNumber,
+                    releaseTag = artifactSource.releaseTag ?: existing.releaseTag
+                )
+                if (fileFor(existing).isFile) {
+                    replace(refreshed)
+                    return@runCatching refreshed
+                }
+                // The index knows about a file that is gone; drop the record and re-import.
+                list().filterNot { it.id == existing.id }.let { writeIndex(it) }
+            }
+            // A copy that cannot fit is refused before it fills the device: vault files
+            // are kept forever until the user deletes them.
+            if (vaultDir.usableSpace in 1L until source.length()) {
+                throw java.io.IOException("Not enough free storage for ${source.length()} bytes")
+            }
             val safeName = sanitizeFileName(originalName)
             val kind = detectKind(safeName)
             val id = "${bytesHash.take(12)}-${System.currentTimeMillis()}"
             val target = uniqueTarget(safeName, id)
-            source.copyTo(target, overwrite = false)
+            // Write to a sibling and rename: an interrupted copy must not leave a partial
+            // file that looks like a stored artifact but has no index record.
+            val partial = File(vaultDir, target.name + ".part")
+            try {
+                source.copyTo(partial, overwrite = true)
+                if (partial.length() != source.length()) {
+                    throw java.io.IOException("Copy of ${source.name} was incomplete")
+                }
+                if (!partial.renameTo(target)) {
+                    throw java.io.IOException("Could not move ${source.name} into the vault")
+                }
+            } catch (e: Exception) {
+                partial.delete()
+                target.delete()
+                throw e
+            }
             val packageInfo = readPackageInfo(target, kind)
             val signature = readSignature(target, kind)
             val record = VaultArtifact(
@@ -176,7 +234,13 @@ class ArtifactVault private constructor(private val context: Context) {
                 signatureVerified = signature?.verified == true,
                 signatureScheme = signature?.scheme
             )
-            writeIndex(list() + record)
+            try {
+                writeIndex(list() + record)
+            } catch (e: Exception) {
+                // Never leave a file the index does not know about.
+                target.delete()
+                throw e
+            }
             record
         }
     }
@@ -268,17 +332,36 @@ class ArtifactVault private constructor(private val context: Context) {
         return candidate
     }
 
+    /**
+     * Persists the index, throwing on failure.
+     *
+     * Swallowing the error used to make [importFile] report success for a record that was
+     * never persisted — an invisible file that no screen could show or delete. The old
+     * index is moved to `.bak` rather than deleted first, so a crash during the rename
+     * leaves something to recover from.
+     */
     private fun writeIndex(artifacts: List<VaultArtifact>) {
         val temp = File(vaultDir, "$INDEX_FILE.tmp")
-        runCatching {
-            temp.writeText(gson.toJson(VaultIndex(artifacts.sortedByDescending { it.savedAtEpochMs })), Charsets.UTF_8)
+        try {
+            temp.writeText(
+                gson.toJson(VaultIndex(artifacts.sortedByDescending { it.savedAtEpochMs })),
+                Charsets.UTF_8
+            )
             if (!temp.renameTo(indexFile)) {
-                indexFile.delete()
-                check(temp.renameTo(indexFile)) { "Could not write vault index" }
+                val backup = File(vaultDir, "$INDEX_FILE.bak")
+                if (indexFile.isFile) {
+                    backup.delete()
+                    check(indexFile.renameTo(backup)) { "Could not move the vault index aside" }
+                }
+                if (!temp.renameTo(indexFile)) {
+                    // Put the old index back rather than leaving the vault with none.
+                    if (backup.isFile) backup.renameTo(indexFile)
+                    throw java.io.IOException("Could not write the vault index")
+                }
+                backup.delete()
             }
-        }.onFailure { error ->
+        } finally {
             temp.delete()
-            AppLogger.w(TAG, "Could not write vault index: ${error.javaClass.simpleName}")
         }
     }
 

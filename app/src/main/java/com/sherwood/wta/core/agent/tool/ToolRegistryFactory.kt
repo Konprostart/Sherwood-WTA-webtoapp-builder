@@ -73,12 +73,21 @@ class ToolRegistryFactory(
     private val imageRegistry: ImageGeneratorRegistry?
 ) {
 
-    fun build(hasImageModel: Boolean): ToolRegistry {
+    /**
+     * Builds the registry for one turn.
+     *
+     * [allowed] is the active agent profile's tool allowlist: null means every built-in
+     * tool, and an empty set is a deliberately tool-free profile. Filtering here (rather
+     * than only when declaring tools) keeps a filtered-out tool from being executed even
+     * if a model asks for it by name.
+     */
+    fun build(hasImageModel: Boolean, allowed: Set<String>? = null): ToolRegistry {
         val base = baseTools()
         val plan = planTools()
         val imagery = if (hasImageModel && imageRegistry != null) imageryTools(imageRegistry) else emptyList()
         val all = (base + plan + imagery).distinctBy { it.name }
-        return ToolRegistry(all)
+        val registry = ToolRegistry(all)
+        return if (allowed == null) registry else registry.filter(allowed)
     }
 
     /** In-app tools minus plan mode and image tools. Served by the local MCP. */

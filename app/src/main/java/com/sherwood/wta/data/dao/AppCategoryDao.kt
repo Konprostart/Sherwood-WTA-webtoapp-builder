@@ -27,4 +27,20 @@ interface AppCategoryDao {
 
     @Query("SELECT COUNT(*) FROM app_categories")
     suspend fun getCategoryCount(): Int
+
+    @Query("UPDATE web_apps SET categoryId = NULL WHERE categoryId = :categoryId")
+    suspend fun clearAppsInCategory(categoryId: Long)
+
+    /**
+     * Deletes a category and detaches its apps in one transaction.
+     *
+     * Two separate writes left every app uncategorised when the delete failed. Room only
+     * honours `@Transaction` on a `@Dao`, which is why this lives here and not on the
+     * repository.
+     */
+    @Transaction
+    suspend fun deleteCategoryWithCleanup(categoryId: Long) {
+        clearAppsInCategory(categoryId)
+        deleteById(categoryId)
+    }
 }

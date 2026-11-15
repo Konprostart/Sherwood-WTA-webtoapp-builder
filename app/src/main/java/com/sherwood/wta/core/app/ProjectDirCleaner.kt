@@ -44,7 +44,9 @@ object ProjectDirCleaner {
                 val canonical = dir.canonicalFile
                 // Guard: only delete inside our own filesDir. A tampered/absolute projectDir must
                 // never let us wipe an arbitrary location.
-                if (!canonical.path.startsWith(sandboxRoot.path)) {
+                // The trailing separator matters: without it a sibling such as
+                // `<filesDir>_evil` shares the prefix and would pass the guard.
+                if (!canonical.path.startsWith(sandboxRoot.path + File.separator)) {
                     AppLogger.w(TAG, "Refusing to delete dir outside filesDir: $canonical")
                     return
                 }

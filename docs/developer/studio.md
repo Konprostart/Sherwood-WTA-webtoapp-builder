@@ -158,6 +158,57 @@ request, dispatch a workflow, delete a branch, or force-update a ref. Those
 calls live in `WorkspaceService` and the provider drivers and are reached only
 from Studio's own screens, where the user taps them.
 
+
+## Telegram command centre
+
+Studio can be driven from a Telegram bot. It is an optional foreground service, off by
+default, and it is the only part of Studio that answers without a screen in front of you.
+
+```
+Telegram chat ──getUpdates (long poll)──> TelegramBotService
+                                             │
+       paired chat? ──no──> one "not paired" line, nothing else
+             │yes
+             ▼
+        TelegramCommandRouter ──> GitProvider / BuildStudio / ArtifactVault
+             │
+             └──> reply (text, or a vault APK as a document)
+```
+
+| Concern | Implementation |
+| --- | --- |
+| Token | `TelegramBotTokenStore` — AES-GCM with the same `TokenCipher` as the git tokens, associated data `sherwood-wta/telegram-bot/v1`. Never logged, never in an Intent. |
+| Settings | `TelegramSettings` — enable switch, paired chats, "allow builds from chat", pairing code, last handled update id, cached bot username. |
+| Pairing | Only a paired chat may send commands. Studio shows a six-digit, single-use code valid for 10 minutes; `/pair <code>` in the bot chat binds that chat. A wrong code is not retried for you — the code is consumed only on success, and it expires. |
+| Polling | `TelegramBotService` (foreground, `specialUse` subtype `telegram_bot`), `getUpdates` with a 25 s long poll. The update offset is persisted **before** a command is handled, so a crash cannot replay it. |
+| Failures | A rejected token stops the service and clears the enable switch (retrying cannot help). `409 Conflict` backs off 30 s. `429` waits Telegram's own `retry_after`. Network errors back off 5 s → 60 s. |
+| Commands | `/status`, `/repos`, `/repo owner/name`, `/runs [branch]`, `/build <branch> [workflow]`, `/vault`, `/apk`, `/version`, `/help`, `/pair <code>`. Unknown commands get the command name back. |
+| Remote builds | `/build` is gated by its own switch. It dispatches the workflow, keeps polling in the background and reports the conclusion and the number of imported artifacts in the same chat. It is the **only** remote write this module performs: push, merge and pull requests stay behind the in-app approval dialogs. |
+| Notifications | `BuildEvents` (a `SharedFlow` in `core/studio`) is published when `buildBranch` finishes; the service forwards it to every paired chat. |
+| Files | `/apk` uploads the newest vault APK as a document when it is under 45 MB, and falls back to a text description when it is not. |
+| Limits | 12 commands per chat per minute; replies capped at 3,800 characters; arguments capped at 200 characters. |
+
+The bot never merges, pushes, deletes a repository or changes settings. A leaked token
+therefore gives an attacker control of a chat the phone has not paired, which receives a
+single "not paired" line.
+
+## Agent profiles
+
+`core/agent/profile/AgentProfile` turns the previously implicit "how the agent runs"
+decisions into data: preferred model, temperature, step budget, a prompt addendum, a tool
+allowlist, and a runner id. `AgentProfileStore` persists them; the default profile is the
+pre-profile behaviour, so upgrading changes nothing.
+
+- **Tool subset** — `ToolRegistryFactory.build(hasImageModel, allowed)` filters the
+  registry, so a tool outside the allowlist cannot be executed even if a model asks for
+  it by name.
+- **Prompt** — the addendum is rendered as its own `# Profile instructions` section after
+  the built-in behaviour rules, so it can sharpen behaviour without editing them.
+- **Runner** — `AgentRunner` is the interface `AgentEngine` implements and
+  `AgentService.AgentRequest.runner` overrides. An alternative runner (a local instruction
+  executor, an Open-Code-style driver) that emits the same `AgentEvent` stream inherits
+  persistence and the whole UI unchanged.
+
 ## Tests
 
 - `EndpointConfigTest` — HTTPS validation, overrides, stored differences.
@@ -192,6 +243,11 @@ from Studio's own screens, where the user taps them.
 - `StudioBuildSourcesTest` — release and release-asset parsing (the API download
   URL is required, non-`uploaded` assets are refused), the dispatched-run
   selection rule, and the vault export name / MIME type.
+- `TelegramHarnessTest` — the harness's access rules: command parsing (`@BotName`
+  suffix, bounded arguments, plain text ignored), the bot-token format gate, the pairing
+  handshake (single use, wrong code, expiry, unpair), and cross-host run terminality
+  (Gitea's `success`/`failure` statuses end the poll that GitHub's `completed` word would
+  never end).
 - `GitProviderSeamTest` — the provider seam: repository-reference parsing (exactly
   two segments, no traversal), per-provider token formats, credential-slot derivation
   (HTTPS only, port-aware), the registry refusing an unimplemented or misconfigured

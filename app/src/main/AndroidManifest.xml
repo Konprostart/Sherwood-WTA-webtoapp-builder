@@ -511,6 +511,22 @@
                 android:value="background_run" />
         </service>
 
+        <!--
+            TelegramBotService - the Telegram command centre (Android harness).
+            Long polling is a persistent connection, so it only stays alive as a
+            foreground service. Started only when the user enables it and a bot token is
+            stored; stopped from its own notification or from Studio settings.
+        -->
+        <service
+            android:name=".core.telegram.TelegramBotService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="telegram_bot" />
+        </service>
+
         
         <service
             android:name=".core.notification.NotificationPollingService"

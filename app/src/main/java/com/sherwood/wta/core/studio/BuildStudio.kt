@@ -16,9 +16,9 @@ import com.sherwood.wta.core.studio.git.GitRunJob
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.zip.ZipInputStream
+import java.io.FileOutputStream
+import java.util.zip.ZipFile
 
 data class BuildRunDetails(
     val run: GitPipelineRun,
@@ -191,7 +191,7 @@ class BuildStudio(private val context: Context) {
         val started = run ?: return@withProvider Result.failure(BuildTimeoutException())
         onProgress(BuildProgress(BuildPhase.RUNNING, started))
         var current = started
-        while (current.status != COMPLETED_STATUS) {
+        while (!current.isTerminal) {
             if (System.currentTimeMillis() >= deadline) {
                 return@withProvider Result.failure(BuildTimeoutException())
             }
@@ -205,7 +205,7 @@ class BuildStudio(private val context: Context) {
             onProgress(BuildProgress(BuildPhase.RUNNING, current))
         }
 
-        val succeeded = current.conclusion == SUCCESS_CONCLUSION
+        val succeeded = current.isSuccessful
         var downloadError: String? = null
         val artifacts = if (succeeded) {
             onProgress(BuildProgress(BuildPhase.DOWNLOADING, current))
@@ -216,6 +216,20 @@ class BuildStudio(private val context: Context) {
             ArtifactDownloadResult(emptyList(), emptyList())
         }
         onProgress(BuildProgress(BuildPhase.FINISHED, current))
+        // Published after the vault import, so a listener that reads the vault sees the
+        // same artifacts this event names.
+        BuildEvents.publish(
+            BuildFinishedEvent(
+                owner = owner,
+                repo = repo,
+                branch = ref,
+                runId = current.id,
+                conclusion = current.conclusion,
+                succeeded = succeeded,
+                artifactNames = artifacts.records.map { it.fileName },
+                downloadError = downloadError
+            )
+        )
         Result.success(
             BranchBuildResult(
                 run = current,
@@ -248,24 +262,31 @@ class BuildStudio(private val context: Context) {
         release: GitRelease,
         asset: GitReleaseAsset
     ): Result<VaultArtifact> = withProvider(owner, repo) { provider, _ ->
-        val bytes = when (val downloaded = provider.downloadReleaseAsset(asset)) {
-            is GitResult.Failure -> return@withProvider Result.failure(
-                WorkspaceException.Provider(downloaded.kind, downloaded.message)
+        // Streamed to a cache file rather than buffered: a release APK, or a Play bundle,
+        // is 25-50 MB and does not belong on the heap.
+        val temp = tempFile("release")
+        try {
+            when (val downloaded = provider.downloadReleaseAssetTo(asset, temp)) {
+                is GitResult.Failure -> return@withProvider Result.failure(
+                    WorkspaceException.Provider(downloaded.kind, downloaded.message)
+                )
+                is GitResult.Success -> Unit
+            }
+            vault.importFile(
+                source = temp,
+                originalName = asset.name,
+                artifactSource = ArtifactSource(
+                    owner = owner,
+                    repo = repo,
+                    branch = null,
+                    commitSha = null,
+                    workflowName = release.name ?: release.tagName,
+                    releaseTag = release.tagName
+                )
             )
-            is GitResult.Success -> downloaded.value
+        } finally {
+            temp.delete()
         }
-        vault.importBytes(
-            bytes = bytes,
-            originalName = asset.name,
-            artifactSource = ArtifactSource(
-                owner = owner,
-                repo = repo,
-                branch = null,
-                commitSha = null,
-                workflowName = release.name ?: release.tagName,
-                releaseTag = release.tagName
-            )
-        )
     }
 
     /**
@@ -288,22 +309,32 @@ class BuildStudio(private val context: Context) {
         artifact: GitArtifact,
         run: GitPipelineRun? = null
     ): Result<List<VaultArtifact>> = withProvider(owner, repo) { provider, _ ->
-        val bytes = when (val downloaded = provider.downloadArtifact(artifact)) {
-            is GitResult.Failure -> return@withProvider Result.failure(
-                WorkspaceException.Provider(downloaded.kind, downloaded.message)
+        if (artifact.sizeInBytes > MAX_ARTIFACT_ZIP_BYTES) {
+            return@withProvider Result.failure(
+                IllegalStateException("Artifact is larger than the ${MAX_ARTIFACT_ZIP_BYTES / 1024 / 1024} MB limit")
             )
-            is GitResult.Success -> downloaded.value
         }
-        val source = ArtifactSource(
-            owner = owner,
-            repo = repo,
-            branch = run?.branch,
-            commitSha = run?.headSha,
-            workflowName = run?.name,
-            runId = run?.id ?: artifact.workflowRunId,
-            runNumber = run?.runNumber
-        )
-        Result.success(unpackArtifacts(bytes, artifact.name, source))
+        val temp = tempFile("artifact")
+        try {
+            when (val downloaded = provider.downloadArtifactTo(artifact, temp)) {
+                is GitResult.Failure -> return@withProvider Result.failure(
+                    WorkspaceException.Provider(downloaded.kind, downloaded.message)
+                )
+                is GitResult.Success -> Unit
+            }
+            val source = ArtifactSource(
+                owner = owner,
+                repo = repo,
+                branch = run?.branch,
+                commitSha = run?.headSha,
+                workflowName = run?.name,
+                runId = run?.id ?: artifact.workflowRunId,
+                runNumber = run?.runNumber
+            )
+            unpackArtifactFile(temp, artifact.name, source)
+        } finally {
+            temp.delete()
+        }
     }
 
     private suspend fun downloadArtifacts(
@@ -334,79 +365,117 @@ class BuildStudio(private val context: Context) {
             runNumber = run.runNumber
         )
         for (artifact in artifacts) {
-            val bytes = when (val downloaded = provider.downloadArtifact(artifact)) {
-                is GitResult.Failure -> return Result.failure(
-                    WorkspaceException.Provider(downloaded.kind, downloaded.message)
-                )
-                is GitResult.Success -> downloaded.value
-            }
-            val unpacked = unpackArtifacts(bytes, artifact.name, source)
-            if (unpacked.isEmpty()) {
+            if (artifact.sizeInBytes > MAX_ARTIFACT_ZIP_BYTES) {
                 skipped += artifact.name
-            } else {
-                records += unpacked
+                continue
+            }
+            val temp = tempFile("artifact")
+            try {
+                when (val downloaded = provider.downloadArtifactTo(artifact, temp)) {
+                    is GitResult.Failure -> return Result.failure(
+                        WorkspaceException.Provider(downloaded.kind, downloaded.message)
+                    )
+                    is GitResult.Success -> Unit
+                }
+                val unpacked = unpackArtifactFile(temp, artifact.name, source)
+                if (unpacked.isFailure) {
+                    return Result.failure(
+                        unpacked.exceptionOrNull()
+                            ?: IllegalStateException("Could not unpack ${artifact.name}")
+                    )
+                }
+                val unpackedRecords = unpacked.getOrDefault(emptyList())
+                if (unpackedRecords.isEmpty()) {
+                    skipped += artifact.name
+                } else {
+                    records += unpackedRecords
+                }
+            } finally {
+                temp.delete()
             }
         }
         return Result.success(ArtifactDownloadResult(records, skipped))
     }
 
-    private fun unpackArtifacts(
-        zipBytes: ByteArray,
+    /**
+     * Unpacks an artifact zip from disk and imports each APK/AAB into the vault.
+     *
+     * Entries are streamed to the vault one at a time, so the largest allocation is one
+     * buffered chunk rather than the whole archive. Three hard limits apply — entries,
+     * total unpacked bytes, and the per-file cap — and tripping one is reported instead
+     * of silently producing a partial import.
+     */
+    private fun unpackArtifactFile(
+        zipFile: File,
         artifactName: String,
         source: ArtifactSource
-    ): List<VaultArtifact> {
+    ): Result<List<VaultArtifact>> {
+        if (zipFile.length() == 0L) {
+            return Result.failure(IllegalStateException("$artifactName is empty"))
+        }
         val records = mutableListOf<VaultArtifact>()
+        var total = 0L
+        var entries = 0
         try {
-            ZipInputStream(zipBytes.inputStream().buffered()).use { zip ->
-                var entry = zip.nextEntry
-                while (entry != null) {
-                    if (!entry.isDirectory) {
-                        val name = entry.name.substringAfterLast('/')
-                        val extension = name.substringAfterLast('.', "").lowercase()
-                        if (extension == "apk" || extension == "aab") {
-                            val bytes = readEntryBounded(zip, name)
-                            if (bytes != null) {
-                                vault.importBytes(
-                                    bytes = bytes,
-                                    originalName = name,
-                                    artifactSource = source
-                                ).onSuccess { records += it }
-                                    .onFailure {
-                                        AppLogger.w(
-                                            TAG,
-                                            "Could not import ${name}: ${it.javaClass.simpleName}"
+            ZipFile(zipFile).use { zip ->
+                val iterator = zip.entries()
+                while (iterator.hasMoreElements()) {
+                    val entry = iterator.nextElement()
+                    if (entry.isDirectory) continue
+                    entries++
+                    if (entries > MAX_ARTIFACT_ENTRIES) {
+                        return Result.failure(
+                            IllegalStateException("$artifactName has more than $MAX_ARTIFACT_ENTRIES entries")
+                        )
+                    }
+                    val name = entry.name.substringAfterLast('/')
+                    val extension = name.substringAfterLast('.', "").lowercase()
+                    if (extension != "apk" && extension != "aab") continue
+                    if (entry.size > MAX_ENTRY_BYTES) {
+                        AppLogger.w(TAG, "$name exceeds the per-file cap")
+                        continue
+                    }
+                    val temp = tempFile("entry")
+                    try {
+                        var written = 0L
+                        zip.getInputStream(entry).use { input ->
+                            FileOutputStream(temp).use { output ->
+                                val buffer = ByteArray(64 * 1024)
+                                while (true) {
+                                    val read = input.read(buffer)
+                                    if (read <= 0) break
+                                    written += read
+                                    total += read
+                                    if (written > MAX_ENTRY_BYTES || total > MAX_TOTAL_UNPACKED_BYTES) {
+                                        return Result.failure(
+                                            IllegalStateException("$artifactName exceeds the unpack limit")
                                         )
                                     }
+                                    output.write(buffer, 0, read)
+                                }
                             }
                         }
+                        if (written == 0L) continue
+                        vault.importFile(temp, name, source)
+                            .onSuccess { records += it }
+                            .onFailure {
+                                AppLogger.w(TAG, "Could not import $name: ${it.javaClass.simpleName}")
+                            }
+                    } finally {
+                        temp.delete()
                     }
-                    zip.closeEntry()
-                    entry = zip.nextEntry
                 }
             }
         } catch (e: Exception) {
+            // A truncated or corrupt zip is a failed download, not an empty artifact.
             AppLogger.w(TAG, "Could not unpack $artifactName: ${e.javaClass.simpleName}")
+            return Result.failure(e)
         }
-        return records
+        return Result.success(records)
     }
 
-    /** Returns null when one entry exceeds the per-file cap (never allocates past it). */
-    private fun readEntryBounded(zip: ZipInputStream, name: String): ByteArray? {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(64 * 1024)
-        var total = 0L
-        while (true) {
-            val read = zip.read(buffer)
-            if (read <= 0) break
-            total += read
-            if (total > MAX_ENTRY_BYTES) {
-                AppLogger.w(TAG, "$name exceeds the artifact size cap")
-                return null
-            }
-            output.write(buffer, 0, read)
-        }
-        return if (total == 0L) null else output.toByteArray()
-    }
+    private fun tempFile(prefix: String): File =
+        File.createTempFile("studio-$prefix-", ".tmp", context.cacheDir)
 
     /**
      * Resolves the active provider and the repository identity once, so every public
@@ -441,16 +510,23 @@ class BuildStudio(private val context: Context) {
     companion object {
         private const val TAG = "BuildStudio"
 
-        /** 400 MB per unpacked file: larger than any real APK/AAB, small enough for a phone. */
-        const val MAX_ENTRY_BYTES = 400L * 1024 * 1024
+        /** 256 MB per unpacked file: larger than any real APK/AAB, safe on a phone. */
+        const val MAX_ENTRY_BYTES = 256L * 1024 * 1024
+
+        /** Refuses to even download an artifact zip above this size. */
+        const val MAX_ARTIFACT_ZIP_BYTES = 512L * 1024 * 1024
+
+        /** Aggregate size of the APK/AAB files unpacked from one artifact. */
+        private const val MAX_TOTAL_UNPACKED_BYTES = 1024L * 1024 * 1024
+
+        /** A zip bomb or a stray folder must not spin the loop forever. */
+        private const val MAX_ARTIFACT_ENTRIES = 2_000
 
         /** A queued Actions job can wait a long time behind other runners. */
         const val DEFAULT_BUILD_TIMEOUT_MS = 45L * 60 * 1000
         const val DEFAULT_POLL_INTERVAL_MS = 5_000L
         private const val POLL_BACKOFF_MS = 2_000L
         private const val MAX_POLL_INTERVAL_MS = 20_000L
-        private const val COMPLETED_STATUS = "completed"
-        private const val SUCCESS_CONCLUSION = "success"
 
         /** Imports an APK/AAB the user picked from storage into the vault. */
         suspend fun importLocalFile(

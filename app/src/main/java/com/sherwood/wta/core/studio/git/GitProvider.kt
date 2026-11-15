@@ -282,11 +282,42 @@ interface GitProvider {
 
     suspend fun downloadArtifact(artifact: GitArtifact): GitResult<ByteArray>
 
+    /**
+     * Streams an artifact zip into [target] without holding it in memory.
+     *
+     * The default writes the buffered result, which keeps test doubles working; real
+     * drivers override it so a large artifact never becomes a `ByteArray` on a phone.
+     */
+    suspend fun downloadArtifactTo(artifact: GitArtifact, target: File): GitResult<Unit> =
+        when (val result = downloadArtifact(artifact)) {
+            is GitResult.Failure -> result
+            is GitResult.Success -> runCatching {
+                target.writeBytes(result.value)
+                GitResult.Success(Unit) as GitResult<Unit>
+            }.getOrElse {
+                target.delete()
+                GitResult.Failure(GitFailureKind.NETWORK, message = it.message)
+            }
+        }
+
     // ----------------------------------------------------------------- releases
 
     suspend fun releases(ref: GitRepoRef, perPage: Int = 20): GitResult<List<GitRelease>>
 
     suspend fun downloadReleaseAsset(asset: GitReleaseAsset): GitResult<ByteArray>
+
+    /** Streams one release asset into [target]; see [downloadArtifactTo]. */
+    suspend fun downloadReleaseAssetTo(asset: GitReleaseAsset, target: File): GitResult<Unit> =
+        when (val result = downloadReleaseAsset(asset)) {
+            is GitResult.Failure -> result
+            is GitResult.Success -> runCatching {
+                target.writeBytes(result.value)
+                GitResult.Success(Unit) as GitResult<Unit>
+            }.getOrElse {
+                target.delete()
+                GitResult.Failure(GitFailureKind.NETWORK, message = it.message)
+            }
+        }
 
     // ------------------------------------------------------------------- writes
 

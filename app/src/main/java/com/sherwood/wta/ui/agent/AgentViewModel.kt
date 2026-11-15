@@ -558,6 +558,16 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun resolveTextModel(models: List<com.sherwood.wta.data.model.SavedModel>): com.sherwood.wta.data.model.SavedModel? {
         val codingModels = models.filter { it.supportsFeature(AiFeature.AGENT) }
         if (codingModels.isEmpty()) return null
+        // A profile may pin its own model; when that model was removed from settings the
+        // profile falls back to the normal resolution instead of failing the turn.
+        val profileModelId = com.sherwood.wta.core.agent.profile.AgentProfileStore
+            .getInstance(getApplication<Application>())
+            .active()
+            .modelId
+            ?.takeIf { it.isNotBlank() }
+        if (profileModelId != null) {
+            codingModels.firstOrNull { it.id == profileModelId }?.let { return it }
+        }
         val defaultId = configManager.defaultModelIdFlow.first()
         return codingModels.firstOrNull { it.id == defaultId } ?: codingModels.first()
     }
@@ -1302,7 +1312,15 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         val factory = registryFactory ?: ToolRegistryFactory(plan, imageRegistry).also {
             registryFactory = it
         }
-        val registry = factory.build(hasImageModel = imageModel != null)
+        // The active profile narrows the tool set, the model and the prompt. A missing
+        // profile store degrades to the default profile, which changes nothing.
+        val profile = com.sherwood.wta.core.agent.profile.AgentProfileStore
+            .getInstance(getApplication<Application>())
+            .active()
+        val registry = factory.build(
+            hasImageModel = imageModel != null,
+            allowed = profile.toolAllowlist
+        )
 
         val projectSummary = files.listAll(session.id).take(40).map { f ->
             // Streamed, capped count — a huge upload must not be slurped into a
@@ -1331,7 +1349,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         // plus the old chars/4 rate is what let oversized requests hit the
         // provider's context-length 400 (#1140).
         val modelName = textModel.alias?.takeIf { it.isNotBlank() } ?: textModel.model.name
-        var parts = buildRequestParts(session, prompt, modelName, sessionRoot, selectedContext, projectSummary, planMode, registry)
+        var parts = buildRequestParts(session, prompt, modelName, sessionRoot, selectedContext, projectSummary, planMode, registry, profile.promptAddendum)
         var requestTokens = compactSvc.estimateRequestTokens(
             parts.systemPrompt, parts.history, parts.userMessage, registry.all
         )
@@ -1341,7 +1359,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             if (result.didCompact) {
                 sessionStore.replaceMessages(session.id, result.messages)
                 val compacted = sessionStore.get(session.id) ?: session
-                parts = buildRequestParts(compacted, prompt, modelName, sessionRoot, selectedContext, projectSummary, planMode, registry)
+                parts = buildRequestParts(compacted, prompt, modelName, sessionRoot, selectedContext, projectSummary, planMode, registry, profile.promptAddendum)
                 requestTokens = compactSvc.estimateRequestTokens(
                     parts.systemPrompt, parts.history, parts.userMessage, registry.all
                 )
@@ -1394,8 +1412,8 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
                 toolContext = toolCtx,
                 registry = registry,
                 sessionStore = sessionStore,
-                temperature = session.config.temperature,
-                maxTurns = session.config.maxTurns
+                temperature = profile.temperature ?: session.config.temperature,
+                maxTurns = profile.maxSteps ?: session.config.maxTurns
             )
         )
     }
@@ -1457,7 +1475,8 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         selectedContext: String,
         projectSummary: List<com.sherwood.wta.core.agent.prompt.sections.ProjectFilesSection.FileSummary>,
         planMode: SystemPromptBuilder.PlanMode?,
-        registry: ToolRegistry
+        registry: ToolRegistry,
+        profileAddendum: String = ""
     ): OutgoingRequest {
         val systemPrompt = SystemPromptBuilder.build(
             SystemPromptBuilder.Input(
@@ -1468,7 +1487,8 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
                 projectFiles = projectSummary,
 
                 planMode = planMode,
-                selectedContext = selectedContext
+                selectedContext = selectedContext,
+                profileAddendum = profileAddendum
             )
         )
 

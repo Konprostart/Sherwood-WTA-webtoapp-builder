@@ -61,7 +61,14 @@ data class FileDiff(
     val binary: Boolean,
     val unified: String,
     val localSize: Long,
-    val remoteSize: Long
+    val remoteSize: Long,
+    /**
+     * One side is too large to diff (or the host withheld the content).
+     *
+     * Reported explicitly instead of as an empty diff, because an empty diff reads as
+     * "the files are identical" and a whole-file-added diff reads as a real change.
+     */
+    val tooLarge: Boolean = false
 )
 
 /**
@@ -348,8 +355,21 @@ class WorkspaceService(private val context: Context) {
             val ok = located as Located.Ok
             val remotePath = listOfNotNull(metadata.subPath, localRelative).joinToString("/")
             val remote = ok.provider.fileContent(ok.ref, remotePath, baseSha)
+            var remoteOmitted = false
+            var remoteSize = 0L
             val remoteBytes = when (remote) {
-                is GitResult.Success -> remote.value.content
+                is GitResult.Success -> {
+                    remoteSize = remote.value.size
+                    // A host omits inline content for large files (GitHub above ~1 MB).
+                    // Treating that as "absent" turned the whole local file into an
+                    // "added" diff, which is a lie about the change.
+                    if (remote.value.content == null) {
+                        remoteOmitted = true
+                        null
+                    } else {
+                        remote.value.content
+                    }
+                }
                 is GitResult.Failure -> {
                     if (remote.kind != GitFailureKind.NOT_FOUND) {
                         return@withContext Result.failure(
@@ -359,8 +379,27 @@ class WorkspaceService(private val context: Context) {
                     null
                 }
             }
-            val localBytes = if (localFile.isFile) localFile.readBytes() else null
+            val localTooLarge = localFile.isFile && localFile.length() > MAX_DIFF_BYTES
+            val localBytes = when {
+                !localFile.isFile -> null
+                // Never read an arbitrary-size asset into the heap just to show a diff.
+                localTooLarge -> null
+                else -> localFile.readBytes()
+            }
             if (localBytes == null && remoteBytes == null) {
+                if (remoteOmitted || localTooLarge) {
+                    return@withContext Result.success(
+                        FileDiff(
+                            repoPath = repoPath,
+                            localPath = localFile.absolutePath,
+                            binary = false,
+                            unified = "",
+                            localSize = if (localFile.isFile) localFile.length() else 0L,
+                            remoteSize = remoteSize,
+                            tooLarge = true
+                        )
+                    )
+                }
                 return@withContext Result.failure(IOException("File does not exist locally or remotely"))
             }
             val binary = isBinary(localBytes) || isBinary(remoteBytes)
@@ -510,6 +549,9 @@ class WorkspaceService(private val context: Context) {
 
     companion object {
         private const val TAG = "WorkspaceService"
+
+        /** Above this, a text diff is refused instead of read into memory. */
+        private const val MAX_DIFF_BYTES = 2L * 1024 * 1024
 
         private val BRANCH_RE = Regex("^[A-Za-z0-9._/-]{1,200}$")
 

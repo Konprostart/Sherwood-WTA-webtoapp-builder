@@ -119,7 +119,9 @@ class AgentService : Service() {
         _isRunning.value = true
 
         val abort = AbortController().also { abortController = it }
-        val engine = AgentEngine(gateway, permissionChecker, abort)
+        // A profile may pin an alternative runner; the built-in loop is the default.
+        val runner: com.sherwood.wta.core.agent.engine.AgentRunner =
+            request.runner ?: AgentEngine(gateway, permissionChecker, abort)
         val store = request.sessionStore
         val sessionId = request.sessionId
         val accumulator = TurnAccumulator(sessionId)
@@ -153,7 +155,7 @@ class AgentService : Service() {
                 )
                 // Single collection source: broadcast to UI AND persist in the same
                 // collector so persistence no longer depends on any UI scope.
-                engine.run(
+                runner.run(
                     AgentEngine.Input(
                         systemPrompt = request.systemPrompt,
                         history = request.history,
@@ -457,7 +459,9 @@ class AgentService : Service() {
         val registry: ToolRegistry,
         val sessionStore: SessionStore? = null,
         val temperature: Float = 0.7f,
-        val maxTurns: Int = 24
+        val maxTurns: Int = 24,
+        /** Overrides the built-in agent loop for this turn when set. */
+        val runner: com.sherwood.wta.core.agent.engine.AgentRunner? = null
     )
 
     /**

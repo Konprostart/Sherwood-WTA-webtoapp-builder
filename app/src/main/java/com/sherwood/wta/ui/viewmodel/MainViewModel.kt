@@ -1632,9 +1632,9 @@ class MainViewModel(
         viewModelScope.launch {
             try {
 
-                repository.clearCategoryId(category.id)
-
-                categoryRepository.deleteCategory(category)
+                // One transaction: an app must never be left with a category that no
+                // longer exists because the delete half of two writes failed.
+                categoryRepository.deleteCategoryWithCleanup(category.id)
 
                 if (_selectedCategoryId.value == category.id) {
                     selectCategory(null)

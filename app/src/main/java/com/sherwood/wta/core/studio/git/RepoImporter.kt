@@ -70,7 +70,18 @@ class RepoImporter(
                 )
             )
 
-        val baseSha = (provider.branch(ref, resolved) as? GitResult.Success)?.value?.sha
+        // A failed lookup here used to become `baseSha = null`, which only surfaces much
+        // later as an unexplained `NO_BASE` on every status and publish of the copy.
+        // Fail the import now instead: a working copy that can never be published is
+        // worse than an import that says why it stopped.
+        val baseSha = when (val branchInfo = provider.branch(ref, resolved)) {
+            is GitResult.Success -> branchInfo.value.sha
+            is GitResult.Failure -> return@withContext Result.failure(
+                IllegalStateException(
+                    branchInfo.message ?: "Could not resolve the branch commit"
+                )
+            )
+        }
         val host = RepoArchive.hostOf(provider.baseUrl)
             ?: return@withContext Result.failure(
                 IllegalStateException("The provider base URL has no host")

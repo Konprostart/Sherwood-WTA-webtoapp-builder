@@ -16,6 +16,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.BufferedSink
 import java.io.File
@@ -63,8 +64,12 @@ internal class GiteaApiClient(
         .followSslRedirects(false)
         .build()
 
+    // Redirects to a CDN are normal for artifact and release downloads, but an
+    // HTTPS-to-HTTP redirect must stay refused: it would serve the bytes of an imported
+    // archive or a release APK over cleartext. `followSslRedirects(false)` blocks the
+    // downgrade while leaving HTTPS-to-HTTPS redirects working.
     private val redirectClient: OkHttpClient = httpClient.newBuilder()
-        .followSslRedirects(true)
+        .followSslRedirects(false)
         .followRedirects(true)
         .build()
 
@@ -450,6 +455,12 @@ internal class GiteaApiClient(
     suspend fun downloadArtifact(artifact: GitArtifact): GitResult<ByteArray> =
         withContext(Dispatchers.IO) { downloadBytes(artifact.archiveDownloadUrl) }
 
+    /** Streams the artifact zip to [target] instead of buffering it in memory. */
+    suspend fun downloadArtifactTo(artifact: GitArtifact, target: File): GitResult<Unit> =
+        withContext(Dispatchers.IO) {
+            downloadTo(artifact.archiveDownloadUrl, target)
+        }
+
     // --------------------------------------------------------------- releases
 
     suspend fun listReleases(
@@ -479,10 +490,12 @@ internal class GiteaApiClient(
             try {
                 urlGuard(asset.apiDownloadUrl)
                 redirectClient.newCall(builder.build()).execute().use { response ->
-                    val bytes = response.body?.bytes()
+                    // Status first, so the server's own explanation survives into the
+                    // failure instead of being buffered and thrown away.
                     if (!response.isSuccessful) {
-                        return@withContext failureFrom(response.code, null)
+                        return@withContext failureFrom(response.code, response.boundedText())
                     }
+                    val bytes = response.body?.bytes()
                     if (bytes == null) {
                         GitResult.Failure(GitFailureKind.UNEXPECTED, response.code, "Empty response")
                     } else {
@@ -496,6 +509,12 @@ internal class GiteaApiClient(
                 AppLogger.w(TAG, "Release asset download error: ${e.javaClass.simpleName}")
                 GitResult.Failure(GitFailureKind.NETWORK)
             }
+        }
+
+    /** Streams one release asset to [target]; same route and token rules as above. */
+    suspend fun downloadReleaseAssetTo(asset: GitReleaseAsset, target: File): GitResult<Unit> =
+        withContext(Dispatchers.IO) {
+            downloadTo(asset.apiDownloadUrl, target)
         }
 
     // ---------------------------------------------------------------- archive
@@ -797,6 +816,48 @@ internal class GiteaApiClient(
         return builder.build().toString()
     }
 
+    /** Streams any binary endpoint to [target]; deletes a partial file on failure. */
+    private fun downloadTo(url: String, target: File): GitResult<Unit> {
+        val token = tokenOrNull()
+        val builder = Request.Builder().url(url).get()
+        if (token != null) builder.header("Authorization", "token $token")
+        return try {
+            urlGuard(url)
+            redirectClient.newCall(builder.build()).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return failureFrom(response.code, response.boundedText())
+                }
+                val body = response.body
+                    ?: return GitResult.Failure(GitFailureKind.UNEXPECTED, message = "Empty response")
+                try {
+                    streamToFile(body.byteStream(), body.contentLength(), target) { }
+                } catch (e: IOException) {
+                    target.delete()
+                    return GitResult.Failure(GitFailureKind.NETWORK, message = e.message)
+                }
+                GitResult.Success(Unit)
+            }
+        } catch (e: IOException) {
+            AppLogger.w(TAG, "Download failed: ${e.javaClass.simpleName}")
+            target.delete()
+            GitResult.Failure(GitFailureKind.NETWORK)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Download error: ${e.javaClass.simpleName}")
+            target.delete()
+            GitResult.Failure(GitFailureKind.NETWORK)
+        }
+    }
+
+    /** At most [ERROR_BODY_LIMIT] bytes of an error body, decoded as UTF-8. */
+    private fun Response.boundedText(limit: Long = ERROR_BODY_LIMIT): String {
+        val body = this.body ?: return ""
+        return runCatching {
+            val buffer = okio.Buffer()
+            body.source().use { source -> source.read(buffer, limit) }
+            buffer.readUtf8()
+        }.getOrDefault("")
+    }
+
     private fun urlBuilder(vararg segments: String) = apiBase.toHttpUrl().newBuilder().apply {
         segments.forEach { addPathSegment(it) }
     }
@@ -923,6 +984,9 @@ internal class GiteaApiClient(
         private const val API_SUFFIX = "/api/v1"
         private const val PER_PAGE = 50
         private const val MAX_ERROR_MESSAGE = 500
+
+        /** How much of an error body is read to recover the server's own explanation. */
+        private const val ERROR_BODY_LIMIT = 8L * 1024
         private const val MAX_ARCHIVE_BYTES = 300L * 1024 * 1024
         private const val MAX_LOG_CHARS = 400_000
         private const val JSON_ACCEPT = "application/json"

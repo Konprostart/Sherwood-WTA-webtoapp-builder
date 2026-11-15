@@ -53,6 +53,10 @@ import com.sherwood.wta.core.studio.git.GitProviderRegistry
 import com.sherwood.wta.core.studio.git.GitProviderSettings
 import com.sherwood.wta.core.studio.git.GitProviderUnavailableReason
 import com.sherwood.wta.core.studio.git.GitStudio
+import com.sherwood.wta.core.telegram.TelegramApiClient
+import com.sherwood.wta.core.telegram.TelegramBotService
+import com.sherwood.wta.core.telegram.TelegramBotTokenStore
+import com.sherwood.wta.core.telegram.TelegramSettings
 import com.sherwood.wta.ui.design.WtaButton
 import com.sherwood.wta.ui.design.WtaButtonVariant
 import com.sherwood.wta.ui.design.WtaScreen
@@ -60,12 +64,15 @@ import com.sherwood.wta.ui.design.WtaSection
 import com.sherwood.wta.ui.design.WtaSectionDivider
 import com.sherwood.wta.ui.design.WtaSettingCard
 import com.sherwood.wta.ui.design.WtaSettingRow
+import com.sherwood.wta.ui.design.WtaToggleRow
 import com.sherwood.wta.ui.design.WtaSpacing
 import com.sherwood.wta.ui.design.WtaTab
 import com.sherwood.wta.ui.design.WtaTabRow
 import com.sherwood.wta.ui.theme.LocalShowDescriptions
 import com.sherwood.wta.ui.theme.ifDescriptionsShown
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Sherwood Studio: GitHub repositories, workspace inbox, GitHub Actions builds and
@@ -222,6 +229,76 @@ private fun StudioSettingsScreen(
     var testing by remember { mutableStateOf(false) }
     var testMessage by remember { mutableStateOf<String?>(null) }
     var testOk by remember { mutableStateOf(false) }
+
+    // ---- Telegram command centre (Android harness) --------------------------
+    val telegramSettings = remember { TelegramSettings.getInstance(context) }
+    val telegramTokens = remember { TelegramBotTokenStore(context) }
+    var telegramEnabled by remember { mutableStateOf(telegramSettings.enabled) }
+    var telegramTokenInput by remember { mutableStateOf("") }
+    var telegramMessage by remember { mutableStateOf<String?>(null) }
+    var telegramError by remember { mutableStateOf(false) }
+    var telegramProtection by remember { mutableStateOf(telegramTokens.protection()) }
+    var telegramPaired by remember { mutableStateOf(telegramSettings.pairedChats) }
+    var telegramAllowBuilds by remember { mutableStateOf(telegramSettings.allowRemoteBuilds) }
+    var telegramPairingCode by remember { mutableStateOf(telegramSettings.pairingCode) }
+    var telegramBusy by remember { mutableStateOf(false) }
+
+    fun applyTelegramEnabled(enabled: Boolean) {
+        telegramEnabled = enabled
+        telegramSettings.enabled = enabled
+        if (enabled) TelegramBotService.start(context) else TelegramBotService.stop(context)
+    }
+
+    fun saveTelegramToken() {
+        if (telegramTokenInput.isBlank()) {
+            telegramError = true
+            telegramMessage = Strings.telegramTokenMissing
+            return
+        }
+        telegramBusy = true
+        // KeyStore encryption plus a synchronous SharedPreferences commit must not run on
+        // the composition thread.
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                telegramTokens.saveToken(telegramTokenInput)
+            }
+            telegramBusy = false
+            result.onSuccess {
+                telegramTokenInput = ""
+                telegramError = false
+                telegramMessage = Strings.telegramTokenSaved
+                telegramProtection = telegramTokens.protection()
+                if (telegramEnabled) TelegramBotService.start(context)
+            }.onFailure {
+                telegramError = true
+                telegramMessage = Strings.telegramTokenInvalid
+            }
+        }
+    }
+
+    fun testTelegram() {
+        val token = telegramTokens.currentToken()
+        if (token == null) {
+            telegramError = true
+            telegramMessage = Strings.telegramTokenMissing
+            return
+        }
+        telegramBusy = true
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                com.sherwood.wta.core.telegram.TelegramApiClient(token).getMe()
+            }
+            telegramBusy = false
+            result.onSuccess { info ->
+                telegramSettings.botUsername = info.username
+                telegramError = false
+                telegramMessage = Strings.telegramConnected(info.username)
+            }.onFailure {
+                telegramError = true
+                telegramMessage = Strings.telegramTestFailed
+            }
+        }
+    }
 
     val credentialKey = remember(providerId, serverUrl) {
         GitCredentialKey.of(providerId, serverUrl)
@@ -609,6 +686,153 @@ private fun StudioSettingsScreen(
                     }
                 }
             }
+            }
+
+            WtaSection(title = Strings.telegramBot, description = Strings.telegramDesc) {
+                WtaSettingCard {
+                    WtaToggleRow(
+                        title = Strings.telegramEnable,
+                        checked = telegramEnabled,
+                        subtitle = Strings.telegramEnableDesc.ifDescriptionsShown(),
+                        onCheckedChange = { applyTelegramEnabled(it) }
+                    )
+                    WtaSectionDivider()
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = WtaSpacing.RowHorizontal,
+                            vertical = WtaSpacing.ContentGap
+                        )
+                    ) {
+                        OutlinedTextField(
+                            value = telegramTokenInput,
+                            onValueChange = { telegramTokenInput = it.trim() },
+                            label = { Text(Strings.telegramToken) },
+                            singleLine = true,
+                            isError = telegramError,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        if (LocalShowDescriptions.current) {
+                            Text(
+                                Strings.telegramTokenHint,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        telegramMessage?.let { message ->
+                            Text(
+                                message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (telegramError) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Same protection report as the git token: a degraded keystore is
+                        // never silently presented as hardware-backed.
+                        Text(
+                            "${Strings.gitTokenProtection}: " + when (telegramProtection) {
+                                com.sherwood.wta.core.frontend.TokenProtection.ANDROID_KEYSTORE ->
+                                    Strings.gitTokenProtectionKeystore
+                                com.sherwood.wta.core.frontend.TokenProtection.APP_DERIVED_FALLBACK ->
+                                    Strings.gitTokenProtectionFallback
+                                com.sherwood.wta.core.frontend.TokenProtection.NONE -> "—"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            WtaButton(
+                                onClick = { testTelegram() },
+                                text = Strings.telegramTest,
+                                variant = WtaButtonVariant.Outlined,
+                                enabled = !telegramBusy
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            WtaButton(
+                                onClick = { saveTelegramToken() },
+                                text = Strings.save,
+                                variant = WtaButtonVariant.Primary,
+                                enabled = !telegramBusy
+                            )
+                        }
+                    }
+                    WtaSectionDivider()
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = WtaSpacing.RowHorizontal,
+                            vertical = WtaSpacing.ContentGap
+                        )
+                    ) {
+                        Text(
+                            Strings.telegramPairing,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (LocalShowDescriptions.current) {
+                            Text(
+                                Strings.telegramPairingDesc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        val pairing = telegramPairingCode
+                        if (pairing != null) {
+                            val minutes = ((pairing.expiresAtEpochMs - System.currentTimeMillis()) / 60_000L)
+                                .coerceAtLeast(0L)
+                            Text(
+                                Strings.telegramCodeActive(pairing.value, minutes.toInt()),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        val pairedText = if (telegramPaired.isEmpty()) {
+                            Strings.telegramNoPairedChats
+                        } else {
+                            "${Strings.telegramPairedChats}: ${telegramPaired.size}"
+                        }
+                        Text(
+                            pairedText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            if (telegramPaired.isNotEmpty()) {
+                                WtaButton(
+                                    onClick = {
+                                        telegramPaired.forEach { telegramSettings.unpair(it) }
+                                        telegramPaired = telegramSettings.pairedChats
+                                    },
+                                    text = Strings.telegramClearPaired,
+                                    variant = WtaButtonVariant.Outlined
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            WtaButton(
+                                onClick = { telegramPairingCode = telegramSettings.newPairingCode() },
+                                text = Strings.telegramCreateCode,
+                                variant = WtaButtonVariant.Primary
+                            )
+                        }
+                    }
+                    WtaSectionDivider()
+                    WtaToggleRow(
+                        title = Strings.telegramAllowBuilds,
+                        checked = telegramAllowBuilds,
+                        subtitle = Strings.telegramAllowBuildsDesc.ifDescriptionsShown(),
+                        onCheckedChange = {
+                            telegramAllowBuilds = it
+                            telegramSettings.allowRemoteBuilds = it
+                        }
+                    )
+                }
             }
 
             WtaSection(title = Strings.studioEndpoints, description = Strings.studioEndpointsDesc) {

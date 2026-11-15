@@ -34,7 +34,7 @@ class AgentEngine(
     private val permissionChecker: PermissionChecker,
     private val abortController: AbortController = AbortController(),
     private val keyRotation: ApiKeyRotation = ApiKeyRotation.shared
-) {
+) : AgentRunner {
 
     data class Input(
         val systemPrompt: String,
@@ -47,7 +47,7 @@ class AgentEngine(
         val maxTokens: Int? = null
     )
 
-    fun run(input: Input): Flow<AgentEvent> = channelFlow {
+    override fun run(input: Input): Flow<AgentEvent> = channelFlow {
         send(AgentEvent.Started)
 
         val messages = mutableListOf<LlmMessage>()

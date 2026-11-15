@@ -17,6 +17,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.io.File
@@ -50,8 +51,12 @@ class GitHubApiClient(
         .followSslRedirects(false)
         .build()
 
+    // Redirects to a CDN are normal for artifact and release downloads, but an
+    // HTTPS-to-HTTP redirect must stay refused: it would serve the bytes of an imported
+    // archive or a release APK over cleartext. `followSslRedirects(false)` blocks the
+    // downgrade while leaving HTTPS-to-HTTPS redirects working.
     private val redirectClient: OkHttpClient = httpClient.newBuilder()
-        .followSslRedirects(true)
+        .followSslRedirects(false)
         .followRedirects(true)
         .build()
 
@@ -567,6 +572,18 @@ class GitHubApiClient(
         }
 
     /**
+     * Streams the artifact zip to [target].
+     *
+     * Preferred over [downloadArtifact]: an Actions artifact can be hundreds of megabytes
+     * and buffering it in a `ByteArray` is an out-of-memory risk on a phone. The vault
+     * unzips from the file instead.
+     */
+    suspend fun downloadArtifactTo(artifact: GitHubArtifact, target: File): GitResult<Unit> =
+        withContext(Dispatchers.IO) {
+            downloadTo(artifact.archiveDownloadUrl, JSON_ACCEPT, target)
+        }
+
+    /**
      * Streams the source archive of [ref] into [target] as a zip.
      *
      * With a token the authenticated zipball endpoint is used, which is what makes a
@@ -697,6 +714,12 @@ class GitHubApiClient(
             downloadBytes(asset.apiDownloadUrl, BINARY_ACCEPT)
         }
 
+    /** Streams one release asset to [target]; see [downloadArtifactTo]. */
+    suspend fun downloadReleaseAssetTo(asset: GitHubReleaseAsset, target: File): GitResult<Unit> =
+        withContext(Dispatchers.IO) {
+            downloadTo(asset.apiDownloadUrl, BINARY_ACCEPT, target)
+        }
+
     // ------------------------------------------------------------------ helpers
 
     private suspend fun <T> getJson(url: String, parse: (JsonElement) -> T?): GitResult<T> =
@@ -820,15 +843,17 @@ class GitHubApiClient(
         return try {
             urlGuard(url)
             redirectClient.newCall(builder.build()).execute().use { response ->
-                val bytes = response.body?.bytes()
+                // Status first: reading a large error body only to throw it away is both
+                // wasted memory and the reason the server's own message never surfaced.
                 if (!response.isSuccessful) {
                     return failureFrom(
                         response.code,
                         response.header("x-ratelimit-remaining"),
                         response.header("retry-after"),
-                        null
+                        response.boundedText()
                     )
                 }
+                val bytes = response.body?.bytes()
                 if (bytes == null) {
                     GitResult.Failure(GitFailureKind.UNEXPECTED, response.code, "Empty response")
                 } else {
@@ -842,6 +867,58 @@ class GitHubApiClient(
             AppLogger.w(TAG, "GitHub download error: ${e.javaClass.simpleName}")
             GitResult.Failure(GitFailureKind.NETWORK)
         }
+    }
+
+    /** Streams one binary download to [target], never buffering the payload. */
+    private fun downloadTo(url: String, accept: String, target: File): GitResult<Unit> {
+        val token = tokenOrNull()
+        val builder = Request.Builder()
+            .url(url)
+            .header("Accept", accept)
+            .header("X-GitHub-Api-Version", API_VERSION)
+        if (token != null) builder.header("Authorization", "Bearer $token")
+        return try {
+            urlGuard(url)
+            redirectClient.newCall(builder.build()).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return failureFrom(
+                        response.code,
+                        response.header("x-ratelimit-remaining"),
+                        response.header("retry-after"),
+                        response.boundedText()
+                    )
+                }
+                val body = response.body
+                    ?: return GitResult.Failure(GitFailureKind.UNEXPECTED, response.code, "Empty response")
+                try {
+                    streamToFile(body.byteStream(), body.contentLength(), target) { }
+                } catch (e: IOException) {
+                    // A capped or interrupted download must not leave a usable-looking
+                    // half file behind: the caller imports whatever is at `target`.
+                    target.delete()
+                    return GitResult.Failure(GitFailureKind.NETWORK, message = e.message)
+                }
+                GitResult.Success(Unit)
+            }
+        } catch (e: IOException) {
+            AppLogger.w(TAG, "GitHub download failed: ${e.javaClass.simpleName}")
+            target.delete()
+            GitResult.Failure(GitFailureKind.NETWORK)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "GitHub download error: ${e.javaClass.simpleName}")
+            target.delete()
+            GitResult.Failure(GitFailureKind.NETWORK)
+        }
+    }
+
+    /** At most [ERROR_BODY_LIMIT] bytes of an error body, decoded as UTF-8. */
+    private fun Response.boundedText(limit: Long = ERROR_BODY_LIMIT): String {
+        val body = this.body ?: return ""
+        return runCatching {
+            val buffer = okio.Buffer()
+            body.source().use { source -> source.read(buffer, limit) }
+            buffer.readUtf8()
+        }.getOrDefault("")
     }
 
     private fun tokenOrNull(): String? =
@@ -905,6 +982,9 @@ class GitHubApiClient(
         private const val TAG = "GitHubApi"
         private const val API_VERSION = "2022-11-28"
         private const val MAX_ERROR_MESSAGE = 500
+
+        /** How much of an error body is read to recover the server's own explanation. */
+        private const val ERROR_BODY_LIMIT = 8L * 1024
         private const val JSON_ACCEPT = "application/vnd.github+json"
         private const val BINARY_ACCEPT = "application/octet-stream"
 

@@ -20027,4 +20027,672 @@ object StringsE {
         AppLanguage.KOREAN -> "이 서버에서 사용할 수 없음"
     }
 
+
+    // ------------------------------------------------ Studio: Telegram command centre
+
+    val telegramBot: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Telegram 机器人"
+        AppLanguage.ENGLISH -> "Telegram bot"
+        AppLanguage.ARABIC -> "بوت تيليجرام"
+        AppLanguage.PORTUGUESE -> "Bot do Telegram"
+        AppLanguage.SPANISH -> "Bot de Telegram"
+        AppLanguage.FRENCH -> "Bot Telegram"
+        AppLanguage.GERMAN -> "Telegram-Bot"
+        AppLanguage.RUSSIAN -> "Telegram-бот"
+        AppLanguage.JAPANESE -> "Telegram ボット"
+        AppLanguage.KOREAN -> "Telegram 봇"
+    }
+
+    val telegramDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "通过 Telegram 遥控 Studio：查看状态、启动构建、获取产物，并在手机上接收构建通知。令牌与 Git 令牌使用同一套 Android Keystore 加密。"
+        AppLanguage.ENGLISH -> "Control the Studio from Telegram: check status, start builds, fetch artifacts, and get build notifications on the phone. The token uses the same Android Keystore encryption as the git tokens."
+        AppLanguage.ARABIC -> "تحكّم في الاستوديو من تيليجرام: افحص الحالة وابدأ البناء واحصل على الملفات وأشعارات البناء على الهاتف. يُشفَّر الرمز بنفس طريقة رموز Git."
+        AppLanguage.PORTUGUESE -> "Controle o Studio pelo Telegram: veja o estado, inicie builds, baixe artefatos e receba notificações no telefone. O token usa a mesma criptografia dos tokens Git."
+        AppLanguage.SPANISH -> "Controla el Studio desde Telegram: consulta el estado, inicia compilaciones, descarga artefactos y recibe avisos en el teléfono. El token usa el mismo cifrado que los tokens Git."
+        AppLanguage.FRENCH -> "Pilotez le Studio depuis Telegram : état, lancement de builds, récupération des artefacts et notifications sur le téléphone. Le jeton utilise le même chiffrement que les jetons Git."
+        AppLanguage.GERMAN -> "Steuere das Studio über Telegram: Status prüfen, Builds starten, Artefakte holen und Build-Benachrichtigungen aufs Telefon bekommen. Das Token nutzt dieselbe Verschlüsselung wie die Git-Token."
+        AppLanguage.RUSSIAN -> "Управляйте Studio из Telegram: статус, запуск сборок, получение артефактов и уведомления о сборке на телефон. Токен шифруется так же, как токены Git."
+        AppLanguage.JAPANESE -> "Telegram から Studio を操作します。状態確認、ビルド開始、成果物の取得、ビルド通知をスマートフォンで受け取れます。トークンは Git トークンと同じ方式で暗号化されます。"
+        AppLanguage.KOREAN -> "Telegram에서 Studio를 제어합니다. 상태 확인, 빌드 시작, 산출물 가져오기, 빌드 알림을 휴대폰에서 받습니다. 토큰은 Git 토큰과 동일하게 암호화됩니다."
+    }
+
+    val telegramEnable: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "启用 Telegram"
+        AppLanguage.ENGLISH -> "Enable Telegram"
+        AppLanguage.ARABIC -> "تفعيل تيليجرام"
+        AppLanguage.PORTUGUESE -> "Ativar Telegram"
+        AppLanguage.SPANISH -> "Activar Telegram"
+        AppLanguage.FRENCH -> "Activer Telegram"
+        AppLanguage.GERMAN -> "Telegram aktivieren"
+        AppLanguage.RUSSIAN -> "Включить Telegram"
+        AppLanguage.JAPANESE -> "Telegram を有効化"
+        AppLanguage.KOREAN -> "Telegram 사용"
+    }
+
+    val telegramEnableDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "只有保存了令牌才会启动长轮询前台服务。"
+        AppLanguage.ENGLISH -> "The polling foreground service starts only when a token is saved."
+        AppLanguage.ARABIC -> "لا تبدأ خدمة الاستقصاء إلا عند حفظ رمز."
+        AppLanguage.PORTUGUESE -> "O serviço de sondagem só inicia quando um token está salvo."
+        AppLanguage.SPANISH -> "El servicio de sondeo solo arranca cuando hay un token guardado."
+        AppLanguage.FRENCH -> "Le service de sondage ne démarre qu'avec un jeton enregistré."
+        AppLanguage.GERMAN -> "Der Polling-Dienst startet nur mit gespeichertem Token."
+        AppLanguage.RUSSIAN -> "Служба опроса запускается только при сохранённом токене."
+        AppLanguage.JAPANESE -> "トークンが保存されている場合のみポーリングサービスが起動します。"
+        AppLanguage.KOREAN -> "토큰이 저장된 경우에만 폴링 서비스가 시작됩니다."
+    }
+
+    val telegramToken: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "机器人令牌"
+        AppLanguage.ENGLISH -> "Bot token"
+        AppLanguage.ARABIC -> "رمز البوت"
+        AppLanguage.PORTUGUESE -> "Token do bot"
+        AppLanguage.SPANISH -> "Token del bot"
+        AppLanguage.FRENCH -> "Jeton du bot"
+        AppLanguage.GERMAN -> "Bot-Token"
+        AppLanguage.RUSSIAN -> "Токен бота"
+        AppLanguage.JAPANESE -> "ボットトークン"
+        AppLanguage.KOREAN -> "봇 토큰"
+    }
+
+    val telegramTokenHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在 Telegram 中向 @BotFather 发送 /newbot 即可获得令牌。它是一个完整凭据，不要分享。"
+        AppLanguage.ENGLISH -> "Send /newbot to @BotFather in Telegram to get a token. It is a full credential — never share it."
+        AppLanguage.ARABIC -> "أرسل /newbot إلى @BotFather في تيليجرام للحصول على رمز. إنه بيانات اعتماد كاملة، لا تشاركها."
+        AppLanguage.PORTUGUESE -> "Envie /newbot para @BotFather no Telegram para obter um token. É uma credencial completa — não compartilhe."
+        AppLanguage.SPANISH -> "Envía /newbot a @BotFather en Telegram para obtener un token. Es una credencial completa: no la compartas."
+        AppLanguage.FRENCH -> "Envoyez /newbot à @BotFather sur Telegram pour obtenir un jeton. C'est une vraie credential — ne la partagez pas."
+        AppLanguage.GERMAN -> "Sende /newbot an @BotFather in Telegram, um ein Token zu erhalten. Es ist ein vollständiger Schlüssel — niemals teilen."
+        AppLanguage.RUSSIAN -> "Отправьте /newbot боту @BotFather в Telegram, чтобы получить токен. Это полноценный ключ — не делитесь им."
+        AppLanguage.JAPANESE -> "@BotFather に /newbot を送るとトークンを取得できます。完全な資格情報なので共有しないでください。"
+        AppLanguage.KOREAN -> "Telegram에서 @BotFather에게 /newbot을 보내 토큰을 받으세요. 완전한 자격 증명이므로 공유하지 마세요."
+    }
+
+    val telegramTokenSaved: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "令牌已保存"
+        AppLanguage.ENGLISH -> "Token saved"
+        AppLanguage.ARABIC -> "تم حفظ الرمز"
+        AppLanguage.PORTUGUESE -> "Token salvo"
+        AppLanguage.SPANISH -> "Token guardado"
+        AppLanguage.FRENCH -> "Jeton enregistré"
+        AppLanguage.GERMAN -> "Token gespeichert"
+        AppLanguage.RUSSIAN -> "Токен сохранён"
+        AppLanguage.JAPANESE -> "トークンを保存しました"
+        AppLanguage.KOREAN -> "토큰이 저장되었습니다"
+    }
+
+    val telegramTokenInvalid: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "令牌格式无效"
+        AppLanguage.ENGLISH -> "The token format is not valid"
+        AppLanguage.ARABIC -> "صيغة الرمز غير صالحة"
+        AppLanguage.PORTUGUESE -> "O formato do token não é válido"
+        AppLanguage.SPANISH -> "El formato del token no es válido"
+        AppLanguage.FRENCH -> "Le format du jeton est invalide"
+        AppLanguage.GERMAN -> "Das Token-Format ist ungültig"
+        AppLanguage.RUSSIAN -> "Неверный формат токена"
+        AppLanguage.JAPANESE -> "トークンの形式が正しくありません"
+        AppLanguage.KOREAN -> "토큰 형식이 올바르지 않습니다"
+    }
+
+    val telegramTokenMissing: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "尚未保存机器人令牌"
+        AppLanguage.ENGLISH -> "No bot token is saved"
+        AppLanguage.ARABIC -> "لا يوجد رمز بوت محفوظ"
+        AppLanguage.PORTUGUESE -> "Nenhum token de bot salvo"
+        AppLanguage.SPANISH -> "No hay token de bot guardado"
+        AppLanguage.FRENCH -> "Aucun jeton de bot enregistré"
+        AppLanguage.GERMAN -> "Kein Bot-Token gespeichert"
+        AppLanguage.RUSSIAN -> "Токен бота не сохранён"
+        AppLanguage.JAPANESE -> "ボットトークンが保存されていません"
+        AppLanguage.KOREAN -> "저장된 봇 토큰이 없습니다"
+    }
+
+    val telegramPairing: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "配对"
+        AppLanguage.ENGLISH -> "Pairing"
+        AppLanguage.ARABIC -> "الاقتران"
+        AppLanguage.PORTUGUESE -> "Pareamento"
+        AppLanguage.SPANISH -> "Emparejamiento"
+        AppLanguage.FRENCH -> "Appairage"
+        AppLanguage.GERMAN -> "Kopplung"
+        AppLanguage.RUSSIAN -> "Сопряжение"
+        AppLanguage.JAPANESE -> "ペアリング"
+        AppLanguage.KOREAN -> "페어링"
+    }
+
+    val telegramPairingDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "只有已配对的聊天可以发送命令。生成一次性代码，然后在机器人聊天中发送 /pair 代码。"
+        AppLanguage.ENGLISH -> "Only a paired chat can send commands. Create a one-time code, then send /pair <code> in the bot chat."
+        AppLanguage.ARABIC -> "لا يمكن إرسال الأوامر إلا من محادثة مقترنة. أنشئ رمزًا لمرة واحدة ثم أرسل /pair <code> في محادثة البوت."
+        AppLanguage.PORTUGUESE -> "Só um chat pareado pode enviar comandos. Crie um código de uso único e envie /pair <code> no chat do bot."
+        AppLanguage.SPANISH -> "Solo un chat emparejado puede enviar comandos. Crea un código de un solo uso y envía /pair <code> en el chat del bot."
+        AppLanguage.FRENCH -> "Seul un chat appairé peut envoyer des commandes. Créez un code à usage unique puis envoyez /pair <code>."
+        AppLanguage.GERMAN -> "Nur ein gekoppelter Chat darf Befehle senden. Einmalcode erzeugen, dann /pair <code> im Bot-Chat senden."
+        AppLanguage.RUSSIAN -> "Команды принимаются только из сопряжённого чата. Создайте одноразовый код и отправьте /pair <code>."
+        AppLanguage.JAPANESE -> "コマンドを送れるのはペアリング済みのチャットのみです。一度きりのコードを作成し、ボットのチャットで /pair <code> を送信してください。"
+        AppLanguage.KOREAN -> "명령은 페어링된 채팅에서만 보낼 수 있습니다. 일회용 코드를 만든 뒤 봇 채팅에서 /pair <code>를 보내세요."
+    }
+
+    val telegramCreateCode: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "生成配对代码"
+        AppLanguage.ENGLISH -> "Create pairing code"
+        AppLanguage.ARABIC -> "إنشاء رمز اقتران"
+        AppLanguage.PORTUGUESE -> "Criar código de pareamento"
+        AppLanguage.SPANISH -> "Crear código de emparejamiento"
+        AppLanguage.FRENCH -> "Créer un code d'appairage"
+        AppLanguage.GERMAN -> "Kopplungscode erzeugen"
+        AppLanguage.RUSSIAN -> "Создать код сопряжения"
+        AppLanguage.JAPANESE -> "ペアリングコードを作成"
+        AppLanguage.KOREAN -> "페어링 코드 생성"
+    }
+
+    val telegramPairedChats: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已配对的聊天"
+        AppLanguage.ENGLISH -> "Paired chats"
+        AppLanguage.ARABIC -> "المحادثات المقترنة"
+        AppLanguage.PORTUGUESE -> "Chats pareados"
+        AppLanguage.SPANISH -> "Chats emparejados"
+        AppLanguage.FRENCH -> "Chats appairés"
+        AppLanguage.GERMAN -> "Gekoppelte Chats"
+        AppLanguage.RUSSIAN -> "Сопряжённые чаты"
+        AppLanguage.JAPANESE -> "ペアリング済みチャット"
+        AppLanguage.KOREAN -> "페어링된 채팅"
+    }
+
+    val telegramNoPairedChats: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "尚未配对任何聊天"
+        AppLanguage.ENGLISH -> "No chat is paired yet"
+        AppLanguage.ARABIC -> "لا توجد محادثة مقترنة بعد"
+        AppLanguage.PORTUGUESE -> "Nenhum chat pareado ainda"
+        AppLanguage.SPANISH -> "Ningún chat emparejado aún"
+        AppLanguage.FRENCH -> "Aucun chat appairé"
+        AppLanguage.GERMAN -> "Noch kein Chat gekoppelt"
+        AppLanguage.RUSSIAN -> "Ни один чат не сопряжён"
+        AppLanguage.JAPANESE -> "まだペアリングされたチャットはありません"
+        AppLanguage.KOREAN -> "아직 페어링된 채팅이 없습니다"
+    }
+
+    val telegramClearPaired: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "清除所有配对"
+        AppLanguage.ENGLISH -> "Clear pairing"
+        AppLanguage.ARABIC -> "مسح الاقتران"
+        AppLanguage.PORTUGUESE -> "Limpar pareamento"
+        AppLanguage.SPANISH -> "Borrar emparejamiento"
+        AppLanguage.FRENCH -> "Effacer l'appairage"
+        AppLanguage.GERMAN -> "Kopplung löschen"
+        AppLanguage.RUSSIAN -> "Сбросить сопряжение"
+        AppLanguage.JAPANESE -> "ペアリングを解除"
+        AppLanguage.KOREAN -> "페어링 해제"
+    }
+
+    val telegramAllowBuilds: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "允许从聊天启动构建"
+        AppLanguage.ENGLISH -> "Allow builds from chat"
+        AppLanguage.ARABIC -> "السماح بالبناء من المحادثة"
+        AppLanguage.PORTUGUESE -> "Permitir builds pelo chat"
+        AppLanguage.SPANISH -> "Permitir compilaciones desde el chat"
+        AppLanguage.FRENCH -> "Autoriser les builds depuis le chat"
+        AppLanguage.GERMAN -> "Builds aus dem Chat erlauben"
+        AppLanguage.RUSSIAN -> "Разрешить сборки из чата"
+        AppLanguage.JAPANESE -> "チャットからのビルドを許可"
+        AppLanguage.KOREAN -> "채팅에서 빌드 허용"
+    }
+
+    val telegramAllowBuildsDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建会消耗 CI 分钟。关闭后，只读命令仍然可用。"
+        AppLanguage.ENGLISH -> "A build spends CI minutes. Turning this off leaves the read-only commands working."
+        AppLanguage.ARABIC -> "البناء يستهلك دقائق CI. عند الإيقاف تبقى الأوامر للقراءة فقط متاحة."
+        AppLanguage.PORTUGUESE -> "Um build consome minutos de CI. Desativado, os comandos somente leitura continuam funcionando."
+        AppLanguage.SPANISH -> "Una compilación consume minutos de CI. Si lo desactivas, los comandos de solo lectura siguen disponibles."
+        AppLanguage.FRENCH -> "Un build consomme des minutes de CI. Désactivé, les commandes en lecture seule restent disponibles."
+        AppLanguage.GERMAN -> "Ein Build verbraucht CI-Minuten. Ausgeschaltet bleiben die Nur-Lese-Befehle verfügbar."
+        AppLanguage.RUSSIAN -> "Сборка расходует минуты CI. Если выключить, команды только для чтения продолжат работать."
+        AppLanguage.JAPANESE -> "ビルドは CI 時間を消費します。オフでも読み取り専用コマンドは使えます。"
+        AppLanguage.KOREAN -> "빌드는 CI 시간을 사용합니다. 끄더라도 읽기 전용 명령은 계속 사용할 수 있습니다."
+    }
+
+    val telegramTest: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "测试连接"
+        AppLanguage.ENGLISH -> "Test connection"
+        AppLanguage.ARABIC -> "اختبار الاتصال"
+        AppLanguage.PORTUGUESE -> "Testar conexão"
+        AppLanguage.SPANISH -> "Probar conexión"
+        AppLanguage.FRENCH -> "Tester la connexion"
+        AppLanguage.GERMAN -> "Verbindung testen"
+        AppLanguage.RUSSIAN -> "Проверить подключение"
+        AppLanguage.JAPANESE -> "接続テスト"
+        AppLanguage.KOREAN -> "연결 테스트"
+    }
+
+    val telegramTestFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "连接失败"
+        AppLanguage.ENGLISH -> "Connection failed"
+        AppLanguage.ARABIC -> "فشل الاتصال"
+        AppLanguage.PORTUGUESE -> "Falha na conexão"
+        AppLanguage.SPANISH -> "Falló la conexión"
+        AppLanguage.FRENCH -> "Échec de la connexion"
+        AppLanguage.GERMAN -> "Verbindung fehlgeschlagen"
+        AppLanguage.RUSSIAN -> "Не удалось подключиться"
+        AppLanguage.JAPANESE -> "接続に失敗しました"
+        AppLanguage.KOREAN -> "연결에 실패했습니다"
+    }
+
+    val telegramServiceRunning: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "命令中心正在运行"
+        AppLanguage.ENGLISH -> "Command centre running"
+        AppLanguage.ARABIC -> "مركز الأوامر يعمل"
+        AppLanguage.PORTUGUESE -> "Central de comandos ativa"
+        AppLanguage.SPANISH -> "Centro de comandos activo"
+        AppLanguage.FRENCH -> "Centre de commandes actif"
+        AppLanguage.GERMAN -> "Kommandozentrale läuft"
+        AppLanguage.RUSSIAN -> "Центр команд работает"
+        AppLanguage.JAPANESE -> "コマンドセンター稼働中"
+        AppLanguage.KOREAN -> "명령 센터 실행 중"
+    }
+
+    val telegramStop: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "停止"
+        AppLanguage.ENGLISH -> "Stop"
+        AppLanguage.ARABIC -> "إيقاف"
+        AppLanguage.PORTUGUESE -> "Parar"
+        AppLanguage.SPANISH -> "Detener"
+        AppLanguage.FRENCH -> "Arrêter"
+        AppLanguage.GERMAN -> "Stoppen"
+        AppLanguage.RUSSIAN -> "Остановить"
+        AppLanguage.JAPANESE -> "停止"
+        AppLanguage.KOREAN -> "중지"
+    }
+
+    val telegramNotPaired: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此聊天尚未配对。请在 Studio 中生成配对代码，然后发送 /pair 代码。"
+        AppLanguage.ENGLISH -> "This chat is not paired. Create a pairing code in the Studio, then send /pair <code>."
+        AppLanguage.ARABIC -> "هذه المحادثة غير مقترنة. أنشئ رمز اقتران في الاستوديو ثم أرسل /pair <code>."
+        AppLanguage.PORTUGUESE -> "Este chat não está pareado. Crie um código no Studio e envie /pair <code>."
+        AppLanguage.SPANISH -> "Este chat no está emparejado. Crea un código en el Studio y envía /pair <code>."
+        AppLanguage.FRENCH -> "Ce chat n'est pas appairé. Créez un code dans le Studio puis envoyez /pair <code>."
+        AppLanguage.GERMAN -> "Dieser Chat ist nicht gekoppelt. Erzeuge einen Code im Studio und sende /pair <code>."
+        AppLanguage.RUSSIAN -> "Этот чат не сопряжён. Создайте код в Studio и отправьте /pair <code>."
+        AppLanguage.JAPANESE -> "このチャットはペアリングされていません。Studio でコードを作成し /pair <code> を送信してください。"
+        AppLanguage.KOREAN -> "이 채팅은 페어링되지 않았습니다. Studio에서 코드를 만든 뒤 /pair <code>를 보내세요."
+    }
+
+    val telegramRateLimited: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "命令过于频繁，请稍后再试。"
+        AppLanguage.ENGLISH -> "Too many commands. Try again in a minute."
+        AppLanguage.ARABIC -> "أوامر كثيرة جدًا. حاول بعد دقيقة."
+        AppLanguage.PORTUGUESE -> "Comandos demais. Tente de novo em um minuto."
+        AppLanguage.SPANISH -> "Demasiados comandos. Inténtalo en un minuto."
+        AppLanguage.FRENCH -> "Trop de commandes. Réessayez dans une minute."
+        AppLanguage.GERMAN -> "Zu viele Befehle. Versuche es in einer Minute erneut."
+        AppLanguage.RUSSIAN -> "Слишком много команд. Повторите через минуту."
+        AppLanguage.JAPANESE -> "コマンドが多すぎます。1 分後に再試行してください。"
+        AppLanguage.KOREAN -> "명령이 너무 많습니다. 1분 후에 다시 시도하세요."
+    }
+
+    val telegramPairNoCode: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "没有有效的配对代码。请在 Studio 中生成。"
+        AppLanguage.ENGLISH -> "No active pairing code. Create one in the Studio."
+        AppLanguage.ARABIC -> "لا يوجد رمز اقتران نشط. أنشئ واحدًا في الاستوديو."
+        AppLanguage.PORTUGUESE -> "Nenhum código de pareamento ativo. Crie um no Studio."
+        AppLanguage.SPANISH -> "No hay código de emparejamiento activo. Crea uno en el Studio."
+        AppLanguage.FRENCH -> "Aucun code d'appairage actif. Créez-en un dans le Studio."
+        AppLanguage.GERMAN -> "Kein aktiver Kopplungscode. Erzeuge einen im Studio."
+        AppLanguage.RUSSIAN -> "Нет активного кода сопряжения. Создайте его в Studio."
+        AppLanguage.JAPANESE -> "有効なペアリングコードがありません。Studio で作成してください。"
+        AppLanguage.KOREAN -> "활성 페어링 코드가 없습니다. Studio에서 만드세요."
+    }
+
+    val telegramPaired: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "配对成功。发送 /help 查看命令。"
+        AppLanguage.ENGLISH -> "Paired. Send /help for the command list."
+        AppLanguage.ARABIC -> "تم الاقتران. أرسل /help لعرض الأوامر."
+        AppLanguage.PORTUGUESE -> "Pareado. Envie /help para ver os comandos."
+        AppLanguage.SPANISH -> "Emparejado. Envía /help para ver los comandos."
+        AppLanguage.FRENCH -> "Appairé. Envoyez /help pour la liste des commandes."
+        AppLanguage.GERMAN -> "Gekoppelt. Sende /help für die Befehlsliste."
+        AppLanguage.RUSSIAN -> "Сопряжено. Отправьте /help для списка команд."
+        AppLanguage.JAPANESE -> "ペアリングしました。/help でコマンド一覧を表示します。"
+        AppLanguage.KOREAN -> "페어링되었습니다. /help로 명령 목록을 확인하세요."
+    }
+
+    val telegramBadCode: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "配对代码不正确。"
+        AppLanguage.ENGLISH -> "The pairing code is not correct."
+        AppLanguage.ARABIC -> "رمز الاقتران غير صحيح."
+        AppLanguage.PORTUGUESE -> "O código de pareamento está incorreto."
+        AppLanguage.SPANISH -> "El código de emparejamiento no es correcto."
+        AppLanguage.FRENCH -> "Le code d'appairage est incorrect."
+        AppLanguage.GERMAN -> "Der Kopplungscode ist falsch."
+        AppLanguage.RUSSIAN -> "Неверный код сопряжения."
+        AppLanguage.JAPANESE -> "ペアリングコードが正しくありません。"
+        AppLanguage.KOREAN -> "페어링 코드가 올바르지 않습니다."
+    }
+
+    val telegramPairExpired: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "配对代码已过期，请生成新的。"
+        AppLanguage.ENGLISH -> "The pairing code expired. Create a new one."
+        AppLanguage.ARABIC -> "انتهت صلاحية رمز الاقتران. أنشئ رمزًا جديدًا."
+        AppLanguage.PORTUGUESE -> "O código expirou. Crie um novo."
+        AppLanguage.SPANISH -> "El código caducó. Crea uno nuevo."
+        AppLanguage.FRENCH -> "Le code a expiré. Créez-en un nouveau."
+        AppLanguage.GERMAN -> "Der Code ist abgelaufen. Erzeuge einen neuen."
+        AppLanguage.RUSSIAN -> "Код истёк. Создайте новый."
+        AppLanguage.JAPANESE -> "コードの有効期限が切れました。新しく作成してください。"
+        AppLanguage.KOREAN -> "코드가 만료되었습니다. 새로 만드세요."
+    }
+
+    val telegramNoRepository: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "尚未选择仓库"
+        AppLanguage.ENGLISH -> "No repository selected yet"
+        AppLanguage.ARABIC -> "لم يتم اختيار مستودع بعد"
+        AppLanguage.PORTUGUESE -> "Nenhum repositório selecionado"
+        AppLanguage.SPANISH -> "Ningún repositorio seleccionado"
+        AppLanguage.FRENCH -> "Aucun dépôt sélectionné"
+        AppLanguage.GERMAN -> "Noch kein Repository gewählt"
+        AppLanguage.RUSSIAN -> "Репозиторий не выбран"
+        AppLanguage.JAPANESE -> "リポジトリが未選択です"
+        AppLanguage.KOREAN -> "저장소가 선택되지 않았습니다"
+    }
+
+    val telegramNoProvider: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "尚未连接 Git 服务器"
+        AppLanguage.ENGLISH -> "No git server is connected"
+        AppLanguage.ARABIC -> "لا يوجد خادم Git متصل"
+        AppLanguage.PORTUGUESE -> "Nenhum servidor Git conectado"
+        AppLanguage.SPANISH -> "Ningún servidor Git conectado"
+        AppLanguage.FRENCH -> "Aucun serveur Git connecté"
+        AppLanguage.GERMAN -> "Kein Git-Server verbunden"
+        AppLanguage.RUSSIAN -> "Git-сервер не подключён"
+        AppLanguage.JAPANESE -> "Git サーバーが未接続です"
+        AppLanguage.KOREAN -> "Git 서버가 연결되지 않았습니다"
+    }
+
+    val telegramBuildOff: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "从聊天启动构建已关闭"
+        AppLanguage.ENGLISH -> "Builds from chat are turned off"
+        AppLanguage.ARABIC -> "البناء من المحادثة متوقف"
+        AppLanguage.PORTUGUESE -> "Builds pelo chat estão desativados"
+        AppLanguage.SPANISH -> "Las compilaciones desde el chat están desactivadas"
+        AppLanguage.FRENCH -> "Les builds depuis le chat sont désactivés"
+        AppLanguage.GERMAN -> "Builds aus dem Chat sind aus"
+        AppLanguage.RUSSIAN -> "Сборки из чата отключены"
+        AppLanguage.JAPANESE -> "チャットからのビルドは無効です"
+        AppLanguage.KOREAN -> "채팅에서의 빌드가 꺼져 있습니다"
+    }
+
+    val telegramBuildUnsupported: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此服务器不支持从 API 启动构建"
+        AppLanguage.ENGLISH -> "This server cannot start builds through its API"
+        AppLanguage.ARABIC -> "لا يمكن لهذا الخادم بدء البناء عبر واجهته"
+        AppLanguage.PORTUGUESE -> "Este servidor não inicia builds pela API"
+        AppLanguage.SPANISH -> "Este servidor no inicia compilaciones por la API"
+        AppLanguage.FRENCH -> "Ce serveur ne lance pas de build via son API"
+        AppLanguage.GERMAN -> "Dieser Server kann Builds nicht per API starten"
+        AppLanguage.RUSSIAN -> "Этот сервер не запускает сборки через API"
+        AppLanguage.JAPANESE -> "このサーバーは API からビルドを開始できません"
+        AppLanguage.KOREAN -> "이 서버는 API로 빌드를 시작할 수 없습니다"
+    }
+
+    val telegramNoToken: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "未保存访问令牌"
+        AppLanguage.ENGLISH -> "No access token is saved"
+        AppLanguage.ARABIC -> "لا يوجد رمز وصول محفوظ"
+        AppLanguage.PORTUGUESE -> "Nenhum token de acesso salvo"
+        AppLanguage.SPANISH -> "No hay token de acceso guardado"
+        AppLanguage.FRENCH -> "Aucun jeton d'accès enregistré"
+        AppLanguage.GERMAN -> "Kein Zugriffstoken gespeichert"
+        AppLanguage.RUSSIAN -> "Токен доступа не сохранён"
+        AppLanguage.JAPANESE -> "アクセストークンが保存されていません"
+        AppLanguage.KOREAN -> "저장된 액세스 토큰이 없습니다"
+    }
+
+    val telegramNoAccess: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "令牌没有访问权限"
+        AppLanguage.ENGLISH -> "The token has no access"
+        AppLanguage.ARABIC -> "لا يملك الرمز صلاحية الوصول"
+        AppLanguage.PORTUGUESE -> "O token não tem acesso"
+        AppLanguage.SPANISH -> "El token no tiene acceso"
+        AppLanguage.FRENCH -> "Le jeton n'a pas d'accès"
+        AppLanguage.GERMAN -> "Das Token hat keinen Zugriff"
+        AppLanguage.RUSSIAN -> "У токена нет доступа"
+        AppLanguage.JAPANESE -> "トークンにアクセス権がありません"
+        AppLanguage.KOREAN -> "토큰에 접근 권한이 없습니다"
+    }
+
+    val telegramNetworkError: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "网络错误，请重试"
+        AppLanguage.ENGLISH -> "Network error. Try again."
+        AppLanguage.ARABIC -> "خطأ في الشبكة. حاول مجددًا."
+        AppLanguage.PORTUGUESE -> "Erro de rede. Tente de novo."
+        AppLanguage.SPANISH -> "Error de red. Inténtalo de nuevo."
+        AppLanguage.FRENCH -> "Erreur réseau. Réessayez."
+        AppLanguage.GERMAN -> "Netzwerkfehler. Versuche es erneut."
+        AppLanguage.RUSSIAN -> "Сетевая ошибка. Повторите."
+        AppLanguage.JAPANESE -> "ネットワークエラーです。再試行してください。"
+        AppLanguage.KOREAN -> "네트워크 오류입니다. 다시 시도하세요."
+    }
+
+    fun telegramCodeActive(code: String, minutes: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "代码 $code，$minutes 分钟内有效"
+        AppLanguage.ENGLISH -> "Code $code, valid for $minutes minutes"
+        AppLanguage.ARABIC -> "الرمز $code صالح لمدة $minutes دقيقة"
+        AppLanguage.PORTUGUESE -> "Código $code, válido por $minutes minutos"
+        AppLanguage.SPANISH -> "Código $code, válido $minutes minutos"
+        AppLanguage.FRENCH -> "Code $code, valable $minutes minutes"
+        AppLanguage.GERMAN -> "Code $code, $minutes Minuten gültig"
+        AppLanguage.RUSSIAN -> "Код $code, действует $minutes мин."
+        AppLanguage.JAPANESE -> "コード $code（$minutes 分間有効）"
+        AppLanguage.KOREAN -> "코드 $code ($minutes분 유효)"
+    }
+
+    fun telegramConnected(username: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已连接：@$username"
+        AppLanguage.ENGLISH -> "Connected as @$username"
+        AppLanguage.ARABIC -> "متصل باسم @$username"
+        AppLanguage.PORTUGUESE -> "Conectado como @$username"
+        AppLanguage.SPANISH -> "Conectado como @$username"
+        AppLanguage.FRENCH -> "Connecté en tant que @$username"
+        AppLanguage.GERMAN -> "Verbunden als @$username"
+        AppLanguage.RUSSIAN -> "Подключено как @$username"
+        AppLanguage.JAPANESE -> "@$username として接続しました"
+        AppLanguage.KOREAN -> "@$username(으)로 연결되었습니다"
+    }
+
+    fun telegramHelp(prefix: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "${prefix}Sherwood Studio 命令中心：
+/status 提供商、账户、仓库
+/repos 仓库列表
+/repo owner/name 选择仓库
+/runs [分支] 最近构建
+/build 分支 [工作流] 启动构建
+/vault 最近产物
+/apk 最新 APK 文件
+/version 应用版本
+/help 本列表"
+        AppLanguage.ENGLISH -> "${prefix}Sherwood Studio command centre:
+/status provider, account, repository
+/repos repositories
+/repo owner/name select repository
+/runs [branch] recent runs
+/build <branch> [workflow] start a build
+/vault recent artifacts
+/apk latest APK as a file
+/version app version
+/help this list"
+        AppLanguage.ARABIC -> "${prefix}مركز أوامر Sherwood Studio:
+/status المزوّد والحساب والمستودع
+/repos المستودعات
+/repo owner/name اختيار مستودع
+/runs [فرع] أحدث عمليات البناء
+/build فرع [سير العمل] بدء بناء
+/vault أحدث الملفات
+/apk أحدث APK كملف
+/version إصدار التطبيق
+/help هذه القائمة"
+        AppLanguage.PORTUGUESE -> "${prefix}Central de comandos do Sherwood Studio:
+/status provedor, conta, repositório
+/repos repositórios
+/repo owner/name selecionar repositório
+/runs [branch] builds recentes
+/build <branch> [workflow] iniciar um build
+/vault artefatos recentes
+/apk APK mais recente como arquivo
+/version versão do app
+/help esta lista"
+        AppLanguage.SPANISH -> "${prefix}Centro de comandos de Sherwood Studio:
+/status proveedor, cuenta, repositorio
+/repos repositorios
+/repo owner/name seleccionar repositorio
+/runs [rama] compilaciones recientes
+/build <rama> [workflow] iniciar compilación
+/vault artefactos recientes
+/apk APK más reciente como archivo
+/version versión de la app
+/help esta lista"
+        AppLanguage.FRENCH -> "${prefix}Centre de commandes Sherwood Studio :
+/status fournisseur, compte, dépôt
+/repos dépôts
+/repo owner/name choisir un dépôt
+/runs [branche] builds récents
+/build <branche> [workflow] lancer un build
+/vault artefacts récents
+/apk dernier APK en fichier
+/version version de l'app
+/help cette liste"
+        AppLanguage.GERMAN -> "${prefix}Sherwood-Studio-Kommandozentrale:
+/status Anbieter, Konto, Repository
+/repos Repositories
+/repo owner/name Repository wählen
+/runs [Branch] letzte Builds
+/build <Branch> [Workflow] Build starten
+/vault letzte Artefakte
+/apk neueste APK als Datei
+/version App-Version
+/help diese Liste"
+        AppLanguage.RUSSIAN -> "${prefix}Центр команд Sherwood Studio:
+/status провайдер, аккаунт, репозиторий
+/repos репозитории
+/repo owner/name выбрать репозиторий
+/runs [ветка] последние сборки
+/build <ветка> [workflow] запустить сборку
+/vault последние артефакты
+/apk последний APK файлом
+/version версия приложения
+/help этот список"
+        AppLanguage.JAPANESE -> "${prefix}Sherwood Studio コマンドセンター:
+/status プロバイダー・アカウント・リポジトリ
+/repos リポジトリ一覧
+/repo owner/name リポジトリ選択
+/runs [ブランチ] 最近の実行
+/build <ブランチ> [ワークフロー] ビルド開始
+/vault 最近の成果物
+/apk 最新 APK をファイルで取得
+/version アプリのバージョン
+/help この一覧"
+        AppLanguage.KOREAN -> "${prefix}Sherwood Studio 명령 센터:
+/status 공급자, 계정, 저장소
+/repos 저장소 목록
+/repo owner/name 저장소 선택
+/runs [브랜치] 최근 실행
+/build <브랜치> [워크플로] 빌드 시작
+/vault 최근 산출물
+/apk 최신 APK 파일
+/version 앱 버전
+/help 이 목록"
+    }
+
+    fun telegramUnknownCommand(command: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "未知命令：/$command"
+        AppLanguage.ENGLISH -> "Unknown command: /$command"
+        AppLanguage.ARABIC -> "أمر غير معروف: /$command"
+        AppLanguage.PORTUGUESE -> "Comando desconhecido: /$command"
+        AppLanguage.SPANISH -> "Comando desconocido: /$command"
+        AppLanguage.FRENCH -> "Commande inconnue : /$command"
+        AppLanguage.GERMAN -> "Unbekannter Befehl: /$command"
+        AppLanguage.RUSSIAN -> "Неизвестная команда: /$command"
+        AppLanguage.JAPANESE -> "不明なコマンド: /$command"
+        AppLanguage.KOREAN -> "알 수 없는 명령: /$command"
+    }
+
+    fun telegramBuildChooseWorkflow(workflows: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请指定工作流：$workflows"
+        AppLanguage.ENGLISH -> "Choose a workflow: $workflows"
+        AppLanguage.ARABIC -> "اختر سير عمل: $workflows"
+        AppLanguage.PORTUGUESE -> "Escolha um workflow: $workflows"
+        AppLanguage.SPANISH -> "Elige un flujo: $workflows"
+        AppLanguage.FRENCH -> "Choisissez un workflow : $workflows"
+        AppLanguage.GERMAN -> "Wähle einen Workflow: $workflows"
+        AppLanguage.RUSSIAN -> "Выберите workflow: $workflows"
+        AppLanguage.JAPANESE -> "ワークフローを指定してください: $workflows"
+        AppLanguage.KOREAN -> "워크플로를 지정하세요: $workflows"
+    }
+
+    fun telegramBuildStarted(branch: String, workflow: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已启动构建：$workflow @ $branch"
+        AppLanguage.ENGLISH -> "Build started: $workflow @ $branch"
+        AppLanguage.ARABIC -> "بدأ البناء: $workflow @ $branch"
+        AppLanguage.PORTUGUESE -> "Build iniciado: $workflow @ $branch"
+        AppLanguage.SPANISH -> "Compilación iniciada: $workflow @ $branch"
+        AppLanguage.FRENCH -> "Build lancé : $workflow @ $branch"
+        AppLanguage.GERMAN -> "Build gestartet: $workflow @ $branch"
+        AppLanguage.RUSSIAN -> "Сборка запущена: $workflow @ $branch"
+        AppLanguage.JAPANESE -> "ビルドを開始しました: $workflow @ $branch"
+        AppLanguage.KOREAN -> "빌드를 시작했습니다: $workflow @ $branch"
+    }
+
+    fun telegramBuildFailed(reason: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建失败：$reason"
+        AppLanguage.ENGLISH -> "Build failed: $reason"
+        AppLanguage.ARABIC -> "فشل البناء: $reason"
+        AppLanguage.PORTUGUESE -> "O build falhou: $reason"
+        AppLanguage.SPANISH -> "La compilación falló: $reason"
+        AppLanguage.FRENCH -> "Le build a échoué : $reason"
+        AppLanguage.GERMAN -> "Build fehlgeschlagen: $reason"
+        AppLanguage.RUSSIAN -> "Сборка не удалась: $reason"
+        AppLanguage.JAPANESE -> "ビルドに失敗しました: $reason"
+        AppLanguage.KOREAN -> "빌드에 실패했습니다: $reason"
+    }
+
+    fun telegramNotifyBuild(repository: String, branch: String, conclusion: String, runId: Long): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "构建结束：$repository · $branch · $conclusion (#$runId)"
+        AppLanguage.ENGLISH -> "Build finished: $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.ARABIC -> "انتهى البناء: $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.PORTUGUESE -> "Build concluído: $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.SPANISH -> "Compilación terminada: $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.FRENCH -> "Build terminé : $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.GERMAN -> "Build beendet: $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.RUSSIAN -> "Сборка завершена: $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.JAPANESE -> "ビルド終了: $repository · $branch · $conclusion (#$runId)"
+        AppLanguage.KOREAN -> "빌드 완료: $repository · $branch · $conclusion (#$runId)"
+    }
+
+    fun telegramNotifyArtifacts(count: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已导入 $count 个产物到 Studio"
+        AppLanguage.ENGLISH -> "$count artifacts imported into the Studio"
+        AppLanguage.ARABIC -> "تم استيراد $count ملفًا إلى الاستوديو"
+        AppLanguage.PORTUGUESE -> "$count artefatos importados para o Studio"
+        AppLanguage.SPANISH -> "$count artefactos importados al Studio"
+        AppLanguage.FRENCH -> "$count artefacts importés dans le Studio"
+        AppLanguage.GERMAN -> "$count Artefakte im Studio importiert"
+        AppLanguage.RUSSIAN -> "Импортировано артефактов: $count"
+        AppLanguage.JAPANESE -> "$count 件の成果物を Studio に取り込みました"
+        AppLanguage.KOREAN -> "$count개 산출물을 Studio로 가져왔습니다"
+    }
+
+
+    // ---------------------------------------------- Studio: diff size guard
+
+    val studioDiffTooLarge: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "文件太大，无法显示文本差异"
+        AppLanguage.ENGLISH -> "This file is too large to diff as text"
+        AppLanguage.ARABIC -> "الملف كبير جدًا لعرض الفرق النصي"
+        AppLanguage.PORTUGUESE -> "O arquivo é grande demais para diff de texto"
+        AppLanguage.SPANISH -> "El archivo es demasiado grande para mostrar el diff"
+        AppLanguage.FRENCH -> "Fichier trop volumineux pour un diff texte"
+        AppLanguage.GERMAN -> "Datei zu groß für einen Text-Diff"
+        AppLanguage.RUSSIAN -> "Файл слишком велик для текстового diff"
+        AppLanguage.JAPANESE -> "ファイルが大きすぎるため差分を表示できません"
+        AppLanguage.KOREAN -> "파일이 너무 커서 텍스트 diff를 표시할 수 없습니다"
+    }
+
 }

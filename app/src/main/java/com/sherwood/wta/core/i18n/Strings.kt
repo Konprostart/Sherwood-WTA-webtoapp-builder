@@ -5438,6 +5438,7 @@ object Strings {
     fun studioSignedFrom(sha: String): String = StringsE.studioSignedFrom(sha)
     val studioSigner: String get() = StringsE.studioSigner
     val studioDiff: String get() = StringsE.studioDiff
+    val studioDiffTooLarge: String get() = StringsE.studioDiffTooLarge
     val studioNoProject: String get() = StringsE.studioNoProject
     val studioWorkspace: String get() = StringsE.studioWorkspace
     val studioWorkspaceDesc: String get() = StringsE.studioWorkspaceDesc
@@ -5541,6 +5542,51 @@ object Strings {
     val studioLicenseNote: String get() = StringsE.studioLicenseNote
     val studioLicenseJgit: String get() = StringsE.studioLicenseJgit
 
+
+    // ---------------------------------------------- Studio: Telegram command centre
+    val telegramBot: String get() = StringsE.telegramBot
+    val telegramDesc: String get() = StringsE.telegramDesc
+    val telegramEnable: String get() = StringsE.telegramEnable
+    val telegramEnableDesc: String get() = StringsE.telegramEnableDesc
+    val telegramToken: String get() = StringsE.telegramToken
+    val telegramTokenHint: String get() = StringsE.telegramTokenHint
+    val telegramTokenSaved: String get() = StringsE.telegramTokenSaved
+    val telegramTokenInvalid: String get() = StringsE.telegramTokenInvalid
+    val telegramTokenMissing: String get() = StringsE.telegramTokenMissing
+    val telegramPairing: String get() = StringsE.telegramPairing
+    val telegramPairingDesc: String get() = StringsE.telegramPairingDesc
+    val telegramCreateCode: String get() = StringsE.telegramCreateCode
+    val telegramPairedChats: String get() = StringsE.telegramPairedChats
+    val telegramNoPairedChats: String get() = StringsE.telegramNoPairedChats
+    val telegramClearPaired: String get() = StringsE.telegramClearPaired
+    val telegramAllowBuilds: String get() = StringsE.telegramAllowBuilds
+    val telegramAllowBuildsDesc: String get() = StringsE.telegramAllowBuildsDesc
+    val telegramTest: String get() = StringsE.telegramTest
+    val telegramTestFailed: String get() = StringsE.telegramTestFailed
+    val telegramServiceRunning: String get() = StringsE.telegramServiceRunning
+    val telegramStop: String get() = StringsE.telegramStop
+    val telegramNotPaired: String get() = StringsE.telegramNotPaired
+    val telegramRateLimited: String get() = StringsE.telegramRateLimited
+    val telegramPairNoCode: String get() = StringsE.telegramPairNoCode
+    val telegramPaired: String get() = StringsE.telegramPaired
+    val telegramBadCode: String get() = StringsE.telegramBadCode
+    val telegramPairExpired: String get() = StringsE.telegramPairExpired
+    val telegramNoRepository: String get() = StringsE.telegramNoRepository
+    val telegramNoProvider: String get() = StringsE.telegramNoProvider
+    val telegramBuildOff: String get() = StringsE.telegramBuildOff
+    val telegramBuildUnsupported: String get() = StringsE.telegramBuildUnsupported
+    val telegramNoToken: String get() = StringsE.telegramNoToken
+    val telegramNoAccess: String get() = StringsE.telegramNoAccess
+    val telegramNetworkError: String get() = StringsE.telegramNetworkError
+    fun telegramCodeActive(code: String, minutes: Int): String = StringsE.telegramCodeActive(code, minutes)
+    fun telegramConnected(username: String): String = StringsE.telegramConnected(username)
+    fun telegramHelp(prefix: String): String = StringsE.telegramHelp(prefix)
+    fun telegramUnknownCommand(command: String): String = StringsE.telegramUnknownCommand(command)
+    fun telegramBuildChooseWorkflow(workflows: String): String = StringsE.telegramBuildChooseWorkflow(workflows)
+    fun telegramBuildStarted(branch: String, workflow: String): String = StringsE.telegramBuildStarted(branch, workflow)
+    fun telegramBuildFailed(reason: String): String = StringsE.telegramBuildFailed(reason)
+    fun telegramNotifyBuild(repository: String, branch: String, conclusion: String, runId: Long): String = StringsE.telegramNotifyBuild(repository, branch, conclusion, runId)
+    fun telegramNotifyArtifacts(count: Int): String = StringsE.telegramNotifyArtifacts(count)
 }
 
 

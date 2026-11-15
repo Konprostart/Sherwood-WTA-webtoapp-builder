@@ -213,7 +213,42 @@ data class GitPipelineRun(
     val createdAt: String?,
     val updatedAt: String?,
     val htmlUrl: String?
-)
+) {
+
+    /**
+     * Whether the run has stopped, whatever vocabulary the host speaks.
+     *
+     * GitHub reports `status = "completed"` with a separate `conclusion`. Gitea and
+     * Forgejo report a single terminal `status` (`success`, `failure`, `cancelled`,
+     * `skipped`, `blocked`) and never say `completed`. Judging terminality by the GitHub
+     * word alone made a Gitea build poll until the deadline and report a timeout for a
+     * run that had already succeeded.
+     */
+    val isTerminal: Boolean
+        get() = conclusion != null || status.lowercase() in TERMINAL_STATUSES
+
+    /** The host's own verdict, normalised to `success` or something else. */
+    val isSuccessful: Boolean
+        get() = (conclusion ?: status).lowercase() == SUCCESS_STATUS
+
+    companion object {
+        private const val SUCCESS_STATUS = "success"
+
+        private val TERMINAL_STATUSES = setOf(
+            "completed",
+            "success",
+            "failure",
+            "failed",
+            "cancelled",
+            "canceled",
+            "skipped",
+            "blocked",
+            "error",
+            "timed_out",
+            "timedout"
+        )
+    }
+}
 
 data class GitRunStep(
     val number: Int,

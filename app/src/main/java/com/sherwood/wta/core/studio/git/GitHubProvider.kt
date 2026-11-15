@@ -7,6 +7,7 @@ import com.sherwood.wta.core.network.NetworkModule
 import com.sherwood.wta.core.studio.EndpointConfig
 import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.GitHubApiClient
+import java.io.File
 
 /**
  * GitHub as a [GitProvider].
@@ -227,11 +228,21 @@ class GitHubProvider(
     override suspend fun downloadArtifact(artifact: GitArtifact): GitResult<ByteArray> =
         api.downloadArtifact(artifact)
 
+    override suspend fun downloadArtifactTo(
+        artifact: GitArtifact,
+        target: File
+    ): GitResult<Unit> = api.downloadArtifactTo(artifact, target)
+
     override suspend fun releases(ref: GitRepoRef, perPage: Int): GitResult<List<GitRelease>> =
         api.listReleases(ref.owner, ref.name, perPage)
 
     override suspend fun downloadReleaseAsset(asset: GitReleaseAsset): GitResult<ByteArray> =
         api.downloadReleaseAsset(asset)
+
+    override suspend fun downloadReleaseAssetTo(
+        asset: GitReleaseAsset,
+        target: File
+    ): GitResult<Unit> = api.downloadReleaseAssetTo(asset, target)
 
     override suspend fun downloadArchive(
         ref: GitRepoRef,

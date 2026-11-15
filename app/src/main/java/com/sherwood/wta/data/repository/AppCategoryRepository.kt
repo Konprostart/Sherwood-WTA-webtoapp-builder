@@ -26,5 +26,10 @@ class AppCategoryRepository(private val categoryDao: AppCategoryDao) {
         categoryDao.deleteById(id)
     }
 
+    /** Deletes the category and detaches its apps atomically. */
+    suspend fun deleteCategoryWithCleanup(id: Long) {
+        categoryDao.deleteCategoryWithCleanup(id)
+    }
+
     suspend fun getCategoryCount(): Int = categoryDao.getCategoryCount()
 }

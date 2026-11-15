@@ -214,6 +214,11 @@ internal class GiteaProvider(
     override suspend fun downloadArtifact(artifact: GitArtifact): GitResult<ByteArray> =
         api.downloadArtifact(artifact)
 
+    override suspend fun downloadArtifactTo(
+        artifact: GitArtifact,
+        target: File
+    ): GitResult<Unit> = api.downloadArtifactTo(artifact, target)
+
     // ----------------------------------------------------------------- releases
 
     override suspend fun releases(ref: GitRepoRef, perPage: Int): GitResult<List<GitRelease>> =
@@ -221,6 +226,11 @@ internal class GiteaProvider(
 
     override suspend fun downloadReleaseAsset(asset: GitReleaseAsset): GitResult<ByteArray> =
         api.downloadReleaseAsset(asset)
+
+    override suspend fun downloadReleaseAssetTo(
+        asset: GitReleaseAsset,
+        target: File
+    ): GitResult<Unit> = api.downloadReleaseAssetTo(asset, target)
 
     // ------------------------------------------------------------------- writes
 

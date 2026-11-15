@@ -1316,7 +1316,10 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_45_46,
                     MIGRATION_46_47
                 )
-                .fallbackToDestructiveMigrationOnDowngrade()
+                // Deliberately NOT fallbackToDestructiveMigrationOnDowngrade(): sideloading
+                // an older build over a newer database used to delete every app, category
+                // and config the user had. Room now refuses to open instead, which is
+                // recoverable; a wiped database is not.
                 .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7)
                 .build()
         }

@@ -4,6 +4,7 @@ import com.sherwood.wta.core.agent.prompt.sections.BehaviorSection
 import com.sherwood.wta.core.agent.prompt.sections.EnvironmentSection
 import com.sherwood.wta.core.agent.prompt.sections.IdentitySection
 import com.sherwood.wta.core.agent.prompt.sections.PlanModeSection
+import com.sherwood.wta.core.agent.prompt.sections.ProfileSection
 import com.sherwood.wta.core.agent.prompt.sections.ProjectFilesSection
 import com.sherwood.wta.core.agent.prompt.sections.ToolUsageSection
 import com.sherwood.wta.core.agent.tool.Tool
@@ -20,7 +21,10 @@ object SystemPromptBuilder {
 
         val planMode: PlanMode? = null,
 
-        val selectedContext: String = ""
+        val selectedContext: String = "",
+
+        /** Addendum from the active agent profile; blank for the default profile. */
+        val profileAddendum: String = ""
     )
 
     data class PlanMode(
@@ -33,6 +37,7 @@ object SystemPromptBuilder {
         val sections = buildList {
             add(IdentitySection.build(lang))
             add(BehaviorSection.build(lang))
+            add(ProfileSection.build(input.profileAddendum))
             add(ToolUsageSection.build(lang, input.tools))
             add(EnvironmentSection.build(lang, input.modelName, input.sessionDir))
             if (input.selectedContext.isNotBlank()) add(input.selectedContext)

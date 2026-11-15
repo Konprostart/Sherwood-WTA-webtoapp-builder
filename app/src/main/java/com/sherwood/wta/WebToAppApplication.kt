@@ -124,6 +124,17 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
             runCatching { HostMcpController.restore(this@WebToAppApplication) }
                 .onFailure { AppLogger.w("Application", "local MCP restore failed: ${it.message}") }
         }
+
+        // The Telegram command centre must survive a process restart: a bot that only
+        // polled while some screen was open would not be reachable from another device.
+        appScope.launch {
+            runCatching {
+                com.sherwood.wta.core.telegram.TelegramBotService
+                    .restoreIfEnabled(this@WebToAppApplication)
+            }.onFailure {
+                AppLogger.w("Application", "Telegram bot restore failed: ${it.message}")
+            }
+        }
     }
 
     override fun onTerminate() {

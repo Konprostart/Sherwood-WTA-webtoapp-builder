@@ -1,6 +1,5 @@
 package com.sherwood.wta.data.repository
 
-import androidx.room.Transaction
 import com.sherwood.wta.data.dao.WebAppDao
 import com.sherwood.wta.data.dao.WebAppStartupCandidate
 import com.sherwood.wta.data.dao.WebAppSummary
@@ -132,11 +131,5 @@ class WebAppRepository(private val webAppDao: WebAppDao) {
     suspend fun setHomeSortOrder(idsInOrder: List<Long>) {
         if (idsInOrder.isEmpty()) return
         webAppDao.setHomeSortOrder(idsInOrder)
-    }
-
-    @Transaction
-    suspend fun deleteCategoryWithCleanup(categoryId: Long, categoryDao: AppCategoryDao) {
-        webAppDao.clearCategoryId(categoryId)
-        categoryDao.deleteById(categoryId)
     }
 }
