@@ -67,7 +67,7 @@ class GiteaCommitWriterTest {
         )
 
         assertThat(result).isInstanceOf(GitResult.Success::class.java)
-        assertThat((result as GitResult.Success).value.commitSha).isEqualTo(NEW_SHA)
+        assertThat((result as GitResult.Success<GitPublishOutcome>).value.commitSha).isEqualTo(NEW_SHA)
 
         val request = server.takeRequest()
         assertThat(request.method).isEqualTo("POST")
@@ -207,7 +207,7 @@ class GiteaCommitWriterTest {
                 )
             )
 
-            val base = writer().baseTree(REF, BASE_SHA) as GitResult.Success
+            val base = writer().baseTree(REF, BASE_SHA) as GitResult.Success<GitBaseTree>
             assertThat(base.value.commitSha).isEqualTo(BASE_SHA)
             assertThat(base.value.treeSha).isEqualTo(TREE_SHA)
             assertThat(base.value.snapshot.entries).hasSize(3)

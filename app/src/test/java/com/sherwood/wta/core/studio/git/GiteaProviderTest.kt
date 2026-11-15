@@ -351,7 +351,7 @@ class GiteaProviderTest {
         // Gitea's own default branch is a server setting; the caller expects `main`.
         assertThat(body).contains("\"default_branch\":\"main\"")
         assertThat(body).contains("\"private\":false")
-        assertThat((created as GitResult.Success).value.defaultBranch).isEqualTo("main")
+        assertThat((created as GitResult.Success<GitRepository>).value.defaultBranch).isEqualTo("main")
     }
 
     @Test
