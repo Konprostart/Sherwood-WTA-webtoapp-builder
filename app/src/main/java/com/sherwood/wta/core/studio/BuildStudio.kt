@@ -482,7 +482,10 @@ class BuildStudio(private val context: Context) {
         }
 
         private fun belongsTo(run: GitPipelineRun, workflow: GitPipeline): Boolean {
-            if (run.workflowId.isNotBlank() && run.workflowId == workflow.id) return true
+            // When the host reports an id on the run, the id is the answer: falling back
+            // to the path there would match a different workflow that shares the file
+            // name in another branch layout.
+            if (run.workflowId.isNotBlank()) return run.workflowId == workflow.id
             val runPath = run.workflowPath?.takeIf { it.isNotBlank() } ?: return false
             val workflowPath = workflow.path.takeIf { it.isNotBlank() } ?: return false
             return runPath == workflowPath

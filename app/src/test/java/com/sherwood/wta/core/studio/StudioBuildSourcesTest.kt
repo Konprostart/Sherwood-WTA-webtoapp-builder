@@ -113,9 +113,9 @@ class StudioBuildSourcesTest {
     @Test
     fun selectsOnlyTheNewRunOfTheDispatchedWorkflow() {
         val candidates = listOf(
-            run(id = 100, workflowId = 1),
-            run(id = 101, workflowId = 2),
-            run(id = 102, workflowId = 1)
+            run(id = 100, workflowId = "1"),
+            run(id = 101, workflowId = "2"),
+            run(id = 102, workflowId = "1")
         )
         // 100 existed before the dispatch; 101 belongs to a different workflow.
         val selected = BuildStudio.selectDispatchedRun(candidates, setOf(100L), workflow("1"))
@@ -124,7 +124,7 @@ class StudioBuildSourcesTest {
 
     @Test
     fun returnsNullWhileTheDispatchedRunIsNotListedYet() {
-        val candidates = listOf(run(id = 100, workflowId = 1))
+        val candidates = listOf(run(id = 100, workflowId = "1"))
         val selected = BuildStudio.selectDispatchedRun(candidates, setOf(100L), workflow("1"))
         assertThat(selected).isNull()
     }
@@ -132,8 +132,8 @@ class StudioBuildSourcesTest {
     @Test
     fun ignoresRunsOfOtherWorkflowsStartedAfterTheDispatch() {
         val candidates = listOf(
-            run(id = 200, workflowId = 9),
-            run(id = 201, workflowId = 9)
+            run(id = 200, workflowId = "9"),
+            run(id = 201, workflowId = "9")
         )
         assertThat(BuildStudio.selectDispatchedRun(candidates, emptySet(), workflow("1")))
             .isNull()

@@ -193,7 +193,7 @@ class GiteaProviderTest {
             json = jsonOf(
                 """{"id":55,"name":"apk","size_in_bytes":10,"expired":false,
                    "archive_download_url":"https://git.example.com/o/r/actions/artifacts/55/zip"}"""
-            )
+            ).asJsonObject
         )
 
         requireNotNull(artifact)
@@ -207,7 +207,7 @@ class GiteaProviderTest {
             apiBase = "https://git.example.com/api/v1",
             owner = "o",
             repo = "r",
-            json = jsonOf("""{"id":1,"name":"x","expired":true}""")
+            json = jsonOf("""{"id":1,"name":"x","expired":true}""").asJsonObject
         )
         requireNotNull(artifact)
         assertThat(artifact.expired).isTrue()
@@ -396,7 +396,7 @@ class GiteaProviderTest {
         .setBody(body)
 
     companion object {
-        private const val TOKEN = "a".repeat(40)
+        private val TOKEN = "a".repeat(40)
         private const val SHA = "0123456789abcdef0123456789abcdef01234567"
     }
 }
