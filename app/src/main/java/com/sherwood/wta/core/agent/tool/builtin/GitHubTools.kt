@@ -9,7 +9,7 @@ import com.sherwood.wta.core.agent.tool.ToolResult
 import com.sherwood.wta.core.frontend.GitHubTokenStore
 import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.GitHubResult
+import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.WorkspaceService
 import kotlinx.coroutines.Dispatchers
@@ -69,9 +69,9 @@ internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection
         return GitHubConnection(false, null, null, repository, endpoints.projectBranch)
     }
     return when (val user = GitHubApiClient(context, endpoints).currentUser()) {
-        is GitHubResult.Success ->
+        is GitResult.Success ->
             GitHubConnection(true, user.value.login, null, repository, endpoints.projectBranch)
-        is GitHubResult.Failure ->
+        is GitResult.Failure ->
             GitHubConnection(
                 hasToken = true,
                 login = null,
@@ -213,7 +213,7 @@ class GitHubListRepositoriesTool : Tool {
 
         val api = GitHubApiClient(ctx.androidContext, EndpointSettingsStore.current(ctx.androidContext))
         return when (val result = api.listRepositories()) {
-            is GitHubResult.Success -> {
+            is GitResult.Success -> {
                 val repos = result.value.filter { includeForks || !it.fork }
                 if (repos.isEmpty()) {
                     ToolResult.ok("The token cannot see any repositories.")
@@ -232,7 +232,7 @@ class GitHubListRepositoriesTool : Tool {
                     ToolResult.ok("${repos.size} repositories:\n$rows$tail")
                 }
             }
-            is GitHubResult.Failure ->
+            is GitResult.Failure ->
                 ToolResult.error(result.message ?: "Could not list repositories (${result.kind}).")
         }
     }

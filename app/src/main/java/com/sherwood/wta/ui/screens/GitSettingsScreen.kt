@@ -46,6 +46,7 @@ import com.sherwood.wta.core.frontend.GitHubRepoFetcher
 import com.sherwood.wta.core.frontend.GitHubTokenFormat
 import com.sherwood.wta.core.frontend.GitHubTokenProbeResult
 import com.sherwood.wta.core.frontend.GitHubTokenStore
+import com.sherwood.wta.core.frontend.TokenProtection
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.design.WtaAlertDialog
 import com.sherwood.wta.ui.design.WtaButton
@@ -73,7 +74,7 @@ fun GitSettingsScreen(
     val uriHandler = LocalUriHandler.current
 
     var hasToken by remember { mutableStateOf(false) }
-    var protection by remember { mutableStateOf(GitHubTokenStore.TokenProtection.NONE) }
+    var protection by remember { mutableStateOf(TokenProtection.NONE) }
     var savedMasked by remember { mutableStateOf<String?>(null) }
     var input by remember { mutableStateOf("") }
     var showToken by remember { mutableStateOf(false) }
@@ -150,7 +151,7 @@ fun GitSettingsScreen(
         scope.launch {
             withContext(Dispatchers.IO) { store.clearToken() }
             hasToken = false
-            protection = GitHubTokenStore.TokenProtection.NONE
+            protection = TokenProtection.NONE
             savedMasked = null
             input = ""
             invalid = false
@@ -207,11 +208,11 @@ fun GitSettingsScreen(
                         WtaSettingRow(
                             title = Strings.gitTokenProtection,
                             subtitle = when (protection) {
-                                GitHubTokenStore.TokenProtection.APP_DERIVED_FALLBACK ->
+                                TokenProtection.APP_DERIVED_FALLBACK ->
                                     Strings.gitTokenProtectionFallback
                                 else -> Strings.gitTokenProtectionKeystore
                             },
-                            tone = if (protection == GitHubTokenStore.TokenProtection.APP_DERIVED_FALLBACK)
+                            tone = if (protection == TokenProtection.APP_DERIVED_FALLBACK)
                                 com.sherwood.wta.ui.design.WtaRowTone.Danger
                             else com.sherwood.wta.ui.design.WtaRowTone.Normal
                         )

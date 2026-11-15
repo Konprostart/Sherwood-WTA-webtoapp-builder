@@ -41,7 +41,7 @@ import com.sherwood.wta.core.studio.GitHubBranch
 import com.sherwood.wta.core.studio.GitHubCommitSummary
 import com.sherwood.wta.core.studio.GitHubOAuthClient
 import com.sherwood.wta.core.studio.GitHubRepository
-import com.sherwood.wta.core.studio.GitHubResult
+import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.WorkspaceService
 import com.sherwood.wta.core.studio.WorkspaceStatus
@@ -110,11 +110,13 @@ internal fun StudioReposTab(
 
     suspend fun loadRepositories() {
         val user = api.currentUser()
-        if (user is GitHubResult.Success) connectedLogin = user.value.login
+        if (user is GitResult.Success) connectedLogin = user.value.login
         when (val result = api.listRepositories()) {
-            is GitHubResult.Success -> repos = result.value
-            is GitHubResult.Failure -> {
-                if (!tokenStore.hasToken() || result.kind == com.sherwood.wta.core.studio.GitHubFailureKind.UNAUTHORIZED) {
+            is GitResult.Success -> repos = result.value
+            is GitResult.Failure -> {
+                if (!tokenStore.hasToken() ||
+                    result.kind == com.sherwood.wta.core.studio.git.GitFailureKind.UNAUTHORIZED
+                ) {
                     connectedLogin = null
                 }
                 snackbarHostState.showSnackbar(
@@ -817,13 +819,13 @@ internal fun StudioReposTab(
                                     draft = prDraft
                                 )
                             ) {
-                                is GitHubResult.Success -> {
+                                is GitResult.Success -> {
                                     showNewPr = false
                                     snackbarHostState.showSnackbar(
                                         Strings.studioPrCreated(result.value.number)
                                     )
                                 }
-                                is GitHubResult.Failure -> snackbarHostState.showSnackbar(
+                                is GitResult.Failure -> snackbarHostState.showSnackbar(
                                     result.message ?: Strings.studioConnectFailed
                                 )
                             }

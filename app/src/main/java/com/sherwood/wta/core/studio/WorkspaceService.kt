@@ -1,7 +1,6 @@
 package com.sherwood.wta.core.studio
 
 import android.content.Context
-import com.sherwood.wta.core.frontend.GitHubFetchResult
 import com.sherwood.wta.core.frontend.GitHubRepoFetcher
 import com.sherwood.wta.core.frontend.RepoBridgeChangeSet
 import com.sherwood.wta.core.frontend.RepoBridgeCommitFailureKind
@@ -11,6 +10,17 @@ import com.sherwood.wta.core.frontend.RepoBridgeMetadataStore
 import com.sherwood.wta.core.frontend.RepoBridgePrepareResult
 import com.sherwood.wta.core.frontend.RepoBridgeReview
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.core.studio.git.GitBranch
+import com.sherwood.wta.core.studio.git.GitCommitSummary
+import com.sherwood.wta.core.studio.git.GitFailureKind
+import com.sherwood.wta.core.studio.git.GitMergeResult
+import com.sherwood.wta.core.studio.git.GitProvider
+import com.sherwood.wta.core.studio.git.GitProviderId
+import com.sherwood.wta.core.studio.git.GitProviderLookup
+import com.sherwood.wta.core.studio.git.GitProviderRegistry
+import com.sherwood.wta.core.studio.git.GitProviderUnavailableReason
+import com.sherwood.wta.core.studio.git.GitRepoRef
+import com.sherwood.wta.core.studio.git.GitResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -62,18 +72,22 @@ data class FileDiff(
  * symbolic-link semantics that Android's app sandbox does not provide; the
  * usually suggested workaround is raising `minSdk`, which this project refuses
  * because it would drop Android 6/7 users. The alternative already shipped here
- * is the GitHub Git Data API: objects are built server-side and the working copy
+ * is the host's server-side git API: objects are built server-side and the working copy
  * is a plain directory diffed against a recorded base tree. Branch, checkout,
- * merge, history and diff therefore go through the REST API, not through JGit,
+ * merge, history and diff therefore go through the provider, not through JGit,
  * and `minSdk` stays 24.
  *
  * Checkout/pull are destructive to the working copy by nature, so both require a
  * clean working copy first (no local changes that would be silently overwritten)
  * and both keep a backup until the copy completes.
+ *
+ * Import still runs through [GitHubRepoFetcher]: the working copy's on-disk provenance
+ * (`repo_bridge.json`) is written by the importer, and generalising that — including the
+ * provider field and its v1→v2 migration — is the next step, not this one. The branch
+ * operations above already go through the provider interface.
  */
 class WorkspaceService(private val context: Context) {
 
-    private val api = GitHubApiClient(context)
     private val fetcher = GitHubRepoFetcher(context)
     private val metadataStore = RepoBridgeMetadataStore()
 
@@ -110,8 +124,10 @@ class WorkspaceService(private val context: Context) {
     }
 
     suspend fun status(projectDir: File): Result<WorkspaceStatus> = withContext(Dispatchers.IO) {
-        val metadata = metadataStore.read(projectDir)
-            ?: return@withContext Result.failure(IllegalStateException("Project is not linked to GitHub"))
+        metadataStore.read(projectDir)
+            ?: return@withContext Result.failure(
+                IllegalStateException("Project is not linked to a git host")
+            )
         try {
             when (val prepared = RepoBridgeCommitUseCase(context, projectDir).prepare()) {
                 is RepoBridgePrepareResult.Ready -> Result.success(
@@ -134,10 +150,13 @@ class WorkspaceService(private val context: Context) {
         }
     }
 
-    suspend fun branches(owner: String, repo: String): List<GitHubBranch> =
-        when (val result = api.listBranches(owner, repo)) {
-            is GitHubResult.Success -> result.value
-            is GitHubResult.Failure -> throw WorkspaceException.GitHub(result.kind, result.message)
+    suspend fun branches(owner: String, repo: String): List<GitBranch> =
+        when (val located = locate(owner, repo)) {
+            is Located.Failure -> throw located.error
+            is Located.Ok -> when (val result = located.provider.branches(located.ref)) {
+                is GitResult.Success -> result.value
+                is GitResult.Failure -> throw WorkspaceException.Provider(result.kind, result.message)
+            }
         }
 
     suspend fun history(
@@ -145,9 +164,12 @@ class WorkspaceService(private val context: Context) {
         repo: String,
         branch: String?,
         perPage: Int = 50
-    ): List<GitHubCommitSummary> = when (val result = api.listCommits(owner, repo, branch, perPage)) {
-        is GitHubResult.Success -> result.value
-        is GitHubResult.Failure -> throw WorkspaceException.GitHub(result.kind, result.message)
+    ): List<GitCommitSummary> = when (val located = locate(owner, repo)) {
+        is Located.Failure -> throw located.error
+        is Located.Ok -> when (val result = located.provider.commits(located.ref, branch, perPage)) {
+            is GitResult.Success -> result.value
+            is GitResult.Failure -> throw WorkspaceException.Provider(result.kind, result.message)
+        }
     }
 
     suspend fun createBranch(
@@ -155,21 +177,24 @@ class WorkspaceService(private val context: Context) {
         repo: String,
         name: String,
         fromBranch: String
-    ): Result<GitHubBranch> = withContext(Dispatchers.IO) {
+    ): Result<GitBranch> = withContext(Dispatchers.IO) {
         if (!isValidBranchName(name)) {
             return@withContext Result.failure(IllegalArgumentException("Invalid branch name"))
         }
-        when (val source = api.getBranch(owner, repo, fromBranch)) {
-            is GitHubResult.Failure -> Result.failure(
-                WorkspaceException.GitHub(source.kind, source.message)
+        val located = locate(owner, repo)
+        if (located is Located.Failure) return@withContext Result.failure(located.error)
+        val ok = located as Located.Ok
+        when (val source = ok.provider.branch(ok.ref, fromBranch)) {
+            is GitResult.Failure -> Result.failure(
+                WorkspaceException.Provider(source.kind, source.message)
             )
-            is GitHubResult.Success -> {
-                when (val created = api.createBranch(owner, repo, name, source.value.sha)) {
-                    is GitHubResult.Success -> Result.success(created.value)
-                    is GitHubResult.Failure -> Result.failure(
-                        WorkspaceException.GitHub(created.kind, created.message)
-                    )
-                }
+            is GitResult.Success -> when (
+                val created = ok.provider.createBranch(ok.ref, name, source.value.sha)
+            ) {
+                is GitResult.Success -> Result.success(created.value)
+                is GitResult.Failure -> Result.failure(
+                    WorkspaceException.Provider(created.kind, created.message)
+                )
             }
         }
     }
@@ -180,11 +205,14 @@ class WorkspaceService(private val context: Context) {
         base: String,
         head: String,
         message: String? = null
-    ): Result<GitHubMergeResult> = withContext(Dispatchers.IO) {
-        when (val result = api.mergeBranches(owner, repo, base, head, message)) {
-            is GitHubResult.Success -> Result.success(result.value)
-            is GitHubResult.Failure -> Result.failure(
-                WorkspaceException.GitHub(result.kind, result.message)
+    ): Result<GitMergeResult> = withContext(Dispatchers.IO) {
+        val located = locate(owner, repo)
+        if (located is Located.Failure) return@withContext Result.failure(located.error)
+        val ok = located as Located.Ok
+        when (val result = ok.provider.mergeBranches(ok.ref, base, head, message)) {
+            is GitResult.Success -> Result.success(result.value)
+            is GitResult.Failure -> Result.failure(
+                WorkspaceException.Provider(result.kind, result.message)
             )
         }
     }
@@ -197,10 +225,13 @@ class WorkspaceService(private val context: Context) {
     suspend fun fetch(projectDir: File): Result<RemoteHead> = withContext(Dispatchers.IO) {
         val metadata = metadataStore.read(projectDir)
             ?: return@withContext Result.failure(
-                IllegalStateException("Project is not linked to GitHub")
+                IllegalStateException("Project is not linked to a git host")
             )
-        when (val branch = api.getBranch(metadata.owner, metadata.repo, metadata.ref)) {
-            is GitHubResult.Success -> Result.success(
+        val located = locate(metadata.owner, metadata.repo)
+        if (located is Located.Failure) return@withContext Result.failure(located.error)
+        val ok = located as Located.Ok
+        when (val branch = ok.provider.branch(ok.ref, metadata.ref)) {
+            is GitResult.Success -> Result.success(
                 RemoteHead(
                     branch = metadata.ref,
                     sha = branch.value.sha,
@@ -208,8 +239,8 @@ class WorkspaceService(private val context: Context) {
                     remoteMoved = metadata.baseSha != null && metadata.baseSha != branch.value.sha
                 )
             )
-            is GitHubResult.Failure -> Result.failure(
-                WorkspaceException.GitHub(branch.kind, branch.message)
+            is GitResult.Failure -> Result.failure(
+                WorkspaceException.Provider(branch.kind, branch.message)
             )
         }
     }
@@ -227,7 +258,7 @@ class WorkspaceService(private val context: Context) {
     /** Pull = move the working copy to the remote head of the branch it already tracks. */
     suspend fun pull(projectDir: File): Result<CheckoutResult> {
         val metadata = metadataStore.read(projectDir)
-            ?: return Result.failure(IllegalStateException("Project is not linked to GitHub"))
+            ?: return Result.failure(IllegalStateException("Project is not linked to a git host"))
         return checkout(projectDir, metadata.ref)
     }
 
@@ -242,7 +273,7 @@ class WorkspaceService(private val context: Context) {
         withContext(Dispatchers.IO) {
             val metadata = metadataStore.read(projectDir)
                 ?: return@withContext Result.failure(
-                    IllegalStateException("Project is not linked to GitHub")
+                    IllegalStateException("Project is not linked to a git host")
                 )
             if (!projectDir.isDirectory) {
                 return@withContext Result.failure(IllegalStateException("Project directory is missing"))
@@ -299,7 +330,7 @@ class WorkspaceService(private val context: Context) {
     suspend fun diff(projectDir: File, repoPath: String): Result<FileDiff> =
         withContext(Dispatchers.IO) {
             val metadata = metadataStore.read(projectDir)
-                ?: return@withContext Result.failure(IllegalStateException("Project is not linked to GitHub"))
+                ?: return@withContext Result.failure(IllegalStateException("Project is not linked to a git host"))
             val baseSha = metadata.baseSha
                 ?: return@withContext Result.failure(IllegalStateException("No base commit recorded"))
             val localRelative = normalizeRepoPath(repoPath) ?: return@withContext Result.failure(
@@ -309,14 +340,17 @@ class WorkspaceService(private val context: Context) {
             if (!isInside(projectDir, localFile)) {
                 return@withContext Result.failure(WorkspaceException.InvalidPath)
             }
+            val located = locate(metadata.owner, metadata.repo)
+            if (located is Located.Failure) return@withContext Result.failure(located.error)
+            val ok = located as Located.Ok
             val remotePath = listOfNotNull(metadata.subPath, localRelative).joinToString("/")
-            val remote = api.getFileContent(metadata.owner, metadata.repo, remotePath, baseSha)
+            val remote = ok.provider.fileContent(ok.ref, remotePath, baseSha)
             val remoteBytes = when (remote) {
-                is GitHubResult.Success -> remote.value.content
-                is GitHubResult.Failure -> {
-                    if (remote.kind != GitHubFailureKind.NOT_FOUND) {
+                is GitResult.Success -> remote.value.content
+                is GitResult.Failure -> {
+                    if (remote.kind != GitFailureKind.NOT_FOUND) {
                         return@withContext Result.failure(
-                            WorkspaceException.GitHub(remote.kind, remote.message)
+                            WorkspaceException.Provider(remote.kind, remote.message)
                         )
                     }
                     null
@@ -348,6 +382,23 @@ class WorkspaceService(private val context: Context) {
                 )
             )
         }
+
+    /** The active provider plus a validated repository identity, or the reason there is none. */
+    private sealed class Located {
+        data class Ok(val provider: GitProvider, val ref: GitRepoRef) : Located()
+        data class Failure(val error: WorkspaceException) : Located()
+    }
+
+    private fun locate(owner: String, repo: String): Located {
+        val candidate = GitRepoRef.of(owner, repo)
+            ?: return Located.Failure(WorkspaceException.InvalidRepository("$owner/$repo"))
+        return when (val lookup = GitProviderRegistry.active(context)) {
+            is GitProviderLookup.Available -> Located.Ok(lookup.provider, candidate)
+            is GitProviderLookup.Unavailable -> Located.Failure(
+                WorkspaceException.UnavailableProvider(lookup.id, lookup.reason)
+            )
+        }
+    }
 
     private fun replaceWorkingCopy(target: File, source: File) {
         require(target.isDirectory) { "Target is not a directory" }
@@ -479,7 +530,17 @@ sealed class WorkspaceException(message: String?) : Exception(message) {
     data class CleanRequired(val changed: Int) :
         WorkspaceException("Working copy has $changed uncommitted changes")
 
-    data class GitHub(val kind: GitHubFailureKind, val detail: String?) :
+    /** The owner/repository pair is not a valid repository identity. */
+    data class InvalidRepository(val value: String) :
+        WorkspaceException("Not a repository: $value")
+
+    /** No provider is configured for this operation; the UI explains [reason]. */
+    data class UnavailableProvider(
+        val id: GitProviderId,
+        val reason: GitProviderUnavailableReason
+    ) : WorkspaceException("Provider $id is unavailable: $reason")
+
+    data class Provider(val kind: GitFailureKind, val detail: String?) :
         WorkspaceException(detail ?: kind.name)
 
     data class Commit(val kind: RepoBridgeCommitFailureKind, val detail: String?) :

@@ -86,7 +86,7 @@ data class GitTreeSnapshot(val entries: List<GitTreeEntry>, val truncated: Boole
  */
 class GitDataApiClient(
     context: Context,
-    private val tokenProvider: GitHubTokenProvider = GitHubTokenStore(context),
+    private val tokenProvider: GitTokenProvider = GitHubTokenStore(context),
     httpClient: OkHttpClient = NetworkModule.downloadClient,
     apiBaseUrl: String = DEFAULT_API_BASE_URL,
     private val urlGuard: (String) -> Unit = { GitHubUrlPolicy.requireHttps(it) }

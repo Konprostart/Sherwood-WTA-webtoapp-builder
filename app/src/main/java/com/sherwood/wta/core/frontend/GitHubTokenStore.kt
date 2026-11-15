@@ -1,13 +1,11 @@
 package com.sherwood.wta.core.frontend
 
 import android.content.Context
-import android.util.Base64
-import com.sherwood.wta.core.crypto.EnhancedCrypto
 import com.sherwood.wta.core.logging.AppLogger
 import java.nio.charset.StandardCharsets
 
 /** Supplies the GitHub PAT for a request. Returns null when no token is configured. */
-fun interface GitHubTokenProvider {
+fun interface GitTokenProvider {
     fun currentToken(): String?
 }
 
@@ -50,8 +48,13 @@ object GitHubTokenFormat {
  * The ciphertext lives in a dedicated SharedPreferences file (never Room), and the
  * plaintext is only materialised for the duration of a request. Deliberately no
  * token value is ever passed to [AppLogger].
+ *
+ * The GitHub slot is the one credential that predates the multi-provider Studio, and it
+ * keeps its storage key so an existing installation keeps working without a migration.
+ * [com.sherwood.wta.core.studio.git.GitCredentialStore] delegates here for GitHub
+ * instead of keeping a second copy of the same token.
  */
-class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
+class GitHubTokenStore(private val context: Context) : GitTokenProvider {
 
     private val prefs by lazy {
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -59,7 +62,8 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
 
     override fun currentToken(): String? {
         val stored = prefs.getString(KEY_TOKEN, null) ?: return null
-        val plaintext = runCatching { decrypt(stored) }.getOrNull()
+        val plaintext = runCatching { TokenCipher.decrypt(context, stored, ASSOCIATED_DATA) }
+            .getOrNull()
         if (plaintext == null) {
             AppLogger.w(TAG, "Stored GitHub token could not be decrypted")
             return null
@@ -77,7 +81,7 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
             return Result.failure(IllegalArgumentException("Unsupported GitHub token format"))
         }
         val encrypted = try {
-            encrypt(token)
+            TokenCipher.encrypt(context, token, ASSOCIATED_DATA)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Token could not be encrypted", e)
             return Result.failure(e)
@@ -96,85 +100,14 @@ class GitHubTokenStore(private val context: Context) : GitHubTokenProvider {
 
     fun hasToken(): Boolean = prefs.contains(KEY_TOKEN)
 
-    /**
-     * How the stored token is protected at rest.
-     *
-     * [TokenProtection.NONE] — no token stored.
-     * [TokenProtection.ANDROID_KEYSTORE] — AES-GCM with a key the Android Keystore
-     *   owns; the key material cannot be extracted from the device.
-     * [TokenProtection.APP_DERIVED_FALLBACK] — the Keystore master key was
-     *   unavailable, so the key is derived from the package name plus the APK
-     *   signing certificate. That certificate is public (anyone holding the APK can
-     *   read it), so this is obfuscation, not secret-key encryption: it still
-     *   protects against accidental plaintext exposure in a backup or cloud sync,
-     *   but not against an attacker who reads the app's private storage.
-     *
-     * The UI surfaces this so a degraded device is never silently presented as
-     * hardware-protected. Nothing here weakens the storage path.
-     */
-    enum class TokenProtection { NONE, ANDROID_KEYSTORE, APP_DERIVED_FALLBACK }
-
-    fun protection(): TokenProtection {
-        val stored = prefs.getString(KEY_TOKEN, null) ?: return TokenProtection.NONE
-        return if (stored.startsWith(FALLBACK_PREFIX)) TokenProtection.APP_DERIVED_FALLBACK
-        else TokenProtection.ANDROID_KEYSTORE
-    }
-
-    private fun encrypt(plaintext: String): String {
-        val masterKey = EnhancedCrypto.getOrCreateMasterKey(context)
-        if (masterKey != null) {
-            val ciphertext = EnhancedCrypto.encrypt(
-                plaintext.toByteArray(StandardCharsets.UTF_8),
-                masterKey,
-                ASSOCIATED_DATA
-            )
-            return Base64.encodeToString(ciphertext, Base64.NO_WRAP)
-        }
-        // Fallback when Android Keystore is unavailable on this device: derive a key from
-        // the app signature + package name. Less secure than Keystore-backed encryption,
-        // but keeps the token encrypted at rest instead of plaintext.
-        AppLogger.w(TAG, "Android Keystore unavailable, falling back to app-derived key")
-        val container = EnhancedCrypto.deriveAppKey(
-            context.packageName,
-            context.packageManager.getPackageInfo(context.packageName, 0).signatures?.firstOrNull()?.toByteArray() ?: ByteArray(0)
-        )
-        val key = container.getKey()
-        val ciphertext = EnhancedCrypto.encrypt(
-            plaintext.toByteArray(StandardCharsets.UTF_8),
-            key,
-            ASSOCIATED_DATA
-        )
-        container.close()
-        return FALLBACK_PREFIX + Base64.encodeToString(ciphertext, Base64.NO_WRAP)
-    }
-
-    private fun decrypt(encoded: String): String {
-        val masterKey = EnhancedCrypto.getOrCreateMasterKey(context)
-        if (masterKey != null && !encoded.startsWith(FALLBACK_PREFIX)) {
-            val ciphertext = Base64.decode(encoded, Base64.NO_WRAP)
-            val plaintext = EnhancedCrypto.decrypt(ciphertext, masterKey, ASSOCIATED_DATA)
-            return String(plaintext, StandardCharsets.UTF_8)
-        }
-        val container = EnhancedCrypto.deriveAppKey(
-            context.packageName,
-            context.packageManager.getPackageInfo(context.packageName, 0).signatures?.firstOrNull()?.toByteArray() ?: ByteArray(0)
-        )
-        val key = container.getKey()
-        val payload = encoded.removePrefix(FALLBACK_PREFIX)
-        val ciphertext = Base64.decode(payload, Base64.NO_WRAP)
-        val plaintext = EnhancedCrypto.decrypt(ciphertext, key, ASSOCIATED_DATA)
-        container.close()
-        return String(plaintext, StandardCharsets.UTF_8)
-    }
+    /** How the stored token is protected at rest; see [TokenProtection]. */
+    fun protection(): TokenProtection = TokenCipher.protection(prefs.getString(KEY_TOKEN, null))
 
     companion object {
         private const val TAG = "GitHubTokenStore"
 
         internal const val PREFS = "sherwood_git"
         internal const val KEY_TOKEN = "github_pat"
-
-        /** Marks a token encrypted with the app-derived key instead of the Keystore. */
-        internal const val FALLBACK_PREFIX = "FALLBACK:"
 
         private val ASSOCIATED_DATA =
             "sherwood-wta/github-pat/v1".toByteArray(StandardCharsets.UTF_8)

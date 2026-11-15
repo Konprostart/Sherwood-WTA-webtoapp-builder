@@ -28,6 +28,52 @@ Everything still ships as **one APK**. Studio is not a second app.
 | Agent access | `GitHubStatus` / `GitHubListRepositories` / `GitHubCreateRepository` / `GitHubImportRepository` / `GitHubOpenPullRequest` | The in-app agent can read the connection, create a new independent repository, copy a repository into its own session folder, and send the edited files back as a new branch plus a pull request with a fresh approval tap. It never forks and never merges — see [Agent access](#agent-access). |
 | Endpoints | `EndpointConfig` | Every Studio address is HTTPS, validated, and overridable from Settings. |
 
+## Provider seam
+
+The Studio talks to a hosting platform through one interface,
+`com.sherwood.wta.core.studio.git.GitProvider`. Everything the screens, the build
+pipeline and the agent need — account, repositories, branches, change requests,
+checks, commits, pipelines, artifacts, releases and the commit writer — is declared
+there with provider-neutral models (`GitRepository`, `GitChangeRequest`,
+`GitPipelineRun`, …). `BuildStudio` and `WorkspaceService` call that interface; they
+no longer name a host.
+
+- **Which host answers** is decided in one place, `GitProviderRegistry`. An id that
+  has no driver in this build is reported as `GitProviderLookup.Unavailable` with a
+  typed reason (`NOT_IMPLEMENTED_IN_THIS_BUILD`, `MISSING_BASE_URL`,
+  `NON_HTTPS_BASE_URL`) instead of silently falling back to GitHub — a fallback would
+  send the user's edits and token to the wrong server.
+- **GitHub is the only driver that ships today** (`GitHubProvider`). It is a thin
+  adapter over the existing `GitHubApiClient`, so no request, header or error message
+  changed. A second host needs a driver and an entry in the registry, not a change to
+  any caller.
+- **Capabilities are explicit.** `GitCapabilities` states what a host can do
+  (reviews, inline comments, checks, dispatch, artifacts, binary release assets,
+  staged commit, device flow, and whether its change requests are called pull or merge
+  requests) so a screen can hide a section it cannot serve and say why, rather than
+  offer a control that always fails.
+- **Credentials are per provider and per server.** `GitCredentialStore` keys a token
+  by `{provider}:{host}` and encrypts it with the Android Keystore master key through
+  the shared `TokenCipher`; the associated data is derived from the slot, so a
+  ciphertext moved to another slot fails to decrypt rather than authenticating as the
+  wrong server. GitHub keeps its original `sherwood_git` slot and storage key, so an
+  existing connection needs no migration. A self-hosted server must be HTTPS — the
+  token travels in a header.
+- **Publishing goes through `GitCommitWriter`.** `RepoBridgeCommitUseCase` keeps the
+  review, the secret scanner and the "new branch, never forced" rule, and asks the
+  writer to build the commit and then move the ref. The split exists so a host whose
+  API can only commit and move in one call can implement it without duplicating the
+  safety rules.
+- **The old GitHub type names are aliases.** `GitHubRepository`, `GitHubWorkflow` and
+  friends are `typealias`es for the neutral models, so the screens and the agent tools
+  kept compiling during the split. They are removed when the first non-GitHub driver
+  lands.
+
+Not generalised yet, and deliberately so: import still runs through
+`GitHubRepoFetcher`, `repo_bridge.json` still records GitHub-shaped provenance, and
+the Studio settings screen has no provider picker. Generalising those is the step that
+adds the second driver, not this one.
+
 ## Signing a vault artifact
 
 Signing is per project, never per app. `ProjectSigningIdentity` resolves the
@@ -71,10 +117,10 @@ active backend.
 ## Why not JGit
 
 JGit's `java.nio.file` use requires API 26. This project keeps `minSdk` 24.
-Instead of raising the floor, the app uses the GitHub Git Data API: the server
-builds the tree/commit objects, and the working copy is a plain directory diffed
-against the recorded base commit. Branch, merge, history and diff stay available
-without a local `.git`.
+Instead of raising the floor, the app uses the host's server-side git API — GitHub's
+Git Data API today, behind `GitCommitWriter`: the server builds the tree/commit
+objects, and the working copy is a plain directory diffed against the recorded base
+commit. Branch, merge, history and diff stay available without a local `.git`.
 
 ## GitHub Actions artifacts
 
@@ -234,6 +280,10 @@ from Studio's own screens, where the user taps them.
 - `StudioBuildSourcesTest` — release and release-asset parsing (the API download
   URL is required, non-`uploaded` assets are refused), the dispatched-run
   selection rule, and the vault export name / MIME type.
+- `GitProviderSeamTest` — the provider seam: repository-reference parsing (exactly
+  two segments, no traversal), per-provider token formats, credential-slot derivation
+  (HTTPS only, port-aware), the registry refusing an unimplemented or misconfigured
+  provider instead of falling back to GitHub, and GitHub's capability declaration.
 
 Artifact signing, keystore import and installation need a device; they are
 exercised manually, not in unit tests.

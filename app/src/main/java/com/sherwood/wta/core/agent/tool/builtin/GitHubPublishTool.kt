@@ -17,8 +17,8 @@ import com.sherwood.wta.core.frontend.RepoBridgePrepareResult
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.GitHubFailureKind
-import com.sherwood.wta.core.studio.GitHubResult
+import com.sherwood.wta.core.studio.git.GitFailureKind
+import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.WorkspaceService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -457,8 +457,8 @@ class GitHubOpenPullRequestTool : Tool {
         // Rule 4 (precondition): the base must not have moved since the import, otherwise
         // the diff would silently revert the newer commits when it is applied.
         val baseHead = when (val result = api.getBranch(owner, repo, baseBranch)) {
-            is GitHubResult.Success -> result.value
-            is GitHubResult.Failure -> return ToolResult.error(
+            is GitResult.Success -> result.value
+            is GitResult.Failure -> return ToolResult.error(
                 "GitHubOpenPullRequest: could not read '$baseBranch' from $owner/$repo — " +
                     (result.message ?: result.kind.name)
             )
@@ -561,7 +561,7 @@ class GitHubOpenPullRequestTool : Tool {
         }
 
         val created = api.createBranch(owner, repo, branch, baseHead.sha)
-        if (created is GitHubResult.Failure) {
+        if (created is GitResult.Failure) {
             restoreMetadata(projectDir, workingMetadata)
             return ToolResult.error(
                 "GitHubOpenPullRequest: GitHub refused to create '$branch' — " +
@@ -605,7 +605,7 @@ class GitHubOpenPullRequestTool : Tool {
                     body = body
                 )
                 return when (pull) {
-                    is GitHubResult.Success -> ToolResult.ok(
+                    is GitResult.Success -> ToolResult.ok(
                         summary(
                             owner = owner,
                             repo = repo,
@@ -619,7 +619,7 @@ class GitHubOpenPullRequestTool : Tool {
                             stats = stats
                         )
                     )
-                    is GitHubResult.Failure -> ToolResult.error(
+                    is GitResult.Failure -> ToolResult.error(
                         "GitHubOpenPullRequest: the commit is on '$branch' but GitHub refused " +
                             "the pull request — " + (pull.message ?: pull.kind.name) + ". " +
                             "Open it from Studio → Repositories → Create PR " +
@@ -772,11 +772,11 @@ private suspend fun probeBranch(
     repo: String,
     branch: String
 ): BranchProbe = when (val result = api.getBranch(owner, repo, branch)) {
-    is GitHubResult.Success -> BranchProbe.Exists
-    is GitHubResult.Failure ->
+    is GitResult.Success -> BranchProbe.Exists
+    is GitResult.Failure ->
         // NOT_FOUND is the only answer that means "free". Anything else (auth, network)
         // must stop the run rather than attempt to create a branch that may exist.
-        if (result.kind == GitHubFailureKind.NOT_FOUND) {
+        if (result.kind == GitFailureKind.NOT_FOUND) {
             BranchProbe.Free
         } else {
             BranchProbe.Unknown(result.message ?: result.kind.name)

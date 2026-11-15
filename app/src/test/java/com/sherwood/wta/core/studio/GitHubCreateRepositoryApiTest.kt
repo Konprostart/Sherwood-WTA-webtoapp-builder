@@ -13,6 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.sherwood.wta.core.studio.git.*
 
 /**
  * `POST /user/repos` is the only repository-creating call the app makes: it must send the
@@ -63,8 +64,8 @@ class GitHubCreateRepositoryApiTest {
             )
 
             val repository = when (created) {
-                is GitHubResult.Success -> created.value
-                is GitHubResult.Failure -> throw AssertionError(
+                is GitResult.Success -> created.value
+                is GitResult.Failure -> throw AssertionError(
                     "unexpected failure: ${created.kind} ${created.message}"
                 )
             }
@@ -114,9 +115,9 @@ class GitHubCreateRepositoryApiTest {
 
             val result = client().createRepository("rebrand")
 
-            val failure = result as? GitHubResult.Failure
+            val failure = result as? GitResult.Failure
                 ?: throw AssertionError("expected a failure")
-            assertThat(failure.kind).isEqualTo(GitHubFailureKind.UNPROCESSABLE)
+            assertThat(failure.kind).isEqualTo(GitFailureKind.UNPROCESSABLE)
             // Without the errors[] detail the message is just "creation failed".
             assertThat(failure.message).contains("name already exists on this account")
         }

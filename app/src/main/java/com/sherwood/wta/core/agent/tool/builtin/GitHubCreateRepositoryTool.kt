@@ -11,9 +11,9 @@ import com.sherwood.wta.core.frontend.GitTreeEntry
 import com.sherwood.wta.core.frontend.RepoBridgeMetadataStore
 import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.GitHubFailureKind
+import com.sherwood.wta.core.studio.git.GitFailureKind
 import com.sherwood.wta.core.studio.GitHubRepository
-import com.sherwood.wta.core.studio.GitHubResult
+import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.WorkspaceService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -353,14 +353,14 @@ class GitHubCreateRepositoryTool : Tool {
             privateRepository = visibility.isPrivate,
             autoInit = true
         )) {
-            is GitHubResult.Success -> created.value
-            is GitHubResult.Failure -> return ToolResult.error(
+            is GitResult.Success -> created.value
+            is GitResult.Failure -> return ToolResult.error(
                 buildString {
                     append("GitHubCreateRepository: GitHub refused to create '$name' — ")
                     append(created.message ?: created.kind.name)
                     append('.')
-                    if (created.kind == GitHubFailureKind.FORBIDDEN ||
-                        created.kind == GitHubFailureKind.NOT_FOUND
+                    if (created.kind == GitFailureKind.FORBIDDEN ||
+                        created.kind == GitFailureKind.NOT_FOUND
                     ) {
                         // The usual cause is a token that may not create repositories:
                         // a fine-grained token needs that permission, a classic one the
@@ -399,8 +399,8 @@ class GitHubCreateRepositoryTool : Tool {
         visibility: RepositoryVisibility
     ): SourcePreparation {
         val sourceRepository = when (val fetched = api.getRepository(owner, repo)) {
-            is GitHubResult.Success -> fetched.value
-            is GitHubResult.Failure -> return SourcePreparation.Failure(
+            is GitResult.Success -> fetched.value
+            is GitResult.Failure -> return SourcePreparation.Failure(
                 "could not read the source repository $owner/$repo — " +
                     (fetched.message ?: fetched.kind.name) + "."
             )

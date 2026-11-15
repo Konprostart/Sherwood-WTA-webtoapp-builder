@@ -42,7 +42,7 @@ import com.sherwood.wta.core.studio.GitHubApiClient
 import com.sherwood.wta.core.studio.GitHubArtifact
 import com.sherwood.wta.core.studio.GitHubRelease
 import com.sherwood.wta.core.studio.GitHubRepository
-import com.sherwood.wta.core.studio.GitHubResult
+import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.GitHubWorkflow
 import com.sherwood.wta.core.studio.GitHubWorkflowRun
 import com.sherwood.wta.core.studio.StudioSettingsStore
@@ -141,10 +141,10 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
         loading = true
         val (owner, repo) = pair
         when (val repoResult = api.getRepository(owner, repo)) {
-            is GitHubResult.Success -> {
+            is GitResult.Success -> {
                 dispatchRef = repoResult.value.defaultBranch
             }
-            is GitHubResult.Failure -> Unit
+            is GitResult.Failure -> Unit
         }
         val wf = buildStudio.workflows(owner, repo)
         if (wf.isSuccess) {
@@ -171,14 +171,14 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
 
     LaunchedEffect(Unit) {
         when (val result = api.listRepositories()) {
-            is GitHubResult.Success -> {
+            is GitResult.Success -> {
                 repositories = result.value
                 if (ownerRepo() == null) {
                     val initial = repositories.firstOrNull()
                     if (initial != null) repoKey = initial.ownerRepo
                 }
             }
-            is GitHubResult.Failure -> snackbarHostState.showSnackbar(
+            is GitResult.Failure -> snackbarHostState.showSnackbar(
                 result.message ?: Strings.studioConnectFailed
             )
         }

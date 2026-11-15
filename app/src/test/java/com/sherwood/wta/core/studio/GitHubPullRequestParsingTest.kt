@@ -2,6 +2,7 @@ package com.sherwood.wta.core.studio
 
 import com.google.common.truth.Truth.assertThat
 import com.google.gson.JsonParser
+import com.sherwood.wta.core.studio.git.ChecksState
 import org.junit.Test
 
 /**

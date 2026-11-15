@@ -28,7 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sherwood.wta.core.i18n.Strings
-import com.sherwood.wta.core.studio.ChecksState
+import com.sherwood.wta.core.studio.git.ChecksState
 import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.GitHubApiClient
 import com.sherwood.wta.core.studio.GitHubBranch
@@ -36,7 +36,7 @@ import com.sherwood.wta.core.studio.GitHubCheckSummary
 import com.sherwood.wta.core.studio.GitHubPullRequest
 import com.sherwood.wta.core.studio.GitHubPullRequestDetails
 import com.sherwood.wta.core.studio.GitHubPullRequestFile
-import com.sherwood.wta.core.studio.GitHubResult
+import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.ui.components.PremiumTextField
 import com.sherwood.wta.ui.design.WtaButton
@@ -64,9 +64,9 @@ private data class PrDetail(
     val checks: GitHubCheckSummary
 )
 
-private fun <T> GitHubResult<T>.valueOrNull(): T? = when (this) {
-    is GitHubResult.Success -> value
-    is GitHubResult.Failure -> null
+private fun <T> GitResult<T>.valueOrNull(): T? = when (this) {
+    is GitResult.Success -> value
+    is GitResult.Failure -> null
 }
 
 @Composable
@@ -103,8 +103,8 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                 ownerRepo = ownerRepo,
                 pulls = pulls.valueOrNull().orEmpty(),
                 branches = branches.valueOrNull().orEmpty(),
-                error = (pulls as? GitHubResult.Failure)?.message
-                    ?: (branches as? GitHubResult.Failure)?.message
+                error = (pulls as? GitResult.Failure)?.message
+                    ?: (branches as? GitResult.Failure)?.message
             )
         }
         loading = false
@@ -201,11 +201,11 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                                             pr.number
                                                         )
                                                     ) {
-                                                        is GitHubResult.Success ->
+                                                        is GitResult.Success ->
                                                             snackbarHostState.showSnackbar(
                                                                 Strings.studioMerged(pr.headRef)
                                                             )
-                                                        is GitHubResult.Failure ->
+                                                        is GitResult.Failure ->
                                                             snackbarHostState.showSnackbar(
                                                                 result.message
                                                                     ?: Strings.studioConnectFailed
@@ -273,7 +273,7 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                                                     body = inlineBody
                                                                 )
                                                         ) {
-                                                            is GitHubResult.Success -> {
+                                                            is GitResult.Success -> {
                                                                 inlineBody = ""
                                                                 inlineLine = ""
                                                                 inlinePath = null
@@ -281,7 +281,7 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                                                     Strings.studioPrInlineCommentSent
                                                                 )
                                                             }
-                                                            is GitHubResult.Failure ->
+                                                            is GitResult.Failure ->
                                                                 snackbarHostState.showSnackbar(
                                                                     result.message
                                                                         ?: Strings.studioConnectFailed
@@ -304,13 +304,13 @@ internal fun StudioInboxTab(context: Context, snackbarHostState: SnackbarHostSta
                                                             requestChanges = requestChanges
                                                         )
                                                     ) {
-                                                        is GitHubResult.Success -> {
+                                                        is GitResult.Success -> {
                                                             reviewText = ""
                                                             snackbarHostState.showSnackbar(
                                                                 Strings.studioPrReviewSent
                                                             )
                                                         }
-                                                        is GitHubResult.Failure ->
+                                                        is GitResult.Failure ->
                                                             snackbarHostState.showSnackbar(
                                                                 result.message
                                                                     ?: Strings.studioConnectFailed

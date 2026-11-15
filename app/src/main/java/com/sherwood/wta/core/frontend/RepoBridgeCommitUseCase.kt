@@ -2,6 +2,13 @@ package com.sherwood.wta.core.frontend
 
 import android.content.Context
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.core.studio.git.GitBaseTree
+import com.sherwood.wta.core.studio.git.GitCommitWriter
+import com.sherwood.wta.core.studio.git.GitFailureKind
+import com.sherwood.wta.core.studio.git.GitFileChange
+import com.sherwood.wta.core.studio.git.GitHubCommitWriter
+import com.sherwood.wta.core.studio.git.GitRepoRef
+import com.sherwood.wta.core.studio.git.GitResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -86,12 +93,18 @@ sealed class RepoBridgeCommitResult {
 }
 
 /**
- * Coordinates "Commit & push" for an imported GitHub working copy.
+ * Coordinates "Commit & push" for an imported working copy.
  *
  * The workflow is deliberately server-side only: the working copy is diffed
  * against the tree of the commit recorded in `repo_bridge.json`, changed files
- * become blobs, one tree carries additions, updates and deletions, and the branch
- * ref is advanced with `force=false` and the imported commit as the expected base.
+ * become a new commit, and the branch ref is advanced with `force=false` and the
+ * imported commit as the expected base.
+ *
+ * Publishing goes through a [GitCommitWriter] rather than a concrete host client, so the
+ * review, the secret scanner and the "new branch, never forced" rule are written once and
+ * apply to every hosting platform. The default writer is the GitHub one because an
+ * imported working copy's provenance is still recorded in GitHub terms; a second writable
+ * provider will resolve the writer from the working copy's own metadata.
  *
  * There is no local git repository and no manifest file, so a user can edit files
  * with any tool and still get an accurate diff. The size limit below only applies to
@@ -101,7 +114,7 @@ sealed class RepoBridgeCommitResult {
 class RepoBridgeCommitUseCase(
     context: Context,
     private val projectDir: File,
-    private val client: GitDataApiClient = GitDataApiClient(context),
+    private val writer: GitCommitWriter = GitHubCommitWriter(GitDataApiClient(context)),
     private val metadataStore: RepoBridgeMetadataStore = RepoBridgeMetadataStore()
 ) {
 
@@ -274,7 +287,9 @@ class RepoBridgeCommitUseCase(
         }
 
         val metadata = plan.metadata
-        val entries = mutableListOf<GitTreeEntry>()
+        val repo = GitRepoRef.of(metadata.owner, metadata.repo)
+            ?: return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_METADATA)
+        val fileChanges = ArrayList<GitFileChange>(changes.total)
 
         for (path in changes.added + changes.modified) {
             val local = files[path] ?: continue
@@ -292,43 +307,23 @@ class RepoBridgeCommitUseCase(
                 cachedPlan = null
                 return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.REVIEW_STALE, path)
             }
-            when (val blob = client.createBlob(metadata.owner, metadata.repo, content)) {
-                is GitDataResult.Success ->
-                    entries += GitTreeEntry(path, blob.value, mode = modeFor(plan, path))
-                is GitDataResult.Failure ->
-                    return RepoBridgeCommitResult.Failure(
-                        blob.kind.toCommitFailure(),
-                        blob.message
-                    )
-            }
+            fileChanges += GitFileChange(path, mode = modeFor(plan, path), content = content)
         }
 
+        // Deletions are explicit tree entries, never implied by omission.
         for (path in changes.deleted) {
-            entries += GitTreeEntry(path, sha = null, mode = FILE_MODE)
+            fileChanges += GitFileChange(path, mode = FILE_MODE, content = null)
         }
 
-        val treeSha = when (val tree = client.createTree(
-            owner = metadata.owner,
-            repo = metadata.repo,
+        val commitSha = when (val commit = writer.createCommit(
+            ref = repo,
+            parentSha = plan.baseSha,
             baseTreeSha = plan.baseTreeSha,
-            entries = entries
-        )) {
-            is GitDataResult.Success -> tree.value
-            is GitDataResult.Failure -> return RepoBridgeCommitResult.Failure(
-                tree.kind.toCommitFailure(),
-                tree.message
-            )
-        }
-
-        val commitSha = when (val commit = client.createCommit(
-            owner = metadata.owner,
-            repo = metadata.repo,
             message = trimmed,
-            treeSha = treeSha,
-            parentSha = plan.baseSha
+            changes = fileChanges
         )) {
-            is GitDataResult.Success -> commit.value
-            is GitDataResult.Failure -> return RepoBridgeCommitResult.Failure(
+            is GitResult.Success -> commit.value
+            is GitResult.Failure -> return RepoBridgeCommitResult.Failure(
                 commit.kind.toCommitFailure(),
                 commit.message
             )
@@ -343,22 +338,20 @@ class RepoBridgeCommitUseCase(
             return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.IO_ERROR, FILE_METADATA)
         }
 
-        when (val ref = client.updateRef(
-            owner = metadata.owner,
-            repo = metadata.repo,
+        when (val moved = writer.moveBranch(
+            ref = repo,
             branch = metadata.ref,
-            newSha = commitSha,
+            commitSha = commitSha,
             expectedBaseSha = plan.baseSha
         )) {
-            is GitDataResult.Success -> Unit
-            is GitDataResult.Failure -> {
+            is GitResult.Success -> Unit
+            is GitResult.Failure -> {
+                // Any failure leaves the cached plan stale: the base commit may no longer
+                // describe the remote.
                 cachedPlan = null
-                if (ref.kind == GitDataFailureKind.CONFLICT) {
-                    cachedPlan = null
-                }
                 return RepoBridgeCommitResult.Failure(
-                    ref.kind.toCommitFailure(),
-                    ref.message
+                    moved.kind.toCommitFailure(),
+                    moved.message
                 )
             }
         }
@@ -460,13 +453,15 @@ class RepoBridgeCommitUseCase(
         var metadata = metadataStore.read(projectDir)
             ?: return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_METADATA)
 
-        // A push that reached GitHub but could not record its base leaves a pending sha.
+        // A push that reached the host but could not record its base leaves a pending sha.
         // If the branch already points at it, adopt it; otherwise the pending sha is stale.
         metadata.pendingBaseSha?.let { pending ->
-            val remoteHead = when (val ref = client.getRef(metadata.owner, metadata.repo, metadata.ref)) {
-                is GitDataResult.Success -> ref.value.sha
-                is GitDataResult.Failure ->
-                    return PlanLoad.Error(ref.kind.toCommitFailure(), ref.message)
+            val repo = GitRepoRef.of(metadata.owner, metadata.repo)
+            if (repo == null) return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_METADATA)
+            val remoteHead = when (val head = writer.branchHead(repo, metadata.ref)) {
+                is GitResult.Success -> head.value
+                is GitResult.Failure ->
+                    return PlanLoad.Error(head.kind.toCommitFailure(), head.message)
             }
             metadata = if (remoteHead == pending) {
                 AppLogger.i(TAG, "Adopting the pushed base commit left pending by an earlier run")
@@ -481,19 +476,16 @@ class RepoBridgeCommitUseCase(
         val baseSha = metadata.baseSha
             ?: return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_BASE)
 
-        val baseCommit = when (val result = client.getCommit(metadata.owner, metadata.repo, baseSha)) {
-            is GitDataResult.Success -> result.value
-            is GitDataResult.Failure ->
+        val repo = GitRepoRef.of(metadata.owner, metadata.repo)
+            ?: return PlanLoad.Error(RepoBridgeCommitFailureKind.NO_METADATA)
+
+        val baseTree: GitBaseTree = when (val result = writer.baseTree(repo, baseSha)) {
+            is GitResult.Success -> result.value
+            is GitResult.Failure ->
                 return PlanLoad.Error(result.kind.toCommitFailure(), result.message)
         }
 
-        val tree = when (val result = client.getTree(metadata.owner, metadata.repo, baseCommit.treeSha)) {
-            is GitDataResult.Success -> result.value
-            is GitDataResult.Failure ->
-                return PlanLoad.Error(result.kind.toCommitFailure(), result.message)
-        }
-
-        if (tree.truncated) {
+        if (baseTree.snapshot.truncated) {
             return PlanLoad.Error(
                 RepoBridgeCommitFailureKind.REMOTE_REJECTED,
                 "Remote tree is truncated"
@@ -508,7 +500,7 @@ class RepoBridgeCommitUseCase(
 
         val remoteBlobs = linkedMapOf<String, String>()
         val remoteModes = linkedMapOf<String, String>()
-        for (entry in tree.entries) {
+        for (entry in baseTree.snapshot.entries) {
             if (entry.type != "blob" || entry.sha == null) continue
             if (prefix != null && !entry.path.startsWith(prefix)) continue
             if (isSkippedRemotePath(entry.path)) continue
@@ -520,7 +512,7 @@ class RepoBridgeCommitUseCase(
             Plan(
                 metadata = metadata,
                 baseSha = baseSha,
-                baseTreeSha = baseCommit.treeSha,
+                baseTreeSha = baseTree.treeSha,
                 prefix = prefix,
                 remoteBlobs = remoteBlobs,
                 remoteModes = remoteModes
@@ -664,17 +656,17 @@ class RepoBridgeCommitUseCase(
         return String(hex)
     }
 
-    private fun GitDataFailureKind.toCommitFailure(): RepoBridgeCommitFailureKind = when (this) {
-        GitDataFailureKind.NO_TOKEN -> RepoBridgeCommitFailureKind.NO_TOKEN
-        GitDataFailureKind.NOT_FOUND -> RepoBridgeCommitFailureKind.NOT_FOUND
-        GitDataFailureKind.UNAUTHORIZED -> RepoBridgeCommitFailureKind.UNAUTHORIZED
-        GitDataFailureKind.FORBIDDEN -> RepoBridgeCommitFailureKind.FORBIDDEN
-        GitDataFailureKind.RATE_LIMITED -> RepoBridgeCommitFailureKind.RATE_LIMITED
-        GitDataFailureKind.CONFLICT -> RepoBridgeCommitFailureKind.CONFLICT
-        GitDataFailureKind.NETWORK -> RepoBridgeCommitFailureKind.NETWORK
-        GitDataFailureKind.UNPROCESSABLE -> RepoBridgeCommitFailureKind.REMOTE_REJECTED
-        GitDataFailureKind.UNEXPECTED -> RepoBridgeCommitFailureKind.UNEXPECTED
-        GitDataFailureKind.HTTP -> RepoBridgeCommitFailureKind.REMOTE_REJECTED
+    private fun GitFailureKind.toCommitFailure(): RepoBridgeCommitFailureKind = when (this) {
+        GitFailureKind.NO_TOKEN -> RepoBridgeCommitFailureKind.NO_TOKEN
+        GitFailureKind.NOT_FOUND -> RepoBridgeCommitFailureKind.NOT_FOUND
+        GitFailureKind.UNAUTHORIZED -> RepoBridgeCommitFailureKind.UNAUTHORIZED
+        GitFailureKind.FORBIDDEN -> RepoBridgeCommitFailureKind.FORBIDDEN
+        GitFailureKind.RATE_LIMITED -> RepoBridgeCommitFailureKind.RATE_LIMITED
+        GitFailureKind.CONFLICT -> RepoBridgeCommitFailureKind.CONFLICT
+        GitFailureKind.NETWORK -> RepoBridgeCommitFailureKind.NETWORK
+        GitFailureKind.UNPROCESSABLE -> RepoBridgeCommitFailureKind.REMOTE_REJECTED
+        GitFailureKind.UNEXPECTED -> RepoBridgeCommitFailureKind.UNEXPECTED
+        GitFailureKind.HTTP -> RepoBridgeCommitFailureKind.REMOTE_REJECTED
     }
 
     private data class Plan(

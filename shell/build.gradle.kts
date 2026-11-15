@@ -308,6 +308,9 @@ val syncShellRuntimeSources by tasks.registering(Sync::class) {
         "**/core/frontend/GitHubRepoFetcher.kt",
         // Repo-bridge plumbing is builder-only; generated apps must not ship token handling.
         "**/core/frontend/GitHubTokenStore.kt",
+        // Shared AES-GCM wrapper for the git credential slots; a generated app never
+        // contacts a git host.
+        "**/core/frontend/TokenCipher.kt",
         "**/core/frontend/GitHubUrlPolicy.kt",
         "**/core/frontend/RepoBridgeMetadata.kt",
         "**/core/frontend/GitDataApiClient.kt",

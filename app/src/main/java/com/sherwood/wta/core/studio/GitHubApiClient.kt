@@ -6,7 +6,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.sherwood.wta.core.frontend.GitHubTokenFormat
-import com.sherwood.wta.core.frontend.GitHubTokenProvider
+import com.sherwood.wta.core.frontend.GitTokenProvider
 import com.sherwood.wta.core.frontend.GitHubTokenStore
 import com.sherwood.wta.core.frontend.GitHubUrlPolicy
 import com.sherwood.wta.core.logging.AppLogger
@@ -20,249 +20,25 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import android.content.Context
-
-/** Why a GitHub API call failed. */
-enum class GitHubFailureKind {
-    NO_TOKEN,
-    UNAUTHORIZED,
-    FORBIDDEN,
-    RATE_LIMITED,
-    NOT_FOUND,
-    CONFLICT,
-    UNPROCESSABLE,
-    NETWORK,
-    UNEXPECTED,
-    HTTP
-}
-
-sealed class GitHubResult<out T> {
-    data class Success<T>(val value: T) : GitHubResult<T>()
-    data class Failure(
-        val kind: GitHubFailureKind,
-        val statusCode: Int? = null,
-        val message: String? = null
-    ) : GitHubResult<Nothing>()
-}
-
-data class GitHubUser(
-    val login: String,
-    val name: String?,
-    val avatarUrl: String?
-)
-
-data class GitHubRepository(
-    val id: Long,
-    val name: String,
-    val owner: String,
-    val fullName: String,
-    val privateRepo: Boolean,
-    val fork: Boolean,
-    val defaultBranch: String,
-    val description: String?,
-    val pushedAt: String?
-) {
-    val ownerRepo: String get() = "$owner/$name"
-}
-
-data class GitHubBranch(
-    val name: String,
-    val sha: String,
-    val protectedBranch: Boolean
-)
-
-data class GitHubPullRequest(
-    val number: Int,
-    val title: String,
-    val state: String,
-    val draft: Boolean,
-    val merged: Boolean,
-    val author: String,
-    val headRef: String,
-    val baseRef: String,
-    val htmlUrl: String,
-    val updatedAt: String?,
-    val body: String?
-)
-
-data class GitHubCommitSummary(
-    val sha: String,
-    val message: String,
-    val authorName: String,
-    val authorDate: String?,
-    val htmlUrl: String?
-)
-
-data class GitHubMergeResult(
-    val merged: Boolean,
-    val sha: String?,
-    val message: String?
-)
-
-/** Aggregate CI state of one commit. */
-enum class ChecksState { UNKNOWN, PENDING, PASSING, FAILING }
-
-data class GitHubCheckRun(
-    val name: String,
-    val status: String,
-    val conclusion: String?,
-    val detailsUrl: String?
-)
-
-data class GitHubCheckSummary(
-    val state: ChecksState,
-    val total: Int,
-    val pending: Int,
-    val passing: Int,
-    val failing: Int,
-    val checks: List<GitHubCheckRun>,
-    val combinedState: String?
-)
-
-data class GitHubPullRequestDetails(
-    val pull: GitHubPullRequest,
-    val mergeable: Boolean?,
-    val mergeableState: String?,
-    val additions: Int,
-    val deletions: Int,
-    val changedFiles: Int,
-    val commitCount: Int,
-    val createdAt: String?,
-    val mergedAt: String?,
-    val closedAt: String?,
-    val headSha: String,
-    val baseSha: String?
-)
-
-data class GitHubPullRequestFile(
-    val filename: String,
-    val status: String,
-    val additions: Int,
-    val deletions: Int,
-    val changes: Int,
-    val previousFilename: String?,
-    /**
-     * Unified diff for this file, when GitHub includes one. It is omitted for binary
-     * files and for very large diffs, so no caller may assume it is present.
-     */
-    val patch: String? = null
-)
-
-data class GitHubPullRequestReview(
-    val id: Long,
-    val state: String,
-    val author: String,
-    val body: String?,
-    val submittedAt: String?
-)
-
-data class GitHubPullRequestReviewComment(
-    val id: Long,
-    val path: String,
-    val line: Int?,
-    val body: String,
-    val author: String,
-    val htmlUrl: String?
-)
-
-data class GitHubWorkflow(
-    val id: Long,
-    val name: String,
-    val path: String,
-    val state: String?
-)
-
-data class GitHubWorkflowRun(
-    val id: Long,
-    val name: String,
-    val workflowId: Long,
-    val status: String,
-    val conclusion: String?,
-    val branch: String?,
-    val headSha: String?,
-    val event: String?,
-    val runNumber: Int,
-    val displayTitle: String?,
-    val createdAt: String?,
-    val updatedAt: String?,
-    val htmlUrl: String?
-)
-
-data class GitHubJobStep(
-    val number: Int,
-    val name: String,
-    val status: String,
-    val conclusion: String?
-)
-
-data class GitHubJob(
-    val id: Long,
-    val name: String,
-    val status: String,
-    val conclusion: String?,
-    val startedAt: String?,
-    val completedAt: String?,
-    val steps: List<GitHubJobStep>
-)
-
-data class GitHubArtifact(
-    val id: Long,
-    val name: String,
-    val sizeInBytes: Long,
-    val expired: Boolean,
-    val archiveDownloadUrl: String,
-    val createdAt: String?,
-    val workflowRunId: Long?
-)
-
-data class GitHubReleaseAsset(
-    val id: Long,
-    val name: String,
-    val sizeInBytes: Long,
-    val contentType: String?,
-    /** REST API URL; download it with an `application/octet-stream` Accept header. */
-    val apiDownloadUrl: String,
-    val state: String?
-) {
-    /** Only `uploaded` assets are downloadable; anything else is left over from a failed upload. */
-    val isDownloadable: Boolean
-        get() = state == null || state == "uploaded"
-}
-
-data class GitHubRelease(
-    val id: Long,
-    val tagName: String,
-    val name: String?,
-    val draft: Boolean,
-    val prerelease: Boolean,
-    val publishedAt: String?,
-    val htmlUrl: String?,
-    val assets: List<GitHubReleaseAsset>
-)
-
-data class GitHubFileContent(
-    val path: String,
-    val name: String,
-    val sha: String,
-    val type: String,
-    val size: Long,
-    val content: ByteArray?
-)
+import com.sherwood.wta.core.studio.git.*
 
 /**
  * Authenticated (or public-read) REST client for the parts of GitHub that the Studio
  * uses: account, repositories, branches, pull requests, commits, Actions workflows,
  * runs, jobs, logs and artifacts.
  *
- * This is deliberately the only network surface for GitHub Studio. It sends the
- * token only in the `Authorization` header, refuses non-HTTPS URLs, refuses
- * HTTPS->HTTP downgrades, never logs the token, and maps every failure to
- * [GitHubFailureKind] so the UI can tell "connect a token" from "no access" from
- * "rate limited".
+ * This is GitHub's transport, not the Studio's interface: [GitHubProvider] adapts it to
+ * [GitProvider], and the neutral model types it returns live in
+ * [com.sherwood.wta.core.studio.git]. It was the only network surface before the
+ * provider split and it still is the only GitHub one. It sends the token only in the
+ * `Authorization` header, refuses non-HTTPS URLs, refuses HTTPS->HTTP downgrades, never
+ * logs the token, and maps every failure to [GitFailureKind] so the UI can tell
+ * "connect a token" from "no access" from "rate limited".
  */
 class GitHubApiClient(
     context: Context,
     private val endpoints: EndpointConfig = EndpointSettingsStore.current(context),
-    private val tokenProvider: GitHubTokenProvider = GitHubTokenStore(context),
+    private val tokenProvider: GitTokenProvider = GitHubTokenStore(context),
     httpClient: OkHttpClient = NetworkModule.downloadClient,
     private val urlGuard: (String) -> Unit = { GitHubUrlPolicy.requireHttps(it) }
 ) {
@@ -280,13 +56,13 @@ class GitHubApiClient(
 
     // ----------------------------------------------------------------- account
 
-    suspend fun currentUser(): GitHubResult<GitHubUser> = getJson(url("user")) { json ->
+    suspend fun currentUser(): GitResult<GitHubUser> = getJson(url("user")) { json ->
         parseUser(json)
     }
 
     // ------------------------------------------------------------ repositories
 
-    suspend fun listRepositories(page: Int = 1, perPage: Int = 100): GitHubResult<List<GitHubRepository>> =
+    suspend fun listRepositories(page: Int = 1, perPage: Int = 100): GitResult<List<GitHubRepository>> =
         getJson(
             url(
                 "user", "repos"
@@ -297,7 +73,7 @@ class GitHubApiClient(
             array.mapNotNull { it.asObjectOrNull()?.let(::parseRepository) }
         }
 
-    suspend fun getRepository(owner: String, repo: String): GitHubResult<GitHubRepository> =
+    suspend fun getRepository(owner: String, repo: String): GitResult<GitHubRepository> =
         getJson(url("repos", owner, repo)) { parseRepository(it) }
 
     /**
@@ -320,10 +96,10 @@ class GitHubApiClient(
         privateRepository: Boolean = false,
         autoInit: Boolean = true,
         homepage: String? = null
-    ): GitHubResult<GitHubRepository> {
+    ): GitResult<GitHubRepository> {
         if (name.isBlank()) {
-            return GitHubResult.Failure(
-                GitHubFailureKind.UNPROCESSABLE,
+            return GitResult.Failure(
+                GitFailureKind.UNPROCESSABLE,
                 message = "A repository name is required"
             )
         }
@@ -341,12 +117,12 @@ class GitHubApiClient(
 
     // ----------------------------------------------------------------- branches
 
-    suspend fun listBranches(owner: String, repo: String, perPage: Int = 100): GitHubResult<List<GitHubBranch>> =
+    suspend fun listBranches(owner: String, repo: String, perPage: Int = 100): GitResult<List<GitHubBranch>> =
         getJson(url("repos", owner, repo, "branches") + "?per_page=${perPage.coerceIn(1, 100)}") { json ->
             json.asArrayOrNull()?.mapNotNull { it.asObjectOrNull()?.let(::parseBranch) }
         }
 
-    suspend fun getBranch(owner: String, repo: String, branch: String): GitHubResult<GitHubBranch> =
+    suspend fun getBranch(owner: String, repo: String, branch: String): GitResult<GitHubBranch> =
         getJson(url("repos", owner, repo, "branches", branch)) { parseBranch(it) }
 
     /** Creates `refs/heads/[branch]` at [fromSha]; fails with CONFLICT when it exists. */
@@ -355,7 +131,7 @@ class GitHubApiClient(
         repo: String,
         branch: String,
         fromSha: String
-    ): GitHubResult<GitHubBranch> = sendJson(
+    ): GitResult<GitHubBranch> = sendJson(
         method = "POST",
         url = url("repos", owner, repo, "git", "refs"),
         body = JsonObject().apply {
@@ -375,7 +151,7 @@ class GitHubApiClient(
         owner: String,
         repo: String,
         state: String = "open"
-    ): GitHubResult<List<GitHubPullRequest>> =
+    ): GitResult<List<GitHubPullRequest>> =
         getJson(url("repos", owner, repo, "pulls") + "?state=$state&per_page=100&sort=updated&direction=desc") { json ->
             json.asArrayOrNull()?.mapNotNull { it.asObjectOrNull()?.let(::parsePullRequest) }
         }
@@ -386,7 +162,7 @@ class GitHubApiClient(
         number: Int,
         commitTitle: String? = null,
         mergeMethod: String = "merge"
-    ): GitHubResult<GitHubMergeResult> {
+    ): GitResult<GitHubMergeResult> {
         val payload = JsonObject().apply {
             addProperty("merge_method", mergeMethod)
             if (!commitTitle.isNullOrBlank()) addProperty("commit_title", commitTitle)
@@ -423,22 +199,22 @@ class GitHubApiClient(
         base: String,
         body: String? = null,
         draft: Boolean = false
-    ): GitHubResult<GitHubPullRequest> {
+    ): GitResult<GitHubPullRequest> {
         if (title.isBlank()) {
-            return GitHubResult.Failure(
-                GitHubFailureKind.UNPROCESSABLE,
+            return GitResult.Failure(
+                GitFailureKind.UNPROCESSABLE,
                 message = "A pull request title is required"
             )
         }
         if (head.isBlank() || base.isBlank()) {
-            return GitHubResult.Failure(
-                GitHubFailureKind.UNPROCESSABLE,
+            return GitResult.Failure(
+                GitFailureKind.UNPROCESSABLE,
                 message = "Head and base branches are required"
             )
         }
         if (head.equals(base, ignoreCase = true)) {
-            return GitHubResult.Failure(
-                GitHubFailureKind.UNPROCESSABLE,
+            return GitResult.Failure(
+                GitFailureKind.UNPROCESSABLE,
                 message = "Head and base branches must differ"
             )
         }
@@ -459,7 +235,7 @@ class GitHubApiClient(
         owner: String,
         repo: String,
         number: Int
-    ): GitHubResult<GitHubPullRequestDetails> =
+    ): GitResult<GitHubPullRequestDetails> =
         getJson(url("repos", owner, repo, "pulls", number.toString())) { json ->
             parsePullRequestDetails(json)
         }
@@ -469,7 +245,7 @@ class GitHubApiClient(
         owner: String,
         repo: String,
         number: Int
-    ): GitHubResult<List<GitHubPullRequestFile>> {
+    ): GitResult<List<GitHubPullRequestFile>> {
         val builder = urlBuilder("repos", owner, repo, "pulls", number.toString(), "files")
             .addQueryParameter("per_page", "100")
         return getJson(builder.build().toString()) { json ->
@@ -489,7 +265,7 @@ class GitHubApiClient(
         owner: String,
         repo: String,
         ref: String
-    ): GitHubResult<GitHubCheckSummary> {
+    ): GitResult<GitHubCheckSummary> {
         val runsBuilder = urlBuilder("repos", owner, repo, "commits", ref, "check-runs")
             .addQueryParameter("per_page", "100")
         val runs = getJson(runsBuilder.build().toString()) { json ->
@@ -505,16 +281,16 @@ class GitHubApiClient(
             } ?: emptyList()
         }
         val runsValue = when (runs) {
-            is GitHubResult.Success -> runs.value
-            is GitHubResult.Failure -> {
-                if (runs.kind != GitHubFailureKind.NOT_FOUND) {
-                    return GitHubResult.Failure(runs.kind, runs.statusCode, runs.message)
+            is GitResult.Success -> runs.value
+            is GitResult.Failure -> {
+                if (runs.kind != GitFailureKind.NOT_FOUND) {
+                    return GitResult.Failure(runs.kind, runs.statusCode, runs.message)
                 }
                 emptyList()
             }
         }
         if (runsValue.isNotEmpty()) {
-            return GitHubResult.Success(summarizeChecks(runsValue, combinedState = null))
+            return GitResult.Success(summarizeChecks(runsValue, combinedState = null))
         }
         val statusUrl = url("repos", owner, repo, "commits", ref, "status")
         val combined = getJson(statusUrl) { json ->
@@ -540,12 +316,12 @@ class GitHubApiClient(
             )
         }
         return when (combined) {
-            is GitHubResult.Success -> combined
-            is GitHubResult.Failure ->
-                if (combined.kind == GitHubFailureKind.NOT_FOUND) {
-                    GitHubResult.Success(summarizeChecks(emptyList(), combinedState = null))
+            is GitResult.Success -> combined
+            is GitResult.Failure ->
+                if (combined.kind == GitFailureKind.NOT_FOUND) {
+                    GitResult.Success(summarizeChecks(emptyList(), combinedState = null))
                 } else {
-                    GitHubResult.Failure(combined.kind, combined.statusCode, combined.message)
+                    GitResult.Failure(combined.kind, combined.statusCode, combined.message)
                 }
         }
     }
@@ -561,10 +337,10 @@ class GitHubApiClient(
         number: Int,
         body: String,
         requestChanges: Boolean = false
-    ): GitHubResult<GitHubPullRequestReview> {
+    ): GitResult<GitHubPullRequestReview> {
         if (body.isBlank()) {
-            return GitHubResult.Failure(
-                GitHubFailureKind.UNPROCESSABLE,
+            return GitResult.Failure(
+                GitFailureKind.UNPROCESSABLE,
                 message = "A review needs a comment"
             )
         }
@@ -604,16 +380,16 @@ class GitHubApiClient(
         path: String,
         line: Int,
         body: String
-    ): GitHubResult<GitHubPullRequestReviewComment> {
+    ): GitResult<GitHubPullRequestReviewComment> {
         if (body.isBlank()) {
-            return GitHubResult.Failure(
-                GitHubFailureKind.UNPROCESSABLE,
+            return GitResult.Failure(
+                GitFailureKind.UNPROCESSABLE,
                 message = "A review comment needs a body"
             )
         }
         if (commitId.isBlank() || path.isBlank() || line <= 0) {
-            return GitHubResult.Failure(
-                GitHubFailureKind.UNPROCESSABLE,
+            return GitResult.Failure(
+                GitFailureKind.UNPROCESSABLE,
                 message = "A review comment needs a commit, a path and a line"
             )
         }
@@ -640,7 +416,7 @@ class GitHubApiClient(
         repo: String,
         sha: String? = null,
         perPage: Int = 50
-    ): GitHubResult<List<GitHubCommitSummary>> {
+    ): GitResult<List<GitHubCommitSummary>> {
         val builder = urlBuilder("repos", owner, repo, "commits")
             .addQueryParameter("per_page", perPage.coerceIn(1, 100).toString())
         if (!sha.isNullOrBlank()) builder.addQueryParameter("sha", sha)
@@ -659,7 +435,7 @@ class GitHubApiClient(
         base: String,
         head: String,
         commitMessage: String? = null
-    ): GitHubResult<GitHubMergeResult> {
+    ): GitResult<GitHubMergeResult> {
         val payload = JsonObject().apply {
             addProperty("base", base)
             addProperty("head", head)
@@ -680,7 +456,7 @@ class GitHubApiClient(
         repo: String,
         path: String,
         ref: String
-    ): GitHubResult<GitHubFileContent> {
+    ): GitResult<GitHubFileContent> {
         val builder = urlBuilder("repos", owner, repo, "contents")
         path.split('/').filter { it.isNotEmpty() }.forEach { builder.addPathSegment(it) }
         builder.addQueryParameter("ref", ref)
@@ -702,7 +478,7 @@ class GitHubApiClient(
 
     // ------------------------------------------------------------------ actions
 
-    suspend fun listWorkflows(owner: String, repo: String): GitHubResult<List<GitHubWorkflow>> =
+    suspend fun listWorkflows(owner: String, repo: String): GitResult<List<GitHubWorkflow>> =
         getJson(url("repos", owner, repo, "actions", "workflows")) { json ->
             val obj = json.asObjectOrNull() ?: return@getJson null
             obj.arr("workflows")?.mapNotNull { it.asObjectOrNull()?.let(::parseWorkflow) }
@@ -713,7 +489,7 @@ class GitHubApiClient(
         repo: String,
         perPage: Int = 20,
         branch: String? = null
-    ): GitHubResult<List<GitHubWorkflowRun>> {
+    ): GitResult<List<GitHubWorkflowRun>> {
         val builder = urlBuilder("repos", owner, repo, "actions", "runs")
             .addQueryParameter("per_page", perPage.coerceIn(1, 100).toString())
         if (!branch.isNullOrBlank()) builder.addQueryParameter("branch", branch)
@@ -723,7 +499,7 @@ class GitHubApiClient(
         }
     }
 
-    suspend fun getWorkflowRun(owner: String, repo: String, runId: Long): GitHubResult<GitHubWorkflowRun> =
+    suspend fun getWorkflowRun(owner: String, repo: String, runId: Long): GitResult<GitHubWorkflowRun> =
         getJson(url("repos", owner, repo, "actions", "runs", runId.toString())) { json ->
             json.asObjectOrNull()?.let(::parseWorkflowRun)
         }
@@ -734,7 +510,7 @@ class GitHubApiClient(
         workflowIdOrFile: String,
         ref: String,
         inputs: Map<String, String> = emptyMap()
-    ): GitHubResult<Unit> {
+    ): GitResult<Unit> {
         val payload = JsonObject().apply {
             addProperty("ref", ref)
             if (inputs.isNotEmpty()) {
@@ -755,19 +531,19 @@ class GitHubApiClient(
         ) { Unit }
     }
 
-    suspend fun listJobs(owner: String, repo: String, runId: Long): GitHubResult<List<GitHubJob>> =
+    suspend fun listJobs(owner: String, repo: String, runId: Long): GitResult<List<GitHubJob>> =
         getJson(url("repos", owner, repo, "actions", "runs", runId.toString(), "jobs") + "?per_page=100") { json ->
             val obj = json.asObjectOrNull() ?: return@getJson null
             obj.arr("jobs")?.mapNotNull { it.asObjectOrNull()?.let(::parseJob) }
         }
 
     /** Downloads a run's log as plain text. GitHub answers with a redirect to a signed URL. */
-    suspend fun downloadRunLogs(owner: String, repo: String, runId: Long): GitHubResult<String> =
+    suspend fun downloadRunLogs(owner: String, repo: String, runId: Long): GitResult<String> =
         withContext(Dispatchers.IO) {
             downloadText(url("repos", owner, repo, "actions", "runs", runId.toString(), "logs"))
         }
 
-    suspend fun listRunArtifacts(owner: String, repo: String, runId: Long): GitHubResult<List<GitHubArtifact>> =
+    suspend fun listRunArtifacts(owner: String, repo: String, runId: Long): GitResult<List<GitHubArtifact>> =
         getJson(url("repos", owner, repo, "actions", "runs", runId.toString(), "artifacts") + "?per_page=100") { json ->
             val obj = json.asObjectOrNull() ?: return@getJson null
             obj.arr("artifacts")?.mapNotNull { it.asObjectOrNull()?.let(::parseArtifact) }
@@ -777,14 +553,14 @@ class GitHubApiClient(
         owner: String,
         repo: String,
         perPage: Int = 50
-    ): GitHubResult<List<GitHubArtifact>> =
+    ): GitResult<List<GitHubArtifact>> =
         getJson(url("repos", owner, repo, "actions", "artifacts") + "?per_page=${perPage.coerceIn(1, 100)}") { json ->
             val obj = json.asObjectOrNull() ?: return@getJson null
             obj.arr("artifacts")?.mapNotNull { it.asObjectOrNull()?.let(::parseArtifact) }
         }
 
     /** Downloads the artifact zip bytes (archive_download_url). */
-    suspend fun downloadArtifact(artifact: GitHubArtifact): GitHubResult<ByteArray> =
+    suspend fun downloadArtifact(artifact: GitHubArtifact): GitResult<ByteArray> =
         withContext(Dispatchers.IO) {
             downloadBytes(artifact.archiveDownloadUrl)
         }
@@ -800,7 +576,7 @@ class GitHubApiClient(
         owner: String,
         repo: String,
         perPage: Int = 20
-    ): GitHubResult<List<GitHubRelease>> =
+    ): GitResult<List<GitHubRelease>> =
         getJson(url("repos", owner, repo, "releases") + "?per_page=${perPage.coerceIn(1, 100)}") { json ->
             json.asArrayOrNull()?.mapNotNull { it.asObjectOrNull()?.let(::parseRelease) }
         }
@@ -813,14 +589,14 @@ class GitHubApiClient(
      * instead. GitHub answers with a redirect to a signed storage URL, which the
      * redirect client follows.
      */
-    suspend fun downloadReleaseAsset(asset: GitHubReleaseAsset): GitHubResult<ByteArray> =
+    suspend fun downloadReleaseAsset(asset: GitHubReleaseAsset): GitResult<ByteArray> =
         withContext(Dispatchers.IO) {
             downloadBytes(asset.apiDownloadUrl, BINARY_ACCEPT)
         }
 
     // ------------------------------------------------------------------ helpers
 
-    private suspend fun <T> getJson(url: String, parse: (JsonElement) -> T?): GitHubResult<T> =
+    private suspend fun <T> getJson(url: String, parse: (JsonElement) -> T?): GitResult<T> =
         withContext(Dispatchers.IO) {
             execute("GET", url, null, parse)
         }
@@ -831,11 +607,11 @@ class GitHubApiClient(
         body: String,
         expectBody: Boolean = true,
         parse: (JsonElement) -> T?
-    ): GitHubResult<T> = withContext(Dispatchers.IO) {
+    ): GitResult<T> = withContext(Dispatchers.IO) {
         val token = tokenOrNull()
         if (token == null) {
-            return@withContext GitHubResult.Failure(
-                GitHubFailureKind.NO_TOKEN,
+            return@withContext GitResult.Failure(
+                GitFailureKind.NO_TOKEN,
                 message = "Connect a GitHub account first"
             )
         }
@@ -855,27 +631,27 @@ class GitHubApiClient(
                 }
                 if (!expectBody || text.isNullOrBlank()) {
                     val empty = parse(JsonObject())
-                        ?: return@withContext GitHubResult.Failure(
-                            GitHubFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub"
+                        ?: return@withContext GitResult.Failure(
+                            GitFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub"
                         )
-                    return@withContext GitHubResult.Success(empty)
+                    return@withContext GitResult.Success(empty)
                 }
                 val element = runCatching { JsonParser.parseString(text) }.getOrNull()
-                    ?: return@withContext GitHubResult.Failure(
-                        GitHubFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub"
+                    ?: return@withContext GitResult.Failure(
+                        GitFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub"
                     )
                 val parsed = parse(element)
-                    ?: return@withContext GitHubResult.Failure(
-                        GitHubFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub"
+                    ?: return@withContext GitResult.Failure(
+                        GitFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub"
                     )
-                GitHubResult.Success(parsed)
+                GitResult.Success(parsed)
             }
         } catch (e: IOException) {
             AppLogger.w(TAG, "GitHub request failed: ${e.javaClass.simpleName}")
-            GitHubResult.Failure(GitHubFailureKind.NETWORK)
+            GitResult.Failure(GitFailureKind.NETWORK)
         } catch (e: Exception) {
             AppLogger.w(TAG, "GitHub request error: ${e.javaClass.simpleName}")
-            GitHubResult.Failure(GitHubFailureKind.NETWORK)
+            GitResult.Failure(GitFailureKind.NETWORK)
         }
     }
 
@@ -884,7 +660,7 @@ class GitHubApiClient(
         url: String,
         body: String?,
         parse: (JsonElement) -> T?
-    ): GitHubResult<T> {
+    ): GitResult<T> {
         val token = tokenOrNull()
         val builder = Request.Builder()
             .url(url)
@@ -911,27 +687,27 @@ class GitHubApiClient(
                 val element = runCatching { JsonParser.parseString(text.orEmpty()) }.getOrNull()
                 val parsed = element?.let { runCatching { parse(it) }.getOrNull() }
                 if (parsed == null) {
-                    GitHubResult.Failure(GitHubFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub")
+                    GitResult.Failure(GitFailureKind.UNEXPECTED, response.code, "Unexpected response from GitHub")
                 } else {
-                    GitHubResult.Success(parsed)
+                    GitResult.Success(parsed)
                 }
             }
         } catch (e: IOException) {
             AppLogger.w(TAG, "GitHub request failed: ${e.javaClass.simpleName}")
-            GitHubResult.Failure(GitHubFailureKind.NETWORK)
+            GitResult.Failure(GitFailureKind.NETWORK)
         } catch (e: Exception) {
             AppLogger.w(TAG, "GitHub request error: ${e.javaClass.simpleName}")
-            GitHubResult.Failure(GitHubFailureKind.NETWORK)
+            GitResult.Failure(GitFailureKind.NETWORK)
         }
     }
 
-    private fun downloadText(url: String): GitHubResult<String> =
+    private fun downloadText(url: String): GitResult<String> =
         downloadBytes(url).map { String(it, Charsets.UTF_8) }
 
     private fun downloadBytes(
         url: String,
         accept: String = JSON_ACCEPT
-    ): GitHubResult<ByteArray> {
+    ): GitResult<ByteArray> {
         val token = tokenOrNull()
         val builder = Request.Builder()
             .url(url)
@@ -951,17 +727,17 @@ class GitHubApiClient(
                     )
                 }
                 if (bytes == null) {
-                    GitHubResult.Failure(GitHubFailureKind.UNEXPECTED, response.code, "Empty response")
+                    GitResult.Failure(GitFailureKind.UNEXPECTED, response.code, "Empty response")
                 } else {
-                    GitHubResult.Success(bytes)
+                    GitResult.Success(bytes)
                 }
             }
         } catch (e: IOException) {
             AppLogger.w(TAG, "GitHub download failed: ${e.javaClass.simpleName}")
-            GitHubResult.Failure(GitHubFailureKind.NETWORK)
+            GitResult.Failure(GitFailureKind.NETWORK)
         } catch (e: Exception) {
             AppLogger.w(TAG, "GitHub download error: ${e.javaClass.simpleName}")
-            GitHubResult.Failure(GitHubFailureKind.NETWORK)
+            GitResult.Failure(GitFailureKind.NETWORK)
         }
     }
 
@@ -973,19 +749,19 @@ class GitHubApiClient(
         rateRemaining: String?,
         retryAfter: String?,
         body: String?
-    ): GitHubResult.Failure {
+    ): GitResult.Failure {
         val message = extractMessage(body)
         val kind = when {
-            code == 401 -> GitHubFailureKind.UNAUTHORIZED
-            code == 429 -> GitHubFailureKind.RATE_LIMITED
-            code == 403 && (rateRemaining == "0" || retryAfter != null) -> GitHubFailureKind.RATE_LIMITED
-            code == 403 -> GitHubFailureKind.FORBIDDEN
-            code == 404 -> GitHubFailureKind.NOT_FOUND
-            code == 409 -> GitHubFailureKind.CONFLICT
-            code == 422 -> GitHubFailureKind.UNPROCESSABLE
-            else -> GitHubFailureKind.HTTP
+            code == 401 -> GitFailureKind.UNAUTHORIZED
+            code == 429 -> GitFailureKind.RATE_LIMITED
+            code == 403 && (rateRemaining == "0" || retryAfter != null) -> GitFailureKind.RATE_LIMITED
+            code == 403 -> GitFailureKind.FORBIDDEN
+            code == 404 -> GitFailureKind.NOT_FOUND
+            code == 409 -> GitFailureKind.CONFLICT
+            code == 422 -> GitFailureKind.UNPROCESSABLE
+            else -> GitFailureKind.HTTP
         }
-        return GitHubResult.Failure(kind, code, message)
+        return GitResult.Failure(kind, code, message)
     }
 
     private fun url(vararg segments: String): String =
@@ -1362,8 +1138,8 @@ class GitHubApiClient(
     }
 }
 
-private inline fun <T> GitHubResult<ByteArray>.map(transform: (ByteArray) -> T): GitHubResult<T> =
+private inline fun <T> GitResult<ByteArray>.map(transform: (ByteArray) -> T): GitResult<T> =
     when (this) {
-        is GitHubResult.Success -> GitHubResult.Success(transform(value))
-        is GitHubResult.Failure -> this
+        is GitResult.Success -> GitResult.Success(transform(value))
+        is GitResult.Failure -> this
     }

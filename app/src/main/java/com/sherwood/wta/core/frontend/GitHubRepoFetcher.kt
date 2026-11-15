@@ -71,7 +71,7 @@ sealed class GitHubTokenProbeResult {
  */
 class GitHubRepoFetcher(
     private val context: Context,
-    private val tokenProvider: GitHubTokenProvider = GitHubTokenStore(context),
+    private val tokenProvider: GitTokenProvider = GitHubTokenStore(context),
     private val httpClient: OkHttpClient = NetworkModule.downloadClient,
     apiBaseUrl: String = DEFAULT_API_BASE_URL,
     archiveBaseUrl: String = DEFAULT_ARCHIVE_BASE_URL,

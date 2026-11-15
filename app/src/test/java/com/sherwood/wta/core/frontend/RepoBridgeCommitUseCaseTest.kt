@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.google.gson.JsonParser
+import com.sherwood.wta.core.studio.git.GitHubCommitWriter
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -53,12 +54,14 @@ class RepoBridgeCommitUseCaseTest {
         return RepoBridgeCommitUseCase(
             context = context,
             projectDir = projectDir,
-            client = GitDataApiClient(
-                context = context,
-                tokenProvider = { token },
-                httpClient = OkHttpClient(),
-                apiBaseUrl = apiBase,
-                urlGuard = {}
+            writer = GitHubCommitWriter(
+                GitDataApiClient(
+                    context = context,
+                    tokenProvider = { token },
+                    httpClient = OkHttpClient(),
+                    apiBaseUrl = apiBase,
+                    urlGuard = {}
+                )
             ),
             metadataStore = metadataStore
         )
@@ -399,12 +402,14 @@ class RepoBridgeCommitUseCaseTest {
         val broken = RepoBridgeCommitUseCase(
             context = context,
             projectDir = projectDir,
-            client = GitDataApiClient(
-                context = context,
-                tokenProvider = { throw IllegalStateException("boom") },
-                httpClient = OkHttpClient(),
-                apiBaseUrl = apiBase,
-                urlGuard = {}
+            writer = GitHubCommitWriter(
+                GitDataApiClient(
+                    context = context,
+                    tokenProvider = { throw IllegalStateException("boom") },
+                    httpClient = OkHttpClient(),
+                    apiBaseUrl = apiBase,
+                    urlGuard = {}
+                )
             ),
             metadataStore = metadataStore
         )
