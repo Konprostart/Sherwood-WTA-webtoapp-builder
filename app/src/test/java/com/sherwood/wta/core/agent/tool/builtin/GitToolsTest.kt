@@ -118,7 +118,7 @@ class GitToolsTest {
     // -------------------------------------------------------------- registration
 
     @Test
-    fun `github tools are registered once and keep their read-only flags`() {
+    fun `git tools are registered once and keep their read-only flags`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val planManager = PlanManager(
             sessionId = "test",

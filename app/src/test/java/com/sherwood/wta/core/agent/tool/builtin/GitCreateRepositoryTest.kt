@@ -89,11 +89,17 @@ class GitCreateRepositoryTest {
         assertThat(isExcludedCopyPath("index.html")).isFalse()
         assertThat(isExcludedCopyPath("src/repo_bridge.json")).isFalse()
 
-        // A copied pipeline could run with the user's credentials on the next push.
+        // A copied pipeline could run with the user's credentials on the next push, on
+        // whichever host the copy lands — so every supported CI definition is excluded.
         assertThat(isWorkflowCopyPath(".github/workflows/build.yml")).isTrue()
         assertThat(isWorkflowCopyPath(".github/workflows")).isTrue()
+        assertThat(isWorkflowCopyPath(".gitea/workflows/build.yml")).isTrue()
+        assertThat(isWorkflowCopyPath(".forgejo/workflows/build.yml")).isTrue()
+        assertThat(isWorkflowCopyPath(".gitlab-ci.yml")).isTrue()
         assertThat(isWorkflowCopyPath(".github/ISSUE_TEMPLATE/bug.md")).isFalse()
+        assertThat(isWorkflowCopyPath(".gitea/README.md")).isFalse()
         assertThat(isWorkflowCopyPath("workflows/build.yml")).isFalse()
+        assertThat(isWorkflowCopyPath("docs/.gitlab-ci.yml")).isFalse()
     }
 
     @Test

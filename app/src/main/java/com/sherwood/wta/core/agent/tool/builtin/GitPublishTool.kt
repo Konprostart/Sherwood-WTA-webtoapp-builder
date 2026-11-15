@@ -11,13 +11,11 @@ import com.sherwood.wta.core.frontend.RepoBridgeCommitUseCase
 import com.sherwood.wta.core.frontend.RepoBridgeMetadataStore
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.studio.WorkspaceService
-import com.sherwood.wta.core.studio.git.GitCommitWriterResolver
 import com.sherwood.wta.core.studio.git.GitFailureKind
 import com.sherwood.wta.core.studio.git.GitProvider
 import com.sherwood.wta.core.studio.git.GitProviderId
 import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitResult
-import com.sherwood.wta.core.studio.git.GitWriterResolution
 import com.sherwood.wta.core.studio.git.NewGitChangeRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -521,16 +519,6 @@ class GitOpenChangeRequestTool : Tool {
             )
         }
 
-        // The host's own limits decide whether this change set can be one commit; reading
-        // them before the copy keeps a too-large tree from being written to disk first.
-        val writer = (GitCommitWriterResolver.resolve(ctx.androidContext, projectDir)
-            as? GitWriterResolution.Ok)?.writer
-            ?: return ToolResult.error(
-                "$name: the working copy at ${projectDir.name} has no publisher for " +
-                    "${connection.providerName}."
-            )
-        val limits = writer.publishLimits
-
         val stats = withContext(Dispatchers.IO) { copySessionTree(folderDir, projectDir) }
         if (stats.failed > 0) {
             // A file that cannot be written would silently keep its old content and the
@@ -553,14 +541,14 @@ class GitOpenChangeRequestTool : Tool {
         if (stats.files == 0) {
             return ToolResult.error("$name: '$folder' has no readable files to push.")
         }
-        if (stats.truncated || stats.files > limits.maxFiles || stats.bytes > limits.maxBytes) {
+        if (stats.truncated) {
             // Publishing a capped copy would silently leave the other edits out of the
             // pull request, so the whole publish fails instead.
             return ToolResult.error(
-                "$name: '$folder' holds more than one publish can send on " +
-                    "${connection.providerName} (${limits.maxFiles} files / " +
-                    "${limits.maxBytes / (1024 * 1024)} MB). Nothing was pushed — reduce " +
-                    "the change set and retry."
+                "$name: '$folder' holds more than one publish can carry " +
+                    "($MAX_PUBLISH_FILES files / " +
+                    "${MAX_PUBLISH_TOTAL_BYTES / (1024 * 1024)} MB). Nothing was pushed — " +
+                    "reduce the change set and retry."
             )
         }
 
