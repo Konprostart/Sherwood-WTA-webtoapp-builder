@@ -284,7 +284,7 @@ class GitProviderSeamTest {
     }
 
     @Test
-    fun `a configured gitea server yields a read-only state`() {
+    fun `a configured gitea server yields a writable state`() {
         val context = context()
         val settings = GitProviderSettings.getInstance(context)
         val previousProvider = settings.activeProvider
@@ -297,8 +297,8 @@ class GitProviderSeamTest {
 
             assertThat(state.isAvailable).isTrue()
             assertThat(state.capabilities).isEqualTo(GiteaProvider.CAPABILITIES)
-            // No writer means no publish UI, on this host and in this build.
-            assertThat(state.canPublish).isFalse()
+            // Gitea/Forgejo have a publish path, so the Studio offers the publish UI.
+            assertThat(state.canPublish).isTrue()
             assertThat(state.hasToken).isFalse()
         } finally {
             settings.activeProvider = previousProvider
