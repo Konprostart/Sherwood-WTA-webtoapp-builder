@@ -118,6 +118,9 @@ class TelegramCommandRouter(
             data == TelegramControls.REPOS -> TelegramReply.Text(repositories(), controlsKeyboard())
             data == TelegramControls.VAULT -> TelegramReply.Text(vaultSummary(), vaultKeyboard())
             data == TelegramControls.APK -> latestApk()
+            data.startsWith(TelegramControls.APK_PREFIX) -> apkForRun(
+                data.removePrefix(TelegramControls.APK_PREFIX).toLongOrNull()
+            )
             data == TelegramControls.BUILD -> startBuildFromButton(null)
             data.startsWith(TelegramControls.BUILD_PREFIX) ->
                 startBuildFromButton(data.removePrefix(TelegramControls.BUILD_PREFIX))
@@ -237,14 +240,26 @@ class TelegramCommandRouter(
     }
 
     private fun latestApk(): TelegramReply {
-        val artifact = vault.list().firstOrNull { it.kindEnum == com.sherwood.wta.core.studio.ArtifactKind.APK }
-            ?: return TelegramReply.Text("—")
+        val artifact = vault.list().firstOrNull {
+            it.kindEnum == com.sherwood.wta.core.studio.ArtifactKind.APK
+        } ?: return TelegramReply.Text("—")
+        return apkReply(artifact)
+    }
+
+    /** The APK that a specific run produced, so a notification downloads the right build. */
+    private fun apkForRun(runId: Long?): TelegramReply {
+        if (runId == null) return latestApk()
+        val artifact = vault.list().firstOrNull {
+            it.runId == runId && it.kindEnum == com.sherwood.wta.core.studio.ArtifactKind.APK
+        } ?: return TelegramReply.Text("—")
+        return apkReply(artifact)
+    }
+
+    private fun apkReply(artifact: com.sherwood.wta.core.studio.VaultArtifact): TelegramReply {
         val file = vault.fileFor(artifact)
         if (!file.isFile) return TelegramReply.Text("—")
         if (file.length() > MAX_DOCUMENT_BYTES) {
-            return TelegramReply.Text(
-                "${artifact.fileName} · ${file.length() / (1024 * 1024)} MB"
-            )
+            return TelegramReply.Text("${artifact.fileName} · ${file.length() / (1024 * 1024)} MB")
         }
         val version = artifact.versionName?.let { " $it" } ?: ""
         return TelegramReply.Document(file, "${artifact.fileName}$version")
@@ -318,7 +333,7 @@ class TelegramCommandRouter(
                             error = finished.downloadError,
                             runUrl = finished.run.htmlUrl
                         ),
-                        TelegramKeyboards.buildResult(finished.run.htmlUrl, hasApk)
+                        TelegramKeyboards.buildResult(finished.run.htmlUrl, hasApk, finished.run.id)
                     )
                 )
             }.onFailure { error ->

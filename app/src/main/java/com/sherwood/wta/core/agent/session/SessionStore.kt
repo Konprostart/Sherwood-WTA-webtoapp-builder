@@ -136,9 +136,10 @@ class SessionStore(
         return captured
     }
 
-    suspend fun replaceMessages(id: String, messages: List<AgentMessage>): AgentSession? = mutate(id) {
-        it.copy(messages = messages)
-    }
+    suspend fun replaceMessages(id: String, messages: List<AgentMessage>): AgentSession? =
+        mutate(id, clearDrafts = true) {
+            it.copy(messages = messages)
+        }
 
     /**
      * Insert or replace the trailing assistant [message] for a session, keyed by
@@ -221,12 +222,13 @@ class SessionStore(
         return captured
     }
 
-    suspend fun truncateAt(id: String, messageId: String, keep: Boolean): AgentSession? = mutate(id) { s ->
-        val idx = s.messages.indexOfFirst { it.id == messageId }
-        if (idx < 0) return@mutate s
-        val end = if (keep) idx + 1 else idx
-        s.copy(messages = s.messages.take(end))
-    }
+    suspend fun truncateAt(id: String, messageId: String, keep: Boolean): AgentSession? =
+        mutate(id, clearDrafts = true) { s ->
+            val idx = s.messages.indexOfFirst { it.id == messageId }
+            if (idx < 0) return@mutate s
+            val end = if (keep) idx + 1 else idx
+            s.copy(messages = s.messages.take(end))
+        }
 
     suspend fun recordPlan(sessionId: String, planSlug: String) = mutate(sessionId) { s ->
         val newSlugs = (s.planSlugs + planSlug).distinct()
@@ -256,7 +258,11 @@ class SessionStore(
      * back the metadata index and that one session's messages. No other session's
      * history is read or rewritten.
      */
-    private suspend fun mutate(id: String, block: (AgentSession) -> AgentSession): AgentSession? {
+    private suspend fun mutate(
+        id: String,
+        clearDrafts: Boolean = false,
+        block: (AgentSession) -> AgentSession
+    ): AgentSession? {
         var captured: AgentSession? = null
         context.aicodingStore.edit { p ->
             migrate(p)
@@ -268,6 +274,9 @@ class SessionStore(
             list[idx] = updated
             p[KEY_INDEX] = encodeIndex(list)
             p[messagesKey(id)] = encodeMessages(updated.messages)
+            // Rewriting the committed history invalidates any in-flight draft: keeping
+            // one would re-append a turn that the replacement deliberately removed.
+            if (clearDrafts) draftKeys(p, id).forEach { p.remove(it) }
             captured = updated
         }
         return captured

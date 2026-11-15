@@ -278,7 +278,6 @@ class StudioStorageMaintenance(private val context: Context) {
         val filesDir = context.filesDir
         val metadataStore = RepoBridgeMetadataStore()
         val settings = StudioSettingsStore.getInstance(context)
-        val providerSettings = com.sherwood.wta.core.studio.git.GitProviderSettings.getInstance(context)
 
         val protectedKeys = GitProviderId.entries.mapNotNull { provider ->
             val path = settings.lastRepository(provider)?.takeIf { it.contains('/') }

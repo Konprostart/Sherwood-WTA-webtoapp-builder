@@ -226,11 +226,14 @@ class TelegramApiClient(
         val payload = mapOf(
             "inline_keyboard" to rows.map { row ->
                 row.map { button ->
-                    if (!button.url.isNullOrBlank()) {
-                        mapOf("text" to button.label, "url" to button.url)
+                    val entry = mutableMapOf("text" to button.label)
+                    val url = button.url
+                    if (!url.isNullOrBlank()) {
+                        entry["url"] = url
                     } else {
-                        mapOf("text" to button.label, "callback_data" to button.data)
+                        entry["callback_data"] = button.data
                     }
+                    entry
                 }
             }
         )

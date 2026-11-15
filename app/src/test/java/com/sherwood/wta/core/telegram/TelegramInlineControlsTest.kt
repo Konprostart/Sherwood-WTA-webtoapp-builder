@@ -64,6 +64,11 @@ class TelegramInlineControlsTest {
         assertThat(TelegramControls.buildData(null)).isEqualTo(TelegramControls.BUILD)
         assertThat(TelegramControls.buildData("ci.yml")).isEqualTo("bd:ci.yml")
         assertThat(TelegramControls.buildData("bad id")).isNull()
+        // A run-specific download is preferred over "whatever is newest".
+        assertThat(TelegramControls.apkData(42L)).isEqualTo("ap:42")
+        assertThat(TelegramControls.apkData(null)).isEqualTo(TelegramControls.APK)
+        assertThat(TelegramControls.isValid("ap:42")).isTrue()
+        assertThat(TelegramControls.isValid("ap:abc")).isFalse()
     }
 
     @Test
@@ -83,9 +88,13 @@ class TelegramInlineControlsTest {
 
     @Test
     fun `build result keyboard offers download and run link when available`() {
-        val rows = TelegramKeyboards.buildResult("https://example.test/runs/1", hasDownload = true)
+        val rows = TelegramKeyboards.buildResult(
+            "https://example.test/runs/1",
+            hasDownload = true,
+            runId = 42L
+        )
         val buttons = rows.flatten()
-        assertThat(buttons.map { it.data }).contains(TelegramControls.APK)
+        assertThat(buttons.map { it.data }).contains("ap:42")
         assertThat(buttons.any { it.url == "https://example.test/runs/1" }).isTrue()
         // Status is always reachable, so no notification is a dead end.
         assertThat(buttons.map { it.data }).contains(TelegramControls.STATUS)

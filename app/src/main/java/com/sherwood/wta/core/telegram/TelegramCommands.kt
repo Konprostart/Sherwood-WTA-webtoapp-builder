@@ -121,7 +121,9 @@ object TelegramControls {
     const val BUILD = "bd"
     const val BUILD_PREFIX = "bd:"
 
-    private val KNOWN = Regex("^(st|rn|rp|vl|ap|bd|bd:[A-Za-z0-9._/-]{1,48})$")
+    const val APK_PREFIX = "ap:"
+
+    private val KNOWN = Regex("^(st|rn|rp|vl|ap|ap:[0-9]{1,19}|bd|bd:[A-Za-z0-9._/-]{1,48})$")
     private val WORKFLOW = Regex("^[A-Za-z0-9._/-]{1,48}$")
 
     fun isValid(data: String): Boolean = KNOWN.matches(data)
@@ -134,6 +136,13 @@ object TelegramControls {
         isValidWorkflowId(workflowId) -> BUILD_PREFIX + workflowId
         else -> null
     }
+
+    /**
+     * Callback data for downloading the APK of a specific run. A notification must not
+     * download "whatever is newest": that could be a different commit.
+     */
+    fun apkData(runId: Long?): String =
+        if (runId == null || runId <= 0L) APK else APK_PREFIX + runId
 }
 
 /**
@@ -148,10 +157,19 @@ object TelegramKeyboards {
      * Buttons for a finished CI run: download the newest vaulted APK, open the run page,
      * or return to status. A missing piece is omitted rather than shown broken.
      */
-    fun buildResult(runUrl: String?, hasDownload: Boolean): List<List<TelegramButton>> {
+    fun buildResult(
+        runUrl: String?,
+        hasDownload: Boolean,
+        runId: Long? = null
+    ): List<List<TelegramButton>> {
         val actionable = buildList {
             if (hasDownload) {
-                add(TelegramButton.callback(Strings.telegramButtonDownloadApk, TelegramControls.APK))
+                add(
+                    TelegramButton.callback(
+                        Strings.telegramButtonDownloadApk,
+                        TelegramControls.apkData(runId)
+                    )
+                )
             }
             if (!runUrl.isNullOrBlank() && runUrl.startsWith("https://")) {
                 add(TelegramButton.link(Strings.telegramButtonOpenRun, runUrl))

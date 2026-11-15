@@ -294,7 +294,10 @@ class TelegramBotService : Service() {
         // The collector on TelegramNotifications already owns delivery; pushing through
         // it keeps one send path instead of two racing ones.
         TelegramNotifications.publish(
-            TelegramReply.Text(text, TelegramKeyboards.buildResult(event.runUrl, hasApk))
+            TelegramReply.Text(
+                text,
+                TelegramKeyboards.buildResult(event.runUrl, hasApk, event.runId)
+            )
         )
     }
 
@@ -350,7 +353,10 @@ class TelegramBotService : Service() {
                 }
                 val hasApk = run.isSuccessful && vaultHasApk()
                 TelegramNotifications.publish(
-                    TelegramReply.Text(text, TelegramKeyboards.buildResult(run.htmlUrl, hasApk))
+                    TelegramReply.Text(
+                        text,
+                        TelegramKeyboards.buildResult(run.htmlUrl, hasApk, run.id)
+                    )
                 )
             }
         }
