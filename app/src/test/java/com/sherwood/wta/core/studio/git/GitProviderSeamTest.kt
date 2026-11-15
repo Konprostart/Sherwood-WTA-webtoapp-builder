@@ -170,7 +170,6 @@ class GitProviderSeamTest {
 
         assertThat(capabilities.changeRequestTerm)
             .isEqualTo(GitChangeRequestTerm.PULL_REQUEST)
-        assertThat(capabilities.stagedCommit).isTrue()
         assertThat(capabilities.artifacts).isTrue()
         assertThat(capabilities.releases).isTrue()
         assertThat(capabilities.binaryReleaseAssets).isTrue()

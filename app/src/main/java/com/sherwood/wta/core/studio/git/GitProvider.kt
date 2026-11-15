@@ -49,12 +49,6 @@ data class GitCapabilities(
     val binaryReleaseAssets: Boolean,
     /** Creating a repository through the API. */
     val createRepository: Boolean,
-    /**
-     * A commit can be built without moving a branch, so the publisher can record the
-     * pending base commit before the ref moves. False for hosts that only commit and
-     * move in one call; the caller then publishes in a single step.
-     */
-    val stagedCommit: Boolean,
     /** OAuth device flow, as an alternative to a personal access token. */
     val oauthDeviceFlow: Boolean
 )

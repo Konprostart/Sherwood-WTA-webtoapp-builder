@@ -49,9 +49,9 @@ no longer name a host.
   any caller.
 - **Capabilities are explicit.** `GitCapabilities` states what a host can do
   (reviews, inline comments, checks, dispatch, artifacts, binary release assets,
-  staged commit, device flow, and whether its change requests are called pull or merge
-  requests) so a screen can hide a section it cannot serve and say why, rather than
-  offer a control that always fails.
+  device flow, and whether its change requests are called pull or merge requests) so a
+  screen can hide a section it cannot serve and say why, rather than offer a control
+  that always fails.
 - **Credentials are per provider and per server.** `GitCredentialStore` keys a token
   by `{provider}:{host}` and encrypts it with the Android Keystore master key through
   the shared `TokenCipher`; the associated data is derived from the slot, so a

@@ -27,10 +27,14 @@ data class GitBaseTree(
  *
  * The split into [createCommit] and [moveBranch] is deliberate: it reproduces the order
  * the publisher has always used — build the commit object first, record it as the
- * "pending base" so an interrupted run can recover, then advance the ref. A host whose
- * API can only commit and move in one call reports
- * [GitCapabilities.stagedCommit] as false; the publisher then performs a single step and
- * the pending-base recovery does not apply.
+ * "pending base" so an interrupted run can recover, then advance the ref. That order is
+ * the contract of this interface, and it is what every host supported today can serve:
+ * the commit is built server-side and no branch moves until [moveBranch] is called.
+ *
+ * A host whose API can only create a commit and move a branch in one call cannot be
+ * expressed by this contract. Adding one — a single-step write, with no pending-base
+ * recovery — belongs to adding that driver, so no capability flag here pretends a caller
+ * could request it.
  *
  * Implementations must never force a ref. [moveBranch] takes the commit the caller
  * believes the branch points at and has to refuse when the branch has moved, so a

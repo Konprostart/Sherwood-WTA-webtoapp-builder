@@ -183,9 +183,7 @@ class GitHubProvider(
         private const val GITHUB_HOST = "github.com"
 
         /**
-         * GitHub can do everything the Studio currently offers. `stagedCommit` is true
-         * because the Git Data API builds a commit object before any ref moves, which is
-         * what lets the publisher record a pending base commit first.
+         * GitHub can do everything the Studio currently offers.
          */
         val CAPABILITIES = GitCapabilities(
             changeRequestTerm = GitChangeRequestTerm.PULL_REQUEST,
@@ -199,7 +197,6 @@ class GitHubProvider(
             releases = true,
             binaryReleaseAssets = true,
             createRepository = true,
-            stagedCommit = true,
             oauthDeviceFlow = true
         )
     }
