@@ -366,7 +366,7 @@ class GiteaProviderTest {
             baseUrl = server.url("/").toString().trimEnd('/'),
             tokenProvider = { TOKEN }
         )
-        val info = provider.serverInfo() as GitResult.Success
+        val info = provider.serverInfo() as GitResult.Success<GitServerInfo>
 
         assertThat(info.value.login).isEqualTo("octocat")
         assertThat(info.value.serverVersion).isEqualTo("1.22.6")
@@ -383,7 +383,7 @@ class GiteaProviderTest {
             baseUrl = server.url("/").toString().trimEnd('/'),
             tokenProvider = { TOKEN }
         )
-        val info = provider.serverInfo() as GitResult.Success
+        val info = provider.serverInfo() as GitResult.Success<GitServerInfo>
 
         assertThat(info.value.login).isEqualTo("octocat")
         assertThat(info.value.serverVersion).isNull()

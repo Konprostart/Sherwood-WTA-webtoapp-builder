@@ -11,8 +11,9 @@ yet.
 The current model is a *server-side* Git: `GitDataApiClient` +
 `RepoBridgeCommitUseCase` build blobs, trees and commits through the GitHub Git
 Data API, the working copy is a plain directory under
-`filesDir/github_imports/<repo>_<timestamp>`, and `RepoBridgeMetadata` records the
-`baseSha` that directory was imported at. That gives commit and push with
+`filesDir/git_imports/<repo>_<timestamp>` (copies written before 2.9.7 stay in
+`filesDir/github_imports/`), and `RepoBridgeMetadata` records the provider, the
+host and the `baseSha` that directory was imported at. That gives commit and push with
 `force=false` plus an `expectedBaseSha` check, which is safe, but it has real
 limits:
 

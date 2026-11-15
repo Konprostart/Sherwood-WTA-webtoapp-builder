@@ -292,8 +292,9 @@ class GitHubCreateRepositoryTool : Tool {
         // build, and saying so is the difference between "unavailable" and "broken".
         if (!connection.canPublish) {
             return ToolResult.error(
-                "%s is read-only in this build (%s). %s is not available; the user can " +
-                    "still import repositories and download build artifacts." % (tool, connection.providerName, feature)
+                "${connection.providerName} is read-only in this build. Creating a " +
+                    "repository is not available; browsing, importing and downloading " +
+                    "build artifacts still work."
             )
         }
 

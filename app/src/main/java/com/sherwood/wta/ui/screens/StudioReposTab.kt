@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import com.sherwood.wta.core.frontend.GitHubTokenStore
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.studio.DeviceFlowChallenge
 import com.sherwood.wta.core.studio.DeviceFlowPollResult
@@ -43,6 +44,7 @@ import com.sherwood.wta.core.studio.git.GitFailureKind
 import com.sherwood.wta.core.studio.git.GitProviderId
 import com.sherwood.wta.core.studio.git.GitProviderLookup
 import com.sherwood.wta.core.studio.git.GitProviderRegistry
+import com.sherwood.wta.core.studio.git.GitProviderUnavailableReason
 import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.git.GitStudio
@@ -75,6 +77,9 @@ internal fun StudioReposTab(
     val scope = rememberCoroutineScope()
     val endpoints = remember { EndpointSettingsStore.current(context) }
     val oauth = remember { GitHubOAuthClient(endpoints = endpoints) }
+    // Only the GitHub device flow writes through this store; other providers use
+    // Studio's credential store, and GitStudio.state() reports the presence either way.
+    val tokenStore = remember { GitHubTokenStore(context) }
     val studioSettings = remember { StudioSettingsStore.getInstance(context) }
     val workspace = remember { WorkspaceService(context) }
     val uriHandler = LocalUriHandler.current

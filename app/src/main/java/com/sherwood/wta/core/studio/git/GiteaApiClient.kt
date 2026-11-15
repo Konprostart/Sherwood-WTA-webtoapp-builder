@@ -150,9 +150,9 @@ internal class GiteaApiClient(
     suspend fun combinedStatus(owner: String, repo: String, revision: String): GitResult<GitCheckSummary> =
         getJson(apiUrl("repos", owner, repo, "commits", revision, "status")) { json ->
             val obj = json.asObjectOrNull() ?: return@getJson null
-            val checks = obj.arr("statuses").orEmpty().mapNotNull { element ->
+            val checks = obj.arr("statuses")?.mapNotNull { element ->
                 element.asObjectOrNull()?.let(::parseCommitStatus)
-            }
+            }.orEmpty()
             GitChecks.summarize(checks, obj.string("state"))
         }
 
@@ -469,7 +469,7 @@ internal class GiteaApiClient(
     }
 
     private fun downloadBytes(url: String): GitResult<ByteArray> {
-        val builder = Request.Builder().url(url).get().header("Accept", JSON_ACCEPT)
+        val builder = Request.Builder().url(url).get().header("Accept", ANY_ACCEPT)
         tokenOrNull()?.let { builder.header("Authorization", "token $it") }
         return try {
             urlGuard(url)
@@ -543,6 +543,7 @@ internal class GiteaApiClient(
         private const val MAX_ARCHIVE_BYTES = 300L * 1024 * 1024
         private const val MAX_LOG_CHARS = 400_000
         private const val JSON_ACCEPT = "application/json"
+        private const val ANY_ACCEPT = "*/*"
 
         // ----------------------------------------------------------------- parsing
 
@@ -699,7 +700,7 @@ internal class GiteaApiClient(
         internal fun parseJob(json: JsonElement): GitRunJob? {
             val obj = json.asObjectOrNull() ?: return null
             val id = obj.long("id") ?: return null
-            val steps = obj.arr("steps").orEmpty().mapNotNull { element ->
+            val steps = obj.arr("steps")?.mapNotNull { element ->
                 element.asObjectOrNull()?.let { step ->
                     GitRunStep(
                         number = step.int("number") ?: 0,
@@ -708,7 +709,7 @@ internal class GiteaApiClient(
                         conclusion = step.string("conclusion")
                     )
                 }
-            }
+            }.orEmpty()
             return GitRunJob(
                 id = id,
                 name = obj.string("name").orEmpty(),
@@ -745,7 +746,7 @@ internal class GiteaApiClient(
             val obj = json.asObjectOrNull() ?: return null
             val id = obj.long("id") ?: return null
             val tag = obj.string("tag_name") ?: return null
-            val assets = obj.arr("assets").orEmpty().mapNotNull { element ->
+            val assets = obj.arr("assets")?.mapNotNull { element ->
                 element.asObjectOrNull()?.let { asset ->
                     val assetId = asset.long("id") ?: return@let null
                     val name = asset.string("name") ?: return@let null
@@ -760,7 +761,7 @@ internal class GiteaApiClient(
                         state = null
                     )
                 }
-            }
+            }.orEmpty()
             return GitRelease(
                 id = id,
                 tagName = tag,

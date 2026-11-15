@@ -596,6 +596,9 @@ private fun StudioSettingsScreen(
 
             // Token-based access is an equal alternative to the OAuth App, and the
             // screen that owns it lives outside Studio. Link it rather than hiding it.
+            // It is GitHub's token screen, so a self-hosted provider must not link to
+            // it — its token lives in the hosting section above.
+            if (providerId == GitProviderId.GITHUB) {
             WtaSection(title = Strings.gitSettingsTitle) {
                 WtaSettingCard {
                     WtaSettingRow(
@@ -621,6 +624,7 @@ private fun StudioSettingsScreen(
                         }
                     }
                 }
+            }
             }
 
             WtaSection(title = Strings.studioEndpoints, description = Strings.studioEndpointsDesc) {
