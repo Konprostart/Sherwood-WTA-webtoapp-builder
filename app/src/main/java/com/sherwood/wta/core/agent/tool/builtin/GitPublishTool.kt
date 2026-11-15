@@ -5,49 +5,51 @@ import com.google.gson.JsonObject
 import com.sherwood.wta.core.agent.tool.Tool
 import com.sherwood.wta.core.agent.tool.ToolContext
 import com.sherwood.wta.core.agent.tool.ToolResult
-import com.sherwood.wta.core.frontend.GitDataApiClient
-import com.sherwood.wta.core.frontend.GitDataFailureKind
-import com.sherwood.wta.core.frontend.GitDataResult
-import com.sherwood.wta.core.frontend.RepoBridgeChangeSet
+import com.sherwood.wta.core.frontend.RepoBridgeCommitFailureKind
 import com.sherwood.wta.core.frontend.RepoBridgeCommitResult
 import com.sherwood.wta.core.frontend.RepoBridgeCommitUseCase
-import com.sherwood.wta.core.frontend.RepoBridgeMetadata
 import com.sherwood.wta.core.frontend.RepoBridgeMetadataStore
-import com.sherwood.wta.core.frontend.RepoBridgePrepareResult
 import com.sherwood.wta.core.logging.AppLogger
-import com.sherwood.wta.core.studio.EndpointSettingsStore
-import com.sherwood.wta.core.studio.GitHubApiClient
-import com.sherwood.wta.core.studio.git.GitFailureKind
-import com.sherwood.wta.core.studio.git.GitResult
 import com.sherwood.wta.core.studio.WorkspaceService
+import com.sherwood.wta.core.studio.git.GitCommitWriterResolver
+import com.sherwood.wta.core.studio.git.GitFailureKind
+import com.sherwood.wta.core.studio.git.GitProvider
+import com.sherwood.wta.core.studio.git.GitProviderId
+import com.sherwood.wta.core.studio.git.GitRepoRef
+import com.sherwood.wta.core.studio.git.GitResult
+import com.sherwood.wta.core.studio.git.GitWriterResolution
+import com.sherwood.wta.core.studio.git.NewGitChangeRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * The only way the in-app agent can send changes to GitHub.
+ * The only way the in-app agent can send changes to the connected git host.
  *
  * Four rules are enforced here in code, not by prompting the model:
  *
  * 1. **A new branch every time.** The commit is never written to the base branch the
  *    folder was imported from, never to `main`/`master`, and never to a branch that
- *    already exists remotely. The branch is created at the current base head and the
- *    ref update expects exactly that commit.
- * 2. **Pull request only.** The push and the `POST /pulls` call happen in the same
- *    invocation; there is no code path that advances a branch without opening a pull
+ *    already exists remotely. The branch is created at the imported commit and the
+ *    change is appended to it.
+ * 2. **Pull request only.** The push and the create-change-request call happen in the
+ *    same invocation; there is no code path that advances a branch without opening a pull
  *    request, and no merge call at all.
  * 3. **A tap per push.** [requiresFreshApproval] makes the permission prompt ask on
  *    every call and hides "Always allow", so one tap can never pre-authorize later
  *    pushes.
- * 4. **No force-push.** `updateRef` is always called with `force = false` and the
- *    expected base commit, so a moved branch fails as a conflict instead of being
- *    overwritten.
+ * 4. **No force-push.** Nothing sends `force`/`force_push`; a host that validates the
+ *    base refuses a moved branch or a file changed remotely instead of overwriting it.
  *
- * The source of the change is the chat's session folder, which
- * [GitHubImportRepositoryTool] filled with a copy of the repository. Only added and
- * modified files are propagated: a deletion made in the chat folder is *not* pushed,
- * because the folder can legitimately hold a partial copy of the repository.
+ * The host is whatever the user configured — GitHub, Gitea or Forgejo. Publishing goes
+ * through [RepoBridgeCommitUseCase.commitNewBranch], so the atomic Gitea `change-files`
+ * path and GitHub's staged ref update are selected by the host, not by this tool.
+ *
+ * The source of the change is the chat's session folder, which [GitImportRepositoryTool]
+ * filled with a copy of the repository. Only added and modified files are propagated: a
+ * deletion made in the chat folder is *not* pushed, because the folder can legitimately
+ * hold a partial copy of the repository.
  */
 
 /** Bounded so one publish cannot upload an arbitrarily large tree. */
@@ -65,7 +67,7 @@ private const val BRANCH_ATTEMPTS = 20
 
 /**
  * Branch prefixes this repository uses (AGENTS.md: plain `type/slug`, never a tool or
- * agent namespace). The conventional-commit prefix of the PR title picks one; `feat`
+ * agent namespace). The conventional-commit prefix of the title picks one; `feat`
  * is the fallback.
  */
 internal val PUBLISH_BRANCH_PREFIXES =
@@ -127,7 +129,7 @@ internal fun branchNameFor(plan: BranchPlan, attempt: Int): String =
  * Returns why [candidate] may not be used as the task branch, or null when it is fine.
  *
  * This is the structural part of rule 1: no base branch, no protected branch and no
- * unprefixed name can ever reach `POST /git/refs`.
+ * unprefixed name can ever reach a create-branch call.
  */
 internal fun newBranchProblem(candidate: String, baseBranch: String): String? {
     val name = candidate.trim()
@@ -240,27 +242,27 @@ internal fun copySessionTree(source: File, target: File): PublishCopyStats {
     return stats
 }
 
-private const val TAG = "GitHubPublish"
+private const val TAG = "GitPublish"
 
-private val PR_BODY_FALLBACK = """
+private val CHANGE_REQUEST_BODY_FALLBACK = """
     Prepared by the in-app agent from the files edited in this chat.
 
     The branch was created from the base branch's current head and the commit was pushed
     without a force-update, so the diff contains only the edited files.
 """.trimIndent()
 
-class GitHubOpenPullRequestTool : Tool {
+class GitOpenChangeRequestTool : Tool {
 
-    override val name = "GitHubOpenPullRequest"
+    override val name = "GitOpenChangeRequest"
 
     override val description = """
-        Send the files edited in this chat to GitHub as a pull request — the only push
-        path the agent has.
+        Send the files edited in this chat to the connected git host (GitHub, Gitea or
+        Forgejo) as a pull request — the only push path the agent has.
         Commit these rules to memory: every call creates a NEW branch from the branch the
         chat folder was imported from, commits there, and opens a pull request. It never
         commits to the base branch, never to main/master, never reuses an existing
         branch, never force-pushes and never merges.
-        Requires a folder previously filled by GitHubImportRepository. Only added and
+        Requires a folder previously filled by GitImportRepository. Only added and
         modified files are uploaded — a file deleted in the chat folder stays in the
         repository. The user is asked to approve the push with a fresh tap on every call,
         so call this only when the change is complete and the user asked to send it;
@@ -316,34 +318,37 @@ class GitHubOpenPullRequestTool : Tool {
     }
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
-        val connection = resolveGitHubConnection(ctx)
+        val connection = resolveGitConnection(ctx)
         if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
         connection.failure?.let { return ToolResult.error(it) }
-        // Writes need a host with a publish path. Gitea/Forgejo are read-only in this
-        // build, and saying so is the difference between "unavailable" and "broken".
+        val provider = connection.provider
+            ?: return ToolResult.error("${connection.providerName} is not usable in this build.")
         if (!connection.canPublish) {
             return ToolResult.error(
-                "${connection.providerName} is read-only in this build. Pushing changes " +
-                    "and opening a pull request are not available; browsing, importing " +
-                    "and downloading build artifacts still work."
+                "${connection.providerName} has no publish path in this build. Pushing " +
+                    "changes and opening a pull request are not available; browsing, " +
+                    "importing and downloading build artifacts still work."
             )
         }
 
         val requestedRepository = argString(args, "repository")?.takeIf { it.isNotBlank() }
         val (owner, repo) = parseOwnerRepo(requestedRepository ?: connection.repository)
             ?: return ToolResult.error(
-                "GitHubOpenPullRequest: '${requestedRepository ?: connection.repository}' is " +
-                    "not an owner/repo identifier. Pass `repository` explicitly."
+                "${name}: '${requestedRepository ?: connection.repository}' is not an " +
+                    "owner/repo identifier. Pass `repository` explicitly."
             )
+        val repoRef = GitRepoRef.of(owner, repo)
+            ?: return ToolResult.error("$name: '$owner/$repo' is not a valid repository.")
 
         val title = argString(args, "title")?.trim().orEmpty()
         if (title.isEmpty()) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: `title` is required — it becomes the pull request " +
-                    "title. Write it in English."
+                "$name: `title` is required — it becomes the pull request title. " +
+                    "Write it in English."
             )
         }
-        val body = argString(args, "body")?.trim()?.takeIf { it.isNotEmpty() } ?: PR_BODY_FALLBACK
+        val body = argString(args, "body")?.trim()?.takeIf { it.isNotEmpty() }
+            ?: CHANGE_REQUEST_BODY_FALLBACK
         val commitMessage = argString(args, "commitMessage")?.trim()?.takeIf { it.isNotEmpty() }
             ?: title
 
@@ -353,18 +358,18 @@ class GitHubOpenPullRequestTool : Tool {
         // back to the default: pushing the wrong folder would send the wrong changes.
         if (requestedFolder != null && folder != requestedFolder.trim('/')) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: '$requestedFolder' is not a plain folder name inside " +
-                    "this chat's working folder."
+                "$name: '$requestedFolder' is not a plain folder name inside this chat's " +
+                    "working folder."
             )
         }
         val folderDir = ctx.fileManager.resolveSafe(ctx.sessionId, folder)
             ?: return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' is not a folder inside this chat's working folder."
+                "$name: '$folder' is not a folder inside this chat's working folder."
             )
         if (!folderDir.isDirectory) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: this chat has no '$folder' folder. Call " +
-                    "GitHubImportRepository first, edit the files, then call this tool."
+                "$name: this chat has no '$folder' folder. Call GitImportRepository " +
+                    "first, edit the files, then call this tool."
             )
         }
 
@@ -374,50 +379,55 @@ class GitHubOpenPullRequestTool : Tool {
         val metadataStore = RepoBridgeMetadataStore()
         val sandboxMetadata = metadataStore.read(folderDir)
             ?: return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' was not created by GitHubImportRepository " +
-                    "(no ${RepoBridgeMetadataStore.FILE_NAME}). Import the repository into " +
+                "$name: '$folder' was not created by GitImportRepository (no " +
+                    "${RepoBridgeMetadataStore.FILE_NAME}). Import the repository into " +
                     "this chat first so the push has a known base commit."
             )
+        if (sandboxMetadata.providerId != connection.providerId) {
+            return ToolResult.error(
+                "$name: '$folder' was imported from " +
+                    "${GitStudioNames.of(sandboxMetadata.providerId)}, but the active host " +
+                    "is ${connection.providerName}. Switch the provider back, or import " +
+                    "the repository from the active host."
+            )
+        }
         if (!sandboxMetadata.owner.equals(owner, ignoreCase = true) ||
             !sandboxMetadata.repo.equals(repo, ignoreCase = true)
         ) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' holds " +
+                "$name: '$folder' holds " +
                     "${sandboxMetadata.owner}/${sandboxMetadata.repo}, not $owner/$repo. " +
                     "Import the right repository into this chat first."
             )
         }
         if (sandboxMetadata.subPath != null) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' was imported from the subfolder " +
+                "$name: '$folder' was imported from the subfolder " +
                     "'${sandboxMetadata.subPath}'. Pushing a subfolder import is not " +
                     "supported — import the repository root instead."
             )
         }
         val baseSha = sandboxMetadata.baseSha
             ?: return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' has no recorded base commit (the import " +
-                    "was offline or rate-limited). Re-import the repository so the push has " +
-                    "a known base."
+                "$name: '$folder' has no recorded base commit (the import was offline or " +
+                    "rate-limited). Re-import the repository so the push has a known base."
             )
 
         val requestedBase = argString(args, "baseBranch")?.trim()?.takeIf { it.isNotEmpty() }
         if (requestedBase != null && requestedBase != sandboxMetadata.ref) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' was imported from '${sandboxMetadata.ref}', " +
-                    "so the pull request must target that branch. Re-import from " +
-                    "'$requestedBase' if that is the intended base."
+                "$name: '$folder' was imported from '${sandboxMetadata.ref}', so the pull " +
+                    "request must target that branch. Re-import from '$requestedBase' if " +
+                    "that is the intended base."
             )
         }
         val baseBranch = sandboxMetadata.ref
         if (!WorkspaceService.isValidBranchName(baseBranch)) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: the recorded base branch '$baseBranch' is not a " +
-                    "valid Git branch name."
+                "$name: the recorded base branch '$baseBranch' is not a valid Git branch name."
             )
         }
 
-        val api = GitHubApiClient(ctx.androidContext, EndpointSettingsStore.current(ctx.androidContext))
         val workspace = WorkspaceService(ctx.androidContext)
 
         // Rule 1: a brand-new branch name, derived and checked before anything is created.
@@ -428,13 +438,12 @@ class GitHubOpenPullRequestTool : Tool {
             for (attempt in 0 until BRANCH_ATTEMPTS) {
                 val candidate = branchNameFor(plan, attempt)
                 if (newBranchProblem(candidate, baseBranch) != null) continue
-                val probe = probeBranch(api, owner, repo, candidate)
+                val probe = probeBranch(provider, repoRef, candidate)
                 // An unknown state means the API call itself failed: stop rather than
                 // guess, and a taken name simply means "try the next suffix".
                 if (probe is BranchProbe.Unknown) {
                     return ToolResult.error(
-                        "GitHubOpenPullRequest: could not check whether '$candidate' exists — " +
-                            probe.message
+                        "$name: could not check whether '$candidate' exists — " + probe.message
                     )
                 }
                 if (probe is BranchProbe.Exists) continue
@@ -442,21 +451,22 @@ class GitHubOpenPullRequestTool : Tool {
                 break
             }
             chosen ?: return ToolResult.error(
-                "GitHubOpenPullRequest: every candidate branch name derived from the title " +
-                    "already exists. Pass an explicit `branch` such as 'feat/${plan.slug}-x'."
+                "$name: every candidate branch name derived from the title already exists. " +
+                    "Pass an explicit `branch` such as 'feat/${plan.slug}-x'."
             )
         }
         if (explicitBranch != null) {
             newBranchProblem(explicitBranch, baseBranch)?.let { problem ->
-                return ToolResult.error("GitHubOpenPullRequest: cannot use '$explicitBranch' — $problem.")
+                return ToolResult.error("$name: cannot use '$explicitBranch' — $problem.")
             }
-            when (val probe = probeBranch(api, owner, repo, explicitBranch)) {
+            when (val probe = probeBranch(provider, repoRef, explicitBranch)) {
                 is BranchProbe.Exists -> return ToolResult.error(
-                    "GitHubOpenPullRequest: branch '$explicitBranch' already exists on GitHub. " +
-                        "A task always gets a new branch — pass another name."
+                    "$name: branch '$explicitBranch' already exists on " +
+                        "${connection.providerName}. A task always gets a new branch — " +
+                        "pass another name."
                 )
                 is BranchProbe.Unknown -> return ToolResult.error(
-                    "GitHubOpenPullRequest: could not check whether '$explicitBranch' exists — " +
+                    "$name: could not check whether '$explicitBranch' exists — " +
                         probe.message
                 )
                 is BranchProbe.Free -> Unit
@@ -465,28 +475,28 @@ class GitHubOpenPullRequestTool : Tool {
 
         // Rule 4 (precondition): the base must not have moved since the import, otherwise
         // the diff would silently revert the newer commits when it is applied.
-        val baseHead = when (val result = api.getBranch(owner, repo, baseBranch)) {
+        val baseHead = when (val result = provider.branch(repoRef, baseBranch)) {
             is GitResult.Success -> result.value
             is GitResult.Failure -> return ToolResult.error(
-                "GitHubOpenPullRequest: could not read '$baseBranch' from $owner/$repo — " +
+                "$name: could not read '$baseBranch' from $owner/$repo — " +
                     (result.message ?: result.kind.name)
             )
         }
         if (baseHead.sha != baseSha) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: '$baseBranch' moved to ${baseHead.sha.take(8)} after " +
-                    "this chat imported it at ${baseSha.take(8)}. Re-import the repository " +
-                    "(GitHubImportRepository) so the pull request does not revert newer commits."
+                "$name: '$baseBranch' moved to ${baseHead.sha.take(8)} after this chat " +
+                    "imported it at ${baseSha.take(8)}. Re-import the repository " +
+                    "(GitImportRepository) so the pull request does not revert newer commits."
             )
         }
 
         // Working copy: reuse a clean Studio copy on the same base, else download one.
         val projectDir = withContext(Dispatchers.IO) {
-            reusableWorkingCopy(workspace, owner, repo, baseBranch, baseSha)
+            reusableWorkingCopy(workspace, owner, repo, baseBranch, baseSha, connection.providerId)
         } ?: workspace.clone(owner, repo, baseBranch)
             .getOrElse { failure ->
                 return ToolResult.error(
-                    "GitHubOpenPullRequest: could not prepare a working copy of $owner/$repo — " +
+                    "$name: could not prepare a working copy of $owner/$repo — " +
                         (failure.message ?: failure.javaClass.simpleName)
                 )
             }
@@ -494,23 +504,39 @@ class GitHubOpenPullRequestTool : Tool {
 
         val workingMetadata = metadataStore.read(projectDir)
             ?: return ToolResult.error(
-                "GitHubOpenPullRequest: the working copy at ${projectDir.name} has no " +
-                    "repository metadata."
+                "$name: the working copy at ${projectDir.name} has no repository metadata."
             )
+        if (workingMetadata.providerId != connection.providerId) {
+            return ToolResult.error(
+                "$name: the working copy at ${projectDir.name} belongs to " +
+                    "${GitStudioNames.of(workingMetadata.providerId)}, not " +
+                    "${connection.providerName}."
+            )
+        }
         if (workingMetadata.ref != baseBranch || workingMetadata.baseSha != baseSha) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: the working copy at ${projectDir.name} tracks " +
+                "$name: the working copy at ${projectDir.name} tracks " +
                     "${workingMetadata.ref}@${workingMetadata.baseSha?.take(8)}, not " +
                     "$baseBranch@${baseSha.take(8)}."
             )
         }
+
+        // The host's own limits decide whether this change set can be one commit; reading
+        // them before the copy keeps a too-large tree from being written to disk first.
+        val writer = (GitCommitWriterResolver.resolve(ctx.androidContext, projectDir)
+            as? GitWriterResolution.Ok)?.writer
+            ?: return ToolResult.error(
+                "$name: the working copy at ${projectDir.name} has no publisher for " +
+                    "${connection.providerName}."
+            )
+        val limits = writer.publishLimits
 
         val stats = withContext(Dispatchers.IO) { copySessionTree(folderDir, projectDir) }
         if (stats.failed > 0) {
             // A file that cannot be written would silently keep its old content and the
             // pushed change set would not match what the agent believes it edited.
             return ToolResult.error(
-                "GitHubOpenPullRequest: ${stats.failed} file(s) in '$folder' could not be " +
+                "$name: ${stats.failed} file(s) in '$folder' could not be " +
                     "copied into the working copy. Nothing was pushed; check free space and " +
                     "file permissions, then retry."
             )
@@ -519,128 +545,80 @@ class GitHubOpenPullRequestTool : Tool {
             // Such a file cannot be uploaded at all, so the pull request would silently
             // miss it; refuse instead of publishing an incomplete change set.
             return ToolResult.error(
-                "GitHubOpenPullRequest: ${stats.skippedLarge} file(s) in '$folder' are larger " +
-                    "than 10 MB, which a push cannot upload. Nothing was pushed — split or " +
-                    "shrink the file."
+                "$name: ${stats.skippedLarge} file(s) in '$folder' are larger than " +
+                    "${MAX_PUBLISH_FILE_BYTES / (1024 * 1024)} MB, which a push cannot " +
+                    "upload. Nothing was pushed — split or shrink the file."
             )
         }
         if (stats.files == 0) {
-            return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' has no readable files to push."
-            )
+            return ToolResult.error("$name: '$folder' has no readable files to push.")
         }
-        if (stats.truncated) {
+        if (stats.truncated || stats.files > limits.maxFiles || stats.bytes > limits.maxBytes) {
             // Publishing a capped copy would silently leave the other edits out of the
             // pull request, so the whole publish fails instead.
             return ToolResult.error(
-                "GitHubOpenPullRequest: '$folder' holds more than one publish can send " +
-                    "(${MAX_PUBLISH_FILES} files / ${MAX_PUBLISH_TOTAL_BYTES / (1024 * 1024)} MB). " +
-                    "Nothing was pushed — reduce the change set and retry."
+                "$name: '$folder' holds more than one publish can send on " +
+                    "${connection.providerName} (${limits.maxFiles} files / " +
+                    "${limits.maxBytes / (1024 * 1024)} MB). Nothing was pushed — reduce " +
+                    "the change set and retry."
             )
         }
 
-        // From here the working copy reports the new branch, so the commit below advances
-        // that branch and not the base. Restored on every failure before the push.
-        val onTaskBranch = workingMetadata.copy(ref = branch, pendingBaseSha = null)
+        // The commit lands on a brand-new branch. The use case enforces that rule again
+        // and never forces a ref; a failure leaves the working copy as it was.
         val commitUseCase = RepoBridgeCommitUseCase(ctx.androidContext, projectDir)
-        try {
-            metadataStore.write(projectDir, onTaskBranch)
-        } catch (e: Exception) {
-            AppLogger.w(TAG, "Could not record the task branch: ${e.javaClass.simpleName}")
+        val committed = commitUseCase.commitNewBranch(commitMessage, branch)
+        if (committed is RepoBridgeCommitResult.Failure) {
             return ToolResult.error(
-                "GitHubOpenPullRequest: could not record the task branch in the working copy."
+                descriptionOf(committed) +
+                    " Nothing was merged." +
+                    branchStateNote(committed.reason, branch)
             )
         }
+        val success = committed as RepoBridgeCommitResult.Success
 
-        val prepared = commitUseCase.prepare()
-        if (prepared is RepoBridgePrepareResult.Failure) {
-            restoreMetadata(projectDir, workingMetadata)
-            return ToolResult.error(
-                "GitHubOpenPullRequest: could not diff the changes (${prepared.reason})" +
-                    (prepared.detail?.let { " — $it" } ?: ".")
-            )
-        }
-        val ready = prepared as RepoBridgePrepareResult.Ready
-        if (ready.changes.isEmpty) {
-            restoreMetadata(projectDir, workingMetadata)
-            return ToolResult.error(
-                "GitHubOpenPullRequest: nothing to push — no file in '$folder' differs from " +
-                    "$owner/$repo@$baseBranch. Edit files in this chat first."
-            )
-        }
-
-        val created = api.createBranch(owner, repo, branch, baseHead.sha)
-        if (created is GitResult.Failure) {
-            restoreMetadata(projectDir, workingMetadata)
-            return ToolResult.error(
-                "GitHubOpenPullRequest: GitHub refused to create '$branch' — " +
-                    (created.message ?: created.kind.name) + "."
-            )
-        }
-
-        when (val committed = commitUseCase.commit(commitMessage)) {
-            is RepoBridgeCommitResult.Failure -> {
-                val cleanup = undoEmptyBranch(
-                    context = ctx.androidContext,
-                    owner = owner,
-                    repo = repo,
-                    branch = branch,
-                    baseSha = baseHead.sha
-                )
-                if (cleanup.branchRemoved) {
-                    restoreMetadata(projectDir, workingMetadata)
-                }
-                return ToolResult.error(
-                    "GitHubOpenPullRequest: the push failed (${committed.reason})" +
-                        (committed.detail?.let { " at $it" } ?: "") + ". " +
-                        "Nothing was merged. " +
-                        (
-                            if (cleanup.branchRemoved) {
-                                "The empty branch '$branch' was removed again."
-                            } else {
-                                "Branch '$branch' may still exist at the base commit — remove " +
-                                    "it from Studio → Repositories if the retry uses another name."
-                            }
-                            )
-                )
-            }
-            is RepoBridgeCommitResult.Success -> {
-                val pull = api.createPullRequest(
-                    owner = owner,
-                    repo = repo,
+        val changeRequest = when (
+            val created = provider.createChangeRequest(
+                repoRef,
+                NewGitChangeRequest(
                     title = title,
                     head = branch,
                     base = baseBranch,
                     body = body
                 )
-                return when (pull) {
-                    is GitResult.Success -> ToolResult.ok(
-                        summary(
-                            owner = owner,
-                            repo = repo,
-                            branch = branch,
-                            baseBranch = baseBranch,
-                            baseSha = baseHead.sha,
-                            commitSha = committed.commitSha,
-                            pullNumber = pull.value.number,
-                            pullUrl = pull.value.htmlUrl,
-                            changes = ready.changes,
-                            stats = stats
-                        )
-                    )
-                    is GitResult.Failure -> ToolResult.error(
-                        "GitHubOpenPullRequest: the commit is on '$branch' but GitHub refused " +
-                            "the pull request — " + (pull.message ?: pull.kind.name) + ". " +
-                            "Open it from Studio → Repositories → Create PR " +
-                            "(head '$branch' → base '$baseBranch'). " +
-                            "Commit: https://github.com/$owner/$repo/commit/${committed.commitSha}"
-                    )
-                }
-            }
+            )
+        ) {
+            is GitResult.Success -> created.value
+            is GitResult.Failure -> return ToolResult.error(
+                "$name: the commit is on '$branch' but ${connection.providerName} refused " +
+                    "the pull request — " + (created.message ?: created.kind.name) + ". " +
+                    "Open it from Studio → Repositories → Create PR " +
+                    "(head '$branch' → base '$baseBranch'). " +
+                    "Commit: ${connection.baseUrl}/$owner/$repo/commit/${success.commitSha}"
+            )
         }
+
+        return ToolResult.ok(
+            summary(
+                providerName = connection.providerName,
+                baseUrl = connection.baseUrl,
+                owner = owner,
+                repo = repo,
+                branch = branch,
+                baseBranch = baseBranch,
+                baseSha = baseHead.sha,
+                commitSha = success.commitSha,
+                pullNumber = changeRequest.number,
+                pullUrl = changeRequest.htmlUrl,
+                files = success.changedFiles,
+                bytes = stats.bytes
+            )
+        )
     }
 
     private fun summary(
+        providerName: String,
+        baseUrl: String,
         owner: String,
         repo: String,
         branch: String,
@@ -649,98 +627,117 @@ class GitHubOpenPullRequestTool : Tool {
         commitSha: String,
         pullNumber: Int,
         pullUrl: String,
-        changes: RepoBridgeChangeSet,
-        stats: PublishCopyStats
+        files: Int,
+        bytes: Long
     ): String = buildString {
         appendLine("Pull request opened: $pullUrl")
         appendLine()
-        appendLine("Repository: $owner/$repo")
+        appendLine("Repository: $owner/$repo on $providerName")
         appendLine("Branch: $branch  (new, created at $baseBranch@${baseSha.take(8)})")
         appendLine("Base: $baseBranch")
         appendLine("Commit: $commitSha")
-        appendLine(
-            "Changes: ${changes.total} file(s) — ${changes.added.size} added, " +
-                "${changes.modified.size} modified"
-        )
-        val shown = (changes.added + changes.modified).take(20)
-        shown.forEach { appendLine("  $it") }
-        if (changes.total > shown.size) appendLine("  … ${changes.total - shown.size} more")
-        if (changes.deleted.isNotEmpty()) {
-            // copySessionTree never deletes, so this only happens if the remote base has
-            // files the working copy lacks (a subfolder/partial import). Refuse to hide it.
-            appendLine(
-                "Note: ${changes.deleted.size} remote file(s) are not in the working copy " +
-                    "and were left in place."
-            )
-        }
+        appendLine("Changes: $files file(s) pushed (${bytes / 1024} KB copied from this chat)")
         appendLine()
         appendLine(
-            "No force-push: the ref update expected $baseBranch@${baseSha.take(8)}. " +
-                "Review and merge the pull request when CI is green — the agent never merges."
+            "No force-push: the change was applied on top of " +
+                "$baseBranch@${baseSha.take(8)}, and the host refuses an overwrite of a " +
+                "file that changed remotely. Review and merge the pull request when CI is " +
+                "green — the agent never merges."
         )
-        append("Pull request: https://github.com/$owner/$repo/pull/$pullNumber")
+        append("Pull request: $pullUrl")
     }.trimEnd()
-}
 
-/** Outcome of removing a branch that only ever pointed at the base commit. */
-private data class BranchCleanup(val branchRemoved: Boolean)
-
-/**
- * Deletes [branch] only when its head is still exactly [baseSha].
- *
- * A branch that received the commit is never removed here: that state means the push
- * succeeded even though a later step failed, and the user must be able to open the pull
- * request from it.
- */
-private suspend fun undoEmptyBranch(
-    context: android.content.Context,
-    owner: String,
-    repo: String,
-    branch: String,
-    baseSha: String
-): BranchCleanup {
-    val git = GitDataApiClient(context)
-    return when (val ref = git.getRef(owner, repo, branch)) {
-        is GitDataResult.Success -> {
-            if (ref.value.sha != baseSha) {
-                BranchCleanup(branchRemoved = false)
-            } else {
-                when (val deleted = git.deleteRef(owner, repo, branch)) {
-                    is GitDataResult.Success -> BranchCleanup(branchRemoved = true)
-                    is GitDataResult.Failure -> {
-                        if (deleted.kind == GitDataFailureKind.NOT_FOUND) {
-                            BranchCleanup(branchRemoved = true)
-                        } else {
-                            AppLogger.w(TAG, "Branch cleanup failed: ${deleted.kind}")
-                            BranchCleanup(branchRemoved = false)
-                        }
-                    }
-                }
-            }
+    /** Turns a publisher failure into a sentence that names the reason and the next step. */
+    private fun descriptionOf(failure: RepoBridgeCommitResult.Failure): String {
+        val detail = failure.detail?.takeIf { it.isNotBlank() }
+        return when (failure.reason) {
+            RepoBridgeCommitFailureKind.NO_TOKEN ->
+                "$name: no token is stored for the active host."
+            RepoBridgeCommitFailureKind.UNAUTHORIZED ->
+                "$name: the stored token is invalid or expired."
+            RepoBridgeCommitFailureKind.FORBIDDEN ->
+                "$name: the token may not write to this repository."
+            RepoBridgeCommitFailureKind.NOT_FOUND ->
+                "$name: the repository or branch no longer exists."
+            RepoBridgeCommitFailureKind.CONFLICT ->
+                "$name: the remote changed after this chat imported it" +
+                    (detail?.let { " ($it)" } ?: "") +
+                    ". Re-import the repository and try again."
+            RepoBridgeCommitFailureKind.RATE_LIMITED ->
+                "$name: the host is rate-limiting the token; wait and retry."
+            RepoBridgeCommitFailureKind.NETWORK ->
+                "$name: the network request failed; check the connection and retry."
+            RepoBridgeCommitFailureKind.TOO_MANY_FILES,
+            RepoBridgeCommitFailureKind.FILE_TOO_LARGE ->
+                "$name: the change set is too large for one push" +
+                    (detail?.let { " ($it)" } ?: "") + "."
+            RepoBridgeCommitFailureKind.NO_CHANGES ->
+                "$name: nothing to push — no file in '$detail' differs from the remote."
+            RepoBridgeCommitFailureKind.NO_COMMIT_MESSAGE ->
+                "$name: a commit message is required."
+            RepoBridgeCommitFailureKind.INVALID_BRANCH ->
+                "$name: the branch cannot be used" +
+                    (detail?.let { " — $it" } ?: "") + "."
+            RepoBridgeCommitFailureKind.REVIEW_STALE ->
+                "$name: the files changed while they were being pushed; retry."
+            RepoBridgeCommitFailureKind.SECRET_BLOCKED,
+            RepoBridgeCommitFailureKind.SECRET_WARNINGS_UNACCEPTED ->
+                "$name: a file looks like a credential" +
+                    (detail?.let { " ($it)" } ?: "") + ", so the push was refused."
+            RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY ->
+                "$name: this host has no publish path in this build."
+            RepoBridgeCommitFailureKind.NO_METADATA,
+            RepoBridgeCommitFailureKind.NO_BASE,
+            RepoBridgeCommitFailureKind.IO_ERROR,
+            RepoBridgeCommitFailureKind.UNEXPECTED ->
+                "$name: the working copy could not be prepared" +
+                    (detail?.let { " ($it)" } ?: "") + "."
+            RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED,
+            RepoBridgeCommitFailureKind.REMOTE_REJECTED ->
+                "$name: the host rejected the change set" +
+                    (detail?.let { " ($it)" } ?: "") + "."
         }
-        is GitDataResult.Failure -> BranchCleanup(branchRemoved = false)
     }
+
+    /**
+     * What the user should look for after a failed push. A single-step host leaves nothing
+     * behind; a staged host removes the empty branch again, but only if no commit landed.
+     */
+    private fun branchStateNote(reason: RepoBridgeCommitFailureKind, branch: String): String =
+        when (reason) {
+            RepoBridgeCommitFailureKind.CONFLICT,
+            RepoBridgeCommitFailureKind.REMOTE_REJECTED,
+            RepoBridgeCommitFailureKind.FORBIDDEN,
+            RepoBridgeCommitFailureKind.UNAUTHORIZED,
+            RepoBridgeCommitFailureKind.NOT_FOUND,
+            RepoBridgeCommitFailureKind.NETWORK,
+            RepoBridgeCommitFailureKind.RATE_LIMITED ->
+                " Nothing was pushed to '$branch'."
+            else -> ""
+        }
 }
 
-/** Restores the branch record after a failure that never reached the remote. */
-private fun restoreMetadata(projectDir: File, original: RepoBridgeMetadata) {
-    runCatching {
-        RepoBridgeMetadataStore().write(projectDir, original.copy(pendingBaseSha = null))
-    }.onFailure {
-        AppLogger.w(TAG, "Could not restore metadata: ${it.javaClass.simpleName}")
+/** Host names in tool messages; not translated because they are product names. */
+private object GitStudioNames {
+    fun of(id: GitProviderId): String = when (id) {
+        GitProviderId.GITHUB -> "GitHub"
+        GitProviderId.GITEA -> "Gitea"
+        GitProviderId.FORGEJO -> "Forgejo"
     }
 }
 
 /**
- * The newest Studio working copy of [owner]/[repo] that tracks [baseBranch] at [baseSha]
- * and has no uncommitted changes. Reusing it avoids downloading the repository twice.
+ * The newest Studio working copy of [owner]/[repo] on [providerId] that tracks
+ * [baseBranch] at [baseSha] and has no uncommitted changes. Reusing it avoids downloading
+ * the repository twice.
  */
 private suspend fun reusableWorkingCopy(
     workspace: WorkspaceService,
     owner: String,
     repo: String,
     baseBranch: String,
-    baseSha: String
+    baseSha: String,
+    providerId: GitProviderId
 ): File? {
     val candidates = try {
         workspace.importedProjects(owner, repo)
@@ -750,6 +747,8 @@ private suspend fun reusableWorkingCopy(
     }
     for (directory in candidates) {
         val metadata = workspace.metadata(directory) ?: continue
+        // A same-named repository on another host is a different project.
+        if (metadata.providerId != providerId) continue
         if (metadata.ref != baseBranch) continue
         if (metadata.baseSha != baseSha) continue
         if (metadata.subPath != null) continue
@@ -776,11 +775,10 @@ private sealed class BranchProbe {
 }
 
 private suspend fun probeBranch(
-    api: GitHubApiClient,
-    owner: String,
-    repo: String,
+    provider: GitProvider,
+    ref: GitRepoRef,
     branch: String
-): BranchProbe = when (val result = api.getBranch(owner, repo, branch)) {
+): BranchProbe = when (val result = provider.branch(ref, branch)) {
     is GitResult.Success -> BranchProbe.Exists
     is GitResult.Failure ->
         // NOT_FOUND is the only answer that means "free". Anything else (auth, network)

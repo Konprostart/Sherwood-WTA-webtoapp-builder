@@ -27,7 +27,7 @@ import org.robolectric.RobolectricTestRunner
  * and a fresh approval tap on every call.
  */
 @RunWith(RobolectricTestRunner::class)
-class GitHubCreateRepositoryTest {
+class GitCreateRepositoryTest {
 
     // ------------------------------------------------------------ name validation
 
@@ -198,8 +198,8 @@ class GitHubCreateRepositoryTest {
         val registry = ToolRegistryFactory(planManager, imageRegistry = null)
             .build(hasImageModel = false)
 
-        assertThat(registry.all.count { it.name == "GitHubCreateRepository" }).isEqualTo(1)
-        val tool = registry.all.first { it.name == "GitHubCreateRepository" }
+        assertThat(registry.all.count { it.name == "GitCreateRepository" }).isEqualTo(1)
+        val tool = registry.all.first { it.name == "GitCreateRepository" }
         assertThat(tool.isReadOnly()).isFalse()
         // A repository is created on a remote account: one tap per call.
         assertThat(tool.requiresFreshApproval()).isTrue()
@@ -207,7 +207,7 @@ class GitHubCreateRepositoryTest {
 
     @Test
     fun `the description states the independence, copy and approval rules`() {
-        val description = GitHubCreateRepositoryTool().description
+        val description = GitCreateRepositoryTool().description
         assertThat(description).contains("independent")
         assertThat(description).contains("never a fork")
         assertThat(description).contains("fresh tap")
@@ -237,7 +237,7 @@ class GitHubCreateRepositoryTest {
             }
             try {
                 val decision = checker.check(
-                    GitHubCreateRepositoryTool(),
+                    GitCreateRepositoryTool(),
                     JsonObject().apply { addProperty("name", "rebrand") },
                     toolContext(context, prompter)
                 )
@@ -253,7 +253,7 @@ class GitHubCreateRepositoryTest {
     fun `create refuses to run without a stored token and touches no network`() {
         runBlocking {
             val context = ApplicationProvider.getApplicationContext<Context>()
-            val result = GitHubCreateRepositoryTool().execute(
+            val result = GitCreateRepositoryTool().execute(
                 JsonObject().apply {
                     addProperty("name", "rebrand")
                     addProperty("visibility", "public")

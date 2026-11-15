@@ -13,7 +13,7 @@ import java.io.File
 import java.nio.file.Files
 
 /**
- * The Gitea/Forgejo driver: JSON mapping, request shapes and the read-only boundary.
+ * The Gitea/Forgejo driver: JSON mapping, request shapes and the read/write boundary.
  *
  * The parsing tests pin the field names this build reads; the server tests pin the URL,
  * the auth header and the error mapping. Both matter: a server that started answering
@@ -325,37 +325,152 @@ class GiteaProviderTest {
         assertThat((result as GitResult.Failure).kind).isEqualTo(GitFailureKind.UNEXPECTED)
     }
 
-    // --------------------------------------------------------------- read-only
+    // ---------------------------------------------------------------- writes
 
     @Test
-    fun `every write fails as unsupported without touching the network`() = runBlocking<Unit> {
-        val provider = GiteaProvider(
-            id = GitProviderId.GITEA,
-            baseUrl = server.url("/").toString().trimEnd('/'),
-            tokenProvider = { TOKEN },
-            httpClient = OkHttpClient(),
-            // MockWebServer speaks plain HTTP on localhost; production keeps HTTPS.
-            urlGuard = {}
-        )
-        val ref = GitRepoRef.parse("o/r")!!
-
-        val results = listOf(
-            provider.createRepository(NewGitRepository(name = "x")),
-            provider.createBranch(ref, "feat/x", SHA),
-            provider.mergeBranches(ref, "main", "feat/x", null),
-            provider.createChangeRequest(ref, NewGitChangeRequest("t", "h", "main")),
-            provider.mergeChangeRequest(ref, 1),
-            provider.dispatch(ref, "release", "main")
+    fun `a repository is created on main and may be private`() = runBlocking<Unit> {
+        server.enqueue(
+            jsonResponse(
+                """{"id":5,"name":"rebrand","full_name":"octocat/rebrand","private":false,
+                   "default_branch":"main","owner":{"login":"octocat"}}"""
+            )
         )
 
-        results.forEach { result ->
-            val failure = result as GitResult.Failure
-            assertThat(failure.kind).isEqualTo(GitFailureKind.UNSUPPORTED)
-        }
-        assertThat(provider.commitWriter()).isNull()
-        // Nothing was requested: the refusal happens before a socket is used.
-        assertThat(server.requestCount).isEqualTo(0)
+        val provider = provider()
+        val created = provider.createRepository(
+            NewGitRepository(name = "rebrand", description = "d", privateRepository = false)
+        )
+
+        assertThat(created).isInstanceOf(GitResult.Success::class.java)
+        val request = server.takeRequest()
+        assertThat(request.method).isEqualTo("POST")
+        assertThat(request.path).isEqualTo("/api/v1/user/repos")
+        val body = request.body.readUtf8()
+        assertThat(body).contains("\"name\":\"rebrand\"")
+        assertThat(body).contains("\"auto_init\":true")
+        // Gitea's own default branch is a server setting; the caller expects `main`.
+        assertThat(body).contains("\"default_branch\":\"main\"")
+        assertThat(body).contains("\"private\":false")
+        assertThat((created as GitResult.Success).value.defaultBranch).isEqualTo("main")
     }
+
+    @Test
+    fun `a new branch is created from the exact commit, not from a branch name`() =
+        runBlocking<Unit> {
+            server.enqueue(jsonResponse("""{"name":"feat/x","commit":{"id":"$SHA"}}"""))
+
+            provider().createBranch(GitRepoRef.parse("o/r")!!, "feat/x", SHA)
+
+            val request = server.takeRequest()
+            assertThat(request.path).isEqualTo("/api/v1/repos/o/r/branches")
+            val body = request.body.readUtf8()
+            assertThat(body).contains("\"new_branch_name\":\"feat/x\"")
+            assertThat(body).contains("\"old_ref_name\":\"$SHA\"")
+        }
+
+    @Test
+    fun `a pull request carries its title, head and base`() = runBlocking<Unit> {
+        server.enqueue(
+            jsonResponse(
+                """{"number":7,"title":"t","state":"open","head":{"ref":"feat/x"},
+                   "base":{"ref":"main"},"html_url":"https://git.example.com/o/r/pulls/7"}"""
+            )
+        )
+
+        provider().createChangeRequest(
+            GitRepoRef.parse("o/r")!!,
+            NewGitChangeRequest(title = "t", head = "feat/x", base = "main", body = "b")
+        )
+
+        val body = server.takeRequest().body.readUtf8()
+        assertThat(body).contains("\"title\":\"t\"")
+        assertThat(body).contains("\"head\":\"feat/x\"")
+        assertThat(body).contains("\"base\":\"main\"")
+        assertThat(body).contains("\"body\":\"b\"")
+    }
+
+    @Test
+    fun `merging a pull request maps the strategy onto the server's vocabulary`() =
+        runBlocking<Unit> {
+            server.enqueue(MockResponse().setResponseCode(200))
+
+            val merged = provider().mergeChangeRequest(
+                GitRepoRef.parse("o/r")!!,
+                number = 7,
+                method = "squash"
+            )
+
+            assertThat(merged).isInstanceOf(GitResult.Success::class.java)
+            val request = server.takeRequest()
+            assertThat(request.path).isEqualTo("/api/v1/repos/o/r/pulls/7/merge")
+            assertThat(request.body.readUtf8()).contains("\"do\":\"squash\"")
+        }
+
+    @Test
+    fun `a review is submitted with the approve or request-changes verdict`() =
+        runBlocking<Unit> {
+            server.enqueue(jsonResponse("""{"id":1,"state":"REQUEST_CHANGES"}"""))
+
+            provider().submitReview(GitRepoRef.parse("o/r")!!, 7, "please fix", requestChanges = true)
+
+            val body = server.takeRequest().body.readUtf8()
+            assertThat(body).contains("\"event\":\"REQUEST_CHANGES\"")
+            assertThat(body).contains("\"body\":\"please fix\"")
+        }
+
+    @Test
+    fun `a workflow dispatch posts the ref and its inputs`() = runBlocking<Unit> {
+        server.enqueue(MockResponse().setResponseCode(204))
+
+        val dispatched = provider().dispatch(
+            GitRepoRef.parse("o/r")!!,
+            pipelineId = "build.yml",
+            branch = "main",
+            inputs = mapOf("flavor" to "standard")
+        )
+
+        assertThat(dispatched).isInstanceOf(GitResult.Success::class.java)
+        val request = server.takeRequest()
+        assertThat(request.path)
+            .isEqualTo("/api/v1/repos/o/r/actions/workflows/build.yml/dispatches")
+        val body = request.body.readUtf8()
+        assertThat(body).contains("\"ref\":\"main\"")
+        assertThat(body).contains("\"flavor\":\"standard\"")
+    }
+
+    @Test
+    fun `a server without the dispatch endpoint says so instead of not-found`() =
+        runBlocking<Unit> {
+            server.enqueue(MockResponse().setResponseCode(404))
+
+            val dispatched = provider().dispatch(
+                GitRepoRef.parse("o/r")!!,
+                pipelineId = "build.yml",
+                branch = "main"
+            )
+
+            val failure = dispatched as GitResult.Failure
+            assertThat(failure.kind).isEqualTo(GitFailureKind.UNSUPPORTED)
+            assertThat(failure.message).contains("1.22")
+        }
+
+    @Test
+    fun `a token that cannot create a repository is a typed failure`() = runBlocking<Unit> {
+        server.enqueue(jsonResponse("""{"message":"user does not have permission"}""").setResponseCode(403))
+
+        val created = provider().createRepository(NewGitRepository(name = "x"))
+
+        assertThat((created as GitResult.Failure).kind).isEqualTo(GitFailureKind.FORBIDDEN)
+    }
+
+    private fun provider(): GiteaProvider = GiteaProvider(
+        id = GitProviderId.GITEA,
+        baseUrl = server.url("/").toString().trimEnd('/'),
+        tokenProvider = { TOKEN },
+        httpClient = OkHttpClient(),
+        // MockWebServer speaks plain HTTP on localhost; production keeps the HTTPS rule.
+        urlGuard = {}
+    )
 
     // ------------------------------------------------------------ server info
 

@@ -44,12 +44,12 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Option 3 guard rails: the agent may send changes to GitHub, but only on a brand-new
- * branch, only through a pull request, only after a fresh approval tap, and never with a
- * force-update. Each of those is pinned here.
+ * Option 3 guard rails: the agent may send changes to the connected git host (GitHub,
+ * Gitea or Forgejo), but only on a brand-new branch, only through a pull request, only
+ * after a fresh approval tap, and never with a force-update. Each of those is pinned here.
  */
 @RunWith(RobolectricTestRunner::class)
-class GitHubPublishTest {
+class GitPublishTest {
 
     // ------------------------------------------------------------ branch naming
 
@@ -223,19 +223,19 @@ class GitHubPublishTest {
             .build(hasImageModel = false)
         val names = registry.all.map { it.name }
 
-        assertThat(names.count { it == "GitHubOpenPullRequest" }).isEqualTo(1)
-        val tool = registry.all.first { it.name == "GitHubOpenPullRequest" }
+        assertThat(names.count { it == "GitOpenChangeRequest" }).isEqualTo(1)
+        val tool = registry.all.first { it.name == "GitOpenChangeRequest" }
         assertThat(tool.isReadOnly()).isFalse()
         // Rule 3: no remembered approval for a push.
         assertThat(tool.requiresFreshApproval()).isTrue()
         // The other GitHub tools keep the plain gate.
-        assertThat(registry.all.first { it.name == "GitHubImportRepository" }.requiresFreshApproval())
+        assertThat(registry.all.first { it.name == "GitImportRepository" }.requiresFreshApproval())
             .isFalse()
     }
 
     @Test
     fun `the publish tool description states the branch, pull request and no-force rules`() {
-        val description = GitHubOpenPullRequestTool().description
+        val description = GitOpenChangeRequestTool().description
         assertThat(description).contains("NEW branch")
         assertThat(description).contains("pull request")
         assertThat(description).contains("never force-pushes")
@@ -345,7 +345,7 @@ class GitHubPublishTest {
     fun `publish refuses to run without a stored token and touches no network`() {
         runBlocking {
             val context = ApplicationProvider.getApplicationContext<Context>()
-            val result = GitHubOpenPullRequestTool().execute(
+            val result = GitOpenChangeRequestTool().execute(
                 JsonObject(),
                 toolContext(context, PermissionPrompter())
             )

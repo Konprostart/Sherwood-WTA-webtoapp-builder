@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
- * Shared fixtures for the GitHub agent tool tests.
+ * Shared fixtures for the git agent tool tests.
  *
  * A tool only reaches the network through the stored credential, so a context with no
  * token lets every "not connected" assertion run without touching it.

@@ -190,7 +190,7 @@ class GitProviderSeamTest {
     }
 
     @Test
-    fun `gitea advertises reads and no writes`() {
+    fun `gitea advertises every capability its api actually serves`() {
         val capabilities = GiteaProvider.CAPABILITIES
 
         assertThat(capabilities.checks).isTrue()
@@ -198,20 +198,23 @@ class GitProviderSeamTest {
         assertThat(capabilities.runLogs).isTrue()
         assertThat(capabilities.artifacts).isTrue()
         assertThat(capabilities.releases).isTrue()
-        // Every write is off: the driver must not offer a control it cannot honour.
-        assertThat(capabilities.reviews).isFalse()
+        // Writes this build implements.
+        assertThat(capabilities.reviews).isTrue()
+        assertThat(capabilities.pipelineDispatch).isTrue()
+        assertThat(capabilities.createRepository).isTrue()
+        assertThat(capabilities.createBranches).isTrue()
+        assertThat(capabilities.createChangeRequests).isTrue()
+        assertThat(capabilities.mergeChangeRequests).isTrue()
+        // No endpoint backs these, so they stay off rather than promising a control
+        // that could only fail.
         assertThat(capabilities.inlineComments).isFalse()
-        assertThat(capabilities.pipelineDispatch).isFalse()
-        assertThat(capabilities.createRepository).isFalse()
-        assertThat(capabilities.createBranches).isFalse()
         assertThat(capabilities.mergeBranches).isFalse()
-        assertThat(capabilities.createChangeRequests).isFalse()
-        assertThat(capabilities.mergeChangeRequests).isFalse()
         assertThat(capabilities.oauthDeviceFlow).isFalse()
+        assertThat(capabilities.draftChangeRequests).isFalse()
     }
 
     @Test
-    fun `gitea write operations fail as unsupported rather than as network errors`() =
+    fun `gitea serves a publish path and only the missing endpoints report unsupported`() =
         runBlocking<Unit> {
             val provider = (GitProviderRegistry.of(
                 context(),
@@ -220,13 +223,17 @@ class GitProviderSeamTest {
             ) as GitProviderLookup.Available).provider
             val ref = GitRepoRef.parse("owner/repo")!!
 
-            val created = provider.createChangeRequest(
-                ref,
-                NewGitChangeRequest(title = "t", head = "h", base = "main")
-            )
-            val failure = created as GitResult.Failure
-            assertThat(failure.kind).isEqualTo(GitFailureKind.UNSUPPORTED)
-            assertThat(provider.commitWriter()).isNull()
+            assertThat(provider.commitWriter()).isNotNull()
+            assertThat(provider.commitWriter()!!.commitsInOneStep).isTrue()
+
+            // There is no branch-merge endpoint on Gitea.
+            val merged = provider.mergeBranches(ref, "main", "feat/x")
+            assertThat((merged as GitResult.Failure).kind)
+                .isEqualTo(GitFailureKind.UNSUPPORTED)
+            // Per-line comments need diff positions this client does not compute.
+            val comment = provider.addReviewComment(ref, 1, "a".repeat(40), "a.kt", 4, "x")
+            assertThat((comment as GitResult.Failure).kind)
+                .isEqualTo(GitFailureKind.UNSUPPORTED)
         }
 
     // ------------------------------------------------------------- studio state

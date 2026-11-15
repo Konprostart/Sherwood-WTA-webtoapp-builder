@@ -19,7 +19,7 @@ import java.io.File
  * identifier parser, the copy guard rails, and registration.
  */
 @RunWith(RobolectricTestRunner::class)
-class GitHubToolsTest {
+class GitToolsTest {
 
     // ------------------------------------------------------------------ parsing
 
@@ -129,23 +129,23 @@ class GitHubToolsTest {
             .build(hasImageModel = false)
         val names = registry.all.map { it.name }
 
-        assertThat(names.count { it == "GitHubStatus" }).isEqualTo(1)
-        assertThat(names.count { it == "GitHubListRepositories" }).isEqualTo(1)
-        assertThat(names.count { it == "GitHubImportRepository" }).isEqualTo(1)
+        assertThat(names.count { it == "GitStatus" }).isEqualTo(1)
+        assertThat(names.count { it == "GitListRepositories" }).isEqualTo(1)
+        assertThat(names.count { it == "GitImportRepository" }).isEqualTo(1)
         assertThat(names.distinct()).isEqualTo(names)
 
-        assertThat(registry.all.first { it.name == "GitHubStatus" }.isReadOnly()).isTrue()
-        assertThat(registry.all.first { it.name == "GitHubListRepositories" }.isReadOnly()).isTrue()
+        assertThat(registry.all.first { it.name == "GitStatus" }.isReadOnly()).isTrue()
+        assertThat(registry.all.first { it.name == "GitListRepositories" }.isReadOnly()).isTrue()
         // Importing writes files, so it must go through the permission prompt.
-        assertThat(registry.all.first { it.name == "GitHubImportRepository" }.isReadOnly()).isFalse()
+        assertThat(registry.all.first { it.name == "GitImportRepository" }.isReadOnly()).isFalse()
     }
 
     @Test
     fun `import tool description states that it never pushes`() {
-        val description = GitHubImportRepositoryTool().description
+        val description = GitImportRepositoryTool().description
         assertThat(description).contains("does NOT")
         assertThat(description).contains("push")
         // The model must be able to understand the default target without a hint.
-        assertThat(description).contains("GitHubStatus")
+        assertThat(description).contains("GitStatus")
     }
 }

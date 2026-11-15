@@ -227,6 +227,32 @@ class GitDataApiClient(
     }
 
     /**
+     * Creates `refs/heads/{branch}` at [sha].
+     *
+     * GitHub rejects the call when the branch already exists, so this is the only
+     * primitive a publish needs to start a brand-new branch. Nothing is forced: the
+     * caller names the exact commit the branch starts from, and an existing name is an
+     * error rather than an overwrite.
+     */
+    suspend fun createRef(
+        owner: String,
+        repo: String,
+        branch: String,
+        sha: String
+    ): GitDataResult<GitRef> = withContext(Dispatchers.IO) {
+        val payload = gson.toJson(
+            RefCreateRequest(ref = "refs/heads/$branch", sha = sha)
+        )
+        val url = apiUrl("repos", owner, repo, "git", "refs")
+        request("POST", url, payload) { body ->
+            val json = parseObject(body) ?: return@request null
+            val created = json.objectSha("object") ?: json.stringSha("sha")
+                ?: return@request null
+            GitRef(json.string("ref") ?: "refs/heads/$branch", created)
+        }
+    }
+
+    /**
      * Fast-forwards `refs/heads/{branch}` to [newSha].
      *
      * When [expectedBaseSha] is set the current ref is read first; a mismatch fails
@@ -439,6 +465,11 @@ class GitDataApiClient(
     private data class RefUpdateRequest(
         val sha: String,
         val force: Boolean
+    )
+
+    private data class RefCreateRequest(
+        val ref: String,
+        val sha: String
     )
 
     companion object {

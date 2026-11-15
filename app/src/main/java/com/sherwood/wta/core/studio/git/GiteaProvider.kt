@@ -9,17 +9,21 @@ import java.io.File
 /**
  * Gitea / Forgejo as a [GitProvider].
  *
- * This driver is deliberately **read-only** in this build. Reading is what makes the
- * Studio useful on a self-hosted server: browse repositories and branches, read pull
- * requests and their files, see commit statuses, import a branch, and pull build
- * artifacts and releases into the vault. Writing (creating a repository, opening or
- * merging a pull request, pushing a commit, dispatching a workflow) is not implemented
- * yet, and every one of those methods fails with [GitFailureKind.UNSUPPORTED] instead of
- * pointing at some other host.
+ * Read and write, within what the server's API actually offers: browse repositories and
+ * branches, read pull requests and their files, see commit statuses, import a branch,
+ * download build artifacts and releases — and, in the other direction, create a
+ * repository, create or delete a branch, open, review and merge a pull request, dispatch a
+ * workflow, and publish a commit through the atomic `change-files` endpoint
+ * ([GiteaCommitWriter]).
  *
- * The capability flags are the single source of truth for that: a screen that reads them
- * hides a control it cannot honour and says why, rather than letting the user tap a
- * button that always fails.
+ * Three things are deliberately *not* offered, and the capability flags say so:
+ *
+ * - **Merging two branches outside a pull request.** Gitea has no such endpoint; merging
+ *   goes through a pull request.
+ * - **Line-anchored review comments.** They need the diff positions of a pull request,
+ *   which this client does not compute; a review with a body and an approve/request-change
+ *   verdict is available instead.
+ * - **Forcing a ref.** No call sends `force_push`, so a branch is never rewritten.
  *
  * Forgejo shares Gitea's API for everything used here, so both ids resolve to this class.
  * The id is kept separate so the UI can name the host the user actually configured.
@@ -40,6 +44,8 @@ internal class GiteaProvider(
         httpClient = httpClient,
         urlGuard = urlGuard
     )
+
+    private val writer: GitCommitWriter by lazy { GiteaCommitWriter(api) }
 
     override val capabilities: GitCapabilities = CAPABILITIES
 
@@ -74,7 +80,7 @@ internal class GiteaProvider(
         api.getRepository(ref.owner, ref.name)
 
     override suspend fun createRepository(request: NewGitRepository): GitResult<GitRepository> =
-        unsupported("Creating a repository on Gitea/Forgejo")
+        api.createRepository(request)
 
     // ----------------------------------------------------------------- branches
 
@@ -88,14 +94,18 @@ internal class GiteaProvider(
         ref: GitRepoRef,
         name: String,
         fromSha: String
-    ): GitResult<GitBranch> = unsupported("Creating a branch on Gitea/Forgejo")
+    ): GitResult<GitBranch> = api.createBranch(ref.owner, ref.name, name, fromSha)
 
+    /** Gitea merges only through a pull request; there is no branch-merge endpoint. */
     override suspend fun mergeBranches(
         ref: GitRepoRef,
         base: String,
         head: String,
         message: String?
-    ): GitResult<GitMergeResult> = unsupported("Merging branches on Gitea/Forgejo")
+    ): GitResult<GitMergeResult> = unsupported(
+        "Merging two branches directly",
+        "Gitea and Forgejo merge through a pull request, so open one and merge that."
+    )
 
     // ------------------------------------------------------------ change requests
 
@@ -120,14 +130,16 @@ internal class GiteaProvider(
     override suspend fun createChangeRequest(
         ref: GitRepoRef,
         request: NewGitChangeRequest
-    ): GitResult<GitChangeRequest> = unsupported("Opening a pull request on Gitea/Forgejo")
+    ): GitResult<GitChangeRequest> =
+        api.createPullRequest(ref.owner, ref.name, request)
 
     override suspend fun mergeChangeRequest(
         ref: GitRepoRef,
         number: Int,
         commitTitle: String?,
         method: String
-    ): GitResult<GitMergeResult> = unsupported("Merging a pull request on Gitea/Forgejo")
+    ): GitResult<GitMergeResult> =
+        api.mergePullRequest(ref.owner, ref.name, number, commitTitle, method)
 
     override suspend fun checks(ref: GitRepoRef, revision: String): GitResult<GitCheckSummary> =
         api.combinedStatus(ref.owner, ref.name, revision)
@@ -137,8 +149,9 @@ internal class GiteaProvider(
         number: Int,
         body: String,
         requestChanges: Boolean
-    ): GitResult<Unit> = unsupported("Reviewing a pull request on Gitea/Forgejo")
+    ): GitResult<Unit> = api.submitReview(ref.owner, ref.name, number, body, requestChanges)
 
+    /** Line comments need the pull request's diff positions, which this client does not build. */
     override suspend fun addReviewComment(
         ref: GitRepoRef,
         number: Int,
@@ -146,7 +159,11 @@ internal class GiteaProvider(
         path: String,
         line: Int,
         body: String
-    ): GitResult<Unit> = unsupported("Commenting on a pull request on Gitea/Forgejo")
+    ): GitResult<Unit> = unsupported(
+        "Line-anchored review comments",
+        "Review a pull request with an overall comment and an approve / request-changes " +
+            "verdict instead; per-line comments are not implemented for this server."
+    )
 
     // ------------------------------------------------------------------ commits
 
@@ -183,7 +200,7 @@ internal class GiteaProvider(
         pipelineId: String,
         branch: String,
         inputs: Map<String, String>
-    ): GitResult<Unit> = unsupported("Dispatching a workflow on Gitea/Forgejo")
+    ): GitResult<Unit> = api.dispatchWorkflow(ref.owner, ref.name, pipelineId, branch, inputs)
 
     override suspend fun jobs(ref: GitRepoRef, runId: Long): GitResult<List<GitRunJob>> =
         api.listJobs(ref.owner, ref.name, runId)
@@ -214,42 +231,50 @@ internal class GiteaProvider(
         onProgress: (Float) -> Unit
     ): GitResult<Unit> = api.downloadArchive(ref.owner, ref.name, branch, target, onProgress)
 
-    /** Null: no publish path exists for this host in this build. */
-    override fun commitWriter(): GitCommitWriter? = null
+    override fun commitWriter(): GitCommitWriter = writer
 
     /**
-     * One uniform answer for every write this driver does not implement, so the message
-     * names the host and the missing feature instead of surfacing a bare HTTP status.
+     * One uniform answer for a write the server genuinely cannot serve, so the message
+     * names the host, the missing feature and the alternative instead of surfacing a bare
+     * HTTP status.
      */
-    private fun <T> unsupported(feature: String): GitResult<T> = GitResult.Failure(
-        GitFailureKind.UNSUPPORTED,
-        message = "$feature is not available in this build. Reading, importing and " +
-            "downloading build artifacts work; creating or changing anything on a " +
-            "Gitea/Forgejo server is planned for a later release."
-    )
+    private fun <T> unsupported(feature: String, alternative: String): GitResult<T> =
+        GitResult.Failure(
+            GitFailureKind.UNSUPPORTED,
+            message = "$feature is not available on ${if (id == GitProviderId.FORGEJO) {
+                "Forgejo"
+            } else {
+                "Gitea"
+            }}. $alternative"
+        )
 
     companion object {
         /**
-         * Read-only, stated exactly: everything that only reads is on, every operation
-         * that would change the server is off.
+         * What the server actually supports. Every flag is backed by a call in
+         * [GiteaApiClient]; the two that stay false have no endpoint to back them.
          */
         val CAPABILITIES = GitCapabilities(
             changeRequestTerm = GitChangeRequestTerm.PULL_REQUEST,
-            reviews = false,
+            reviews = true,
+            // Per-line comments need the pull request's diff positions.
             inlineComments = false,
             checks = true,
             pipelines = true,
-            pipelineDispatch = false,
+            pipelineDispatch = true,
             runLogs = true,
             artifacts = true,
             releases = true,
             binaryReleaseAssets = true,
-            createRepository = false,
+            createRepository = true,
+            // Personal access tokens only: Gitea has no OAuth device flow.
             oauthDeviceFlow = false,
-            createBranches = false,
+            createBranches = true,
+            // No branch-merge endpoint; merging happens through a pull request.
             mergeBranches = false,
-            createChangeRequests = false,
-            mergeChangeRequests = false
+            createChangeRequests = true,
+            mergeChangeRequests = true,
+            // Gitea's create endpoint has no draft field.
+            draftChangeRequests = false
         )
 
         /** Minimum server version whose Actions API this driver can read. */

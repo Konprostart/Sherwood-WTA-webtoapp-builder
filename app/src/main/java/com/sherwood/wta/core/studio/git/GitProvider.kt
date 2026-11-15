@@ -68,7 +68,12 @@ data class GitCapabilities(
     /** Opening a pull/merge request from the API. */
     val createChangeRequests: Boolean,
     /** Merging a pull/merge request from the API. */
-    val mergeChangeRequests: Boolean
+    val mergeChangeRequests: Boolean,
+    /**
+     * Creating a pull/merge request directly as a draft. Gitea's create endpoint has no
+     * draft field, so the UI hides the toggle instead of letting it silently do nothing.
+     */
+    val draftChangeRequests: Boolean
 )
 
 /**

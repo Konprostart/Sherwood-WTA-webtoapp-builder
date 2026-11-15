@@ -5,6 +5,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.sherwood.wta.core.frontend.GitHubUrlPolicy
 import com.sherwood.wta.core.frontend.GitTokenProvider
+import com.sherwood.wta.core.frontend.GitTreeEntry
+import com.sherwood.wta.core.frontend.GitTreeSnapshot
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.network.NetworkModule
 import kotlinx.coroutines.Dispatchers
@@ -13,20 +15,29 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.Writer
 import java.util.zip.ZipInputStream
 
 /**
  * REST transport for a Gitea or Forgejo server (`{server}/api/v1`).
  *
- * Scope in this build is **read**: account, repositories, branches, pull requests, commit
- * statuses, commits, file contents, Actions workflows/runs/jobs/logs/artifacts, releases
- * and the source archive. Nothing here creates, merges or pushes; the provider reports
- * those operations as unsupported so no caller can mistake a missing implementation for a
- * transient failure.
+ * Reads: account, repositories, branches, pull requests, commit statuses, commits, file
+ * contents, git trees, Actions workflows/runs/jobs/logs/artifacts, releases and the
+ * source archive.
+ *
+ * Writes: create a repository, create/delete a branch, open/merge/review a pull request,
+ * dispatch a workflow, and commit a multi-file change set through the `change-files`
+ * endpoint. The change set is the only commit path: Gitea has no API that creates a
+ * commit object separately from moving its branch, so a change is always atomic — the
+ * branch appears with the commit or not at all. `force_push` is never sent, and every
+ * update or delete carries the blob sha it was computed against, so content that changed
+ * remotely makes the host refuse instead of being overwritten.
  *
  * Security rules match the GitHub client, because they are properties of the feature and
  * not of the host: the token travels only in the `Authorization` header, only HTTPS URLs
@@ -34,8 +45,8 @@ import java.util.zip.ZipInputStream
  * failure is mapped to [GitFailureKind].
  *
  * The server's own version decides which of the Actions endpoints exist. Gitea gained the
- * workflow API over several releases, so a 404 from one of those endpoints is reported as
- * [GitFailureKind.NOT_FOUND] with the server version in the message rather than being
+ * workflow API over several releases, so a 404/405 from dispatch is reported as
+ * [GitFailureKind.UNSUPPORTED] with the server version in the message rather than being
  * retried forever.
  */
 internal class GiteaApiClient(
@@ -85,6 +96,25 @@ internal class GiteaApiClient(
             json.asObjectOrNull()?.let(::parseRepository)
         }
 
+    /**
+     * `POST /user/repos`. `default_branch` is sent explicitly when the repository is
+     * initialised: Gitea's own default is a server setting, and a caller that expects
+     * `main` (the name every release of this app tags) must not depend on it.
+     */
+    suspend fun createRepository(request: NewGitRepository): GitResult<GitRepository> {
+        val body = JsonObject().apply {
+            addProperty("name", request.name)
+            request.description?.trim()?.takeIf { it.isNotEmpty() }
+                ?.let { addProperty("description", it) }
+            addProperty("private", request.privateRepository)
+            addProperty("auto_init", request.autoInit)
+            if (request.autoInit) addProperty("default_branch", DEFAULT_BRANCH)
+        }
+        return sendJson("POST", apiUrl("user", "repos"), body) { json ->
+            json.asObjectOrNull()?.let(::parseRepository)
+        }
+    }
+
     // ----------------------------------------------------------------- branches
 
     suspend fun listBranches(owner: String, repo: String): GitResult<List<GitBranch>> {
@@ -100,6 +130,32 @@ internal class GiteaApiClient(
         getJson(apiUrl("repos", owner, repo, "branches", name)) { json ->
             json.asObjectOrNull()?.let(::parseBranch)
         }
+
+    /**
+     * `POST /repos/{owner}/{repo}/branches`.
+     *
+     * [fromRef] may be a branch name or a full commit sha; `old_ref_name` is resolved by
+     * git itself, which is what lets a publish pin the new branch to the exact commit the
+     * diff was taken against instead of "whatever the base points at now".
+     */
+    suspend fun createBranch(
+        owner: String,
+        repo: String,
+        name: String,
+        fromRef: String
+    ): GitResult<GitBranch> {
+        val body = JsonObject().apply {
+            addProperty("new_branch_name", name)
+            addProperty("old_ref_name", fromRef)
+        }
+        return sendJson("POST", apiUrl("repos", owner, repo, "branches"), body) { json ->
+            json.asObjectOrNull()?.let(::parseBranch)
+        }
+    }
+
+    /** `DELETE /repos/{owner}/{repo}/branches/{branch}`; only used to undo an empty one. */
+    suspend fun deleteBranch(owner: String, repo: String, name: String): GitResult<Unit> =
+        sendEmpty("DELETE", apiUrl("repos", owner, repo, "branches", name))
 
     // ------------------------------------------------------------ pull requests
 
@@ -139,6 +195,77 @@ internal class GiteaApiClient(
         getJson(apiUrl("repos", owner, repo, "pulls", number.toString(), "files")) { json ->
             json.asArrayOrNull()?.mapNotNull { it.asObjectOrNull()?.let(::parsePullRequestFile) }
         }
+
+    /**
+     * `POST /repos/{owner}/{repo}/pulls`.
+     *
+     * Gitea has no draft field on creation (a draft is set afterwards), so [NewGitChangeRequest.draft]
+     * is not sent: the caller that needs a draft-free pull request is the publisher, and
+     * silently prefixing a title would alter text the user approved.
+     */
+    suspend fun createPullRequest(
+        owner: String,
+        repo: String,
+        request: NewGitChangeRequest
+    ): GitResult<GitChangeRequest> {
+        val body = JsonObject().apply {
+            addProperty("title", request.title)
+            addProperty("head", request.head)
+            addProperty("base", request.base)
+            request.body?.takeIf { it.isNotBlank() }?.let { addProperty("body", it) }
+        }
+        return sendJson("POST", apiUrl("repos", owner, repo, "pulls"), body) { json ->
+            json.asObjectOrNull()?.let(::parsePullRequest)
+        }
+    }
+
+    /**
+     * `POST /repos/{owner}/{repo}/pulls/{index}/merge`.
+     *
+     * Gitea answers `200` with an empty body, so the merge is reported as done with the
+     * sha unknown; the caller re-reads the pull request when it needs the commit.
+     */
+    suspend fun mergePullRequest(
+        owner: String,
+        repo: String,
+        number: Int,
+        commitTitle: String?,
+        method: String
+    ): GitResult<GitMergeResult> {
+        val body = JsonObject().apply {
+            addProperty("do", GITEA_MERGE_METHODS[method.lowercase()] ?: "merge")
+            commitTitle?.takeIf { it.isNotBlank() }?.let { addProperty("merge_title_field", it) }
+        }
+        return when (val merged = sendEmpty(
+            "POST",
+            apiUrl("repos", owner, repo, "pulls", number.toString(), "merge"),
+            body
+        )) {
+            is GitResult.Success -> GitResult.Success(GitMergeResult(merged = true))
+            is GitResult.Failure -> merged
+        }
+    }
+
+    /** `POST /repos/{owner}/{repo}/pulls/{index}/reviews` with an approve / request-changes event. */
+    suspend fun submitReview(
+        owner: String,
+        repo: String,
+        number: Int,
+        body: String,
+        requestChanges: Boolean
+    ): GitResult<Unit> {
+        val payload = JsonObject().apply {
+            addProperty("body", body)
+            addProperty("event", if (requestChanges) "REQUEST_CHANGES" else "APPROVED")
+        }
+        val url = apiUrl("repos", owner, repo, "pulls", number.toString(), "reviews")
+        return when (
+            val submitted = sendJson("POST", url, payload) { json -> json.asObjectOrNull() }
+        ) {
+            is GitResult.Success -> GitResult.Success(Unit)
+            is GitResult.Failure -> submitted
+        }
+    }
 
     // --------------------------------------------------------------- checks
 
@@ -194,6 +321,68 @@ internal class GiteaApiClient(
                 content = bytes
             )
         }
+    }
+
+    /**
+     * `GET /repos/{owner}/{repo}/git/commits/{sha}`: the commit sha and the sha of its tree.
+     *
+     * A working copy's provenance records the commit; diffing needs the tree it points at.
+     */
+    suspend fun getCommitTree(owner: String, repo: String, sha: String): GitResult<GitCommitTree> =
+        getJson(apiUrl("repos", owner, repo, "git", "commits", sha)) { json ->
+            val obj = json.asObjectOrNull() ?: return@getJson null
+            val commitSha = obj.string("sha") ?: return@getJson null
+            val treeSha = obj.obj("commit")?.obj("tree")?.string("sha")
+                ?: obj.obj("tree")?.string("sha")
+                ?: return@getJson null
+            GitCommitTree(commitSha = commitSha, treeSha = treeSha)
+        }
+
+    /**
+     * `GET /repos/{owner}/{repo}/git/trees/{sha}?recursive=1`, paginated.
+     *
+     * The server reports `truncated` while more entries remain. The loop stops at
+     * [MAX_TREE_PAGES] and marks the result truncated, which makes a publish refuse
+     * instead of diffing against a tree that is missing files (those would look deleted).
+     */
+    suspend fun getTree(owner: String, repo: String, treeSha: String): GitResult<GitTreeSnapshot> {
+        val entries = ArrayList<GitTreeEntry>()
+        var page = 1
+        var truncated = true
+        while (truncated && page <= MAX_TREE_PAGES) {
+            val url = urlBuilder("repos", owner, repo, "git", "trees", treeSha)
+                .addQueryParameter("recursive", "true")
+                .addQueryParameter("per_page", TREE_PAGE_SIZE.toString())
+                .addQueryParameter("page", page.toString())
+                .build()
+            when (val pageResult = getJson(url) { json -> json.asObjectOrNull() }) {
+                is GitResult.Failure -> return pageResult
+                is GitResult.Success -> {
+                    val obj = pageResult.value
+                    obj.arr("tree")?.forEach { element ->
+                        val entry = element.asObjectOrNull() ?: return@forEach
+                        val path = entry.string("path") ?: return@forEach
+                        entries += GitTreeEntry(
+                            path = path,
+                            sha = entry.string("sha"),
+                            mode = entry.string("mode") ?: "100644",
+                            type = entry.string("type") ?: "blob"
+                        )
+                    }
+                    truncated = obj.bool("truncated") ?: false
+                    // A server that ignores `page` would otherwise loop on page 1 forever.
+                    val reported = obj.int("page")
+                    if (reported != null && reported != page && truncated) {
+                        return GitResult.Failure(
+                            GitFailureKind.UNEXPECTED,
+                            message = "The server did not paginate the tree"
+                        )
+                    }
+                }
+            }
+            page++
+        }
+        return GitResult.Success(GitTreeSnapshot(entries, truncated))
     }
 
     // ---------------------------------------------------------------- actions
@@ -344,7 +533,199 @@ internal class GiteaApiClient(
         }
     }
 
+    // ---------------------------------------------------------------- dispatch
+
+    /**
+     * `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches`.
+     *
+     * The endpoint only exists once the server ships the Actions API, which older Gitea
+     * releases do not. A 404/405 is therefore reported as
+     * [GitFailureKind.UNSUPPORTED] with the version this build needs, not as "not found":
+     * the workflow genuinely exists, the server just cannot start it.
+     */
+    suspend fun dispatchWorkflow(
+        owner: String,
+        repo: String,
+        workflowId: String,
+        branch: String,
+        inputs: Map<String, String>
+    ): GitResult<Unit> {
+        val body = JsonObject().apply {
+            addProperty("ref", branch)
+            if (inputs.isNotEmpty()) {
+                add("inputs", JsonObject().apply {
+                    inputs.forEach { (key, value) -> addProperty(key, value) }
+                })
+            }
+        }
+        val url = apiUrl(
+            "repos", owner, repo, "actions", "workflows", workflowId, "dispatches"
+        )
+        return when (val dispatched = sendEmpty("POST", url, body)) {
+            is GitResult.Success -> dispatched
+            is GitResult.Failure -> if (dispatched.statusCode == 404 || dispatched.statusCode == 405) {
+                GitResult.Failure(
+                    GitFailureKind.UNSUPPORTED,
+                    dispatched.statusCode,
+                    "This server does not expose the workflow dispatch endpoint " +
+                        "(${dispatched.message ?: "not found"}). Dispatch needs the Actions API " +
+                        "of Gitea $MIN_DISPATCH_VERSION+ / Forgejo with Actions enabled."
+                )
+            } else {
+                dispatched
+            }
+        }
+    }
+
+    // ----------------------------------------------------------- change files
+
+    /**
+     * Commits a whole change set in one call (`POST /repos/{owner}/{repo}/contents`).
+     *
+     * This is the only write path on Gitea, because its API creates a commit and moves
+     * (or creates) the branch together. [newBranch] makes the host start that branch from
+     * [baseBranch] and attach the commit to it, so the branch and the commit appear
+     * together: a refused change set leaves neither behind.
+     *
+     * Every update or delete carries the blob sha it was computed against
+     * ([GitFileChange.baseSha]) and `force_push` is never sent, so content that changed
+     * remotely makes the commit fail instead of being overwritten.
+     */
+    suspend fun changeFiles(
+        owner: String,
+        repo: String,
+        baseBranch: String,
+        newBranch: String?,
+        message: String,
+        changes: List<GitFileChange>
+    ): GitResult<String> = withContext(Dispatchers.IO) {
+        val url = apiUrl("repos", owner, repo, "contents")
+        val body = ChangeFilesBody(
+            message = message,
+            branch = baseBranch,
+            newBranch = newBranch,
+            changes = changes
+        )
+        val builder = Request.Builder()
+            .url(url)
+            .header("Accept", JSON_ACCEPT)
+            .apply { tokenOrNull()?.let { header("Authorization", "token $it") } }
+            .post(body)
+        try {
+            urlGuard(url)
+            secureClient.newCall(builder.build()).execute().use { response ->
+                val text = response.body?.string()
+                if (!response.isSuccessful) {
+                    return@withContext changeFilesFailure(response.code, text)
+                }
+                val parsed = runCatching { JsonParser.parseString(text) }.getOrNull()
+                val sha = parsed?.asObjectOrNull()?.obj("commit")?.string("sha")
+                if (sha == null) {
+                    GitResult.Failure(
+                        GitFailureKind.UNEXPECTED,
+                        response.code,
+                        "The server did not return the new commit"
+                    )
+                } else {
+                    GitResult.Success(sha)
+                }
+            }
+        } catch (e: IOException) {
+            AppLogger.w(TAG, "Change set failed: ${e.javaClass.simpleName}")
+            GitResult.Failure(GitFailureKind.NETWORK)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Change set error: ${e.javaClass.simpleName}")
+            GitResult.Failure(GitFailureKind.NETWORK)
+        }
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    /**
+     * One request with a JSON body, returning the parsed value.
+     *
+     * [parse] receives null for a successful response with no body (Gitea answers `204`
+     * to deletes and dispatches), so a caller that expects nothing can accept both `200`
+     * and `204` without treating one of them as a failure.
+     */
+    private suspend fun <T> send(
+        method: String,
+        url: String,
+        body: RequestBody?,
+        parse: (JsonElement?) -> T?
+    ): GitResult<T> = withContext(Dispatchers.IO) {
+        val builder = Request.Builder()
+            .url(url)
+            .header("Accept", JSON_ACCEPT)
+            .apply { tokenOrNull()?.let { header("Authorization", "token $it") } }
+            .method(method, body)
+        try {
+            urlGuard(url)
+            secureClient.newCall(builder.build()).execute().use { response ->
+                val text = response.body?.string()
+                if (!response.isSuccessful) {
+                    return@withContext failureFrom(response.code, text)
+                }
+                val element = text
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { runCatching { JsonParser.parseString(it) }.getOrNull() }
+                val parsed = parse(element)
+                    ?: return@withContext GitResult.Failure(
+                        GitFailureKind.UNEXPECTED,
+                        response.code,
+                        "Unexpected response from the git server"
+                    )
+                GitResult.Success(parsed)
+            }
+        } catch (e: IOException) {
+            AppLogger.w(TAG, "Request failed: ${e.javaClass.simpleName}")
+            GitResult.Failure(GitFailureKind.NETWORK)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "Request error: ${e.javaClass.simpleName}")
+            GitResult.Failure(GitFailureKind.NETWORK)
+        }
+    }
+
+    private suspend fun <T> sendJson(
+        method: String,
+        url: String,
+        body: JsonElement,
+        parse: (JsonElement) -> T?
+    ): GitResult<T> = send(method, url, body.toString().toRequestBody(JSON_MEDIA_TYPE)) { element ->
+        element?.let(parse)
+    }
+
+    /** A write whose success carries nothing; accepts an empty or JSON response body. */
+    private suspend fun sendEmpty(
+        method: String,
+        url: String,
+        body: JsonElement? = null
+    ): GitResult<Unit> = send(
+        method,
+        url,
+        body?.toString()?.toRequestBody(JSON_MEDIA_TYPE)
+    ) { Unit }
+
+    /**
+     * A `422` from change-files is usually a refused precondition, not a malformed
+     * request: the branch already exists, or a file's blob sha no longer matches the
+     * branch. Reporting those as [GitFailureKind.CONFLICT] is what lets the publisher say
+     * "the remote changed, re-import" instead of "the server rejected the payload".
+     */
+    private fun changeFilesFailure(code: Int, body: String?): GitResult.Failure {
+        val failure = failureFrom(code, body)
+        if (code != 422) return failure
+        val message = failure.message.orEmpty()
+        val conflict = message.contains("already exists", ignoreCase = true) ||
+            message.contains("does not match", ignoreCase = true) ||
+            message.contains("not up to date", ignoreCase = true) ||
+            message.contains("out of date", ignoreCase = true)
+        return if (conflict) {
+            GitResult.Failure(GitFailureKind.CONFLICT, code, message)
+        } else {
+            failure
+        }
+    }
 
     private fun streamToFile(
         input: java.io.InputStream,
@@ -544,6 +925,32 @@ internal class GiteaApiClient(
         private const val MAX_LOG_CHARS = 400_000
         private const val JSON_ACCEPT = "application/json"
         private const val ANY_ACCEPT = "*/*"
+        private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+
+        /** Written explicitly on creation so a new repository always starts on `main`. */
+        const val DEFAULT_BRANCH = "main"
+
+        /** First Gitea release that serves the workflow dispatch endpoint this build calls. */
+        const val MIN_DISPATCH_VERSION = "1.22"
+
+        /** Server-side cap for one tree page; the loop keeps going while `truncated`. */
+        private const val TREE_PAGE_SIZE = 1_000
+
+        /** 50 pages × 1000 entries. Beyond that the tree is reported truncated, never partial. */
+        private const val MAX_TREE_PAGES = 50
+
+        /** Gitea's merge strategies, by the neutral name a caller passes. */
+        private val GITEA_MERGE_METHODS = mapOf(
+            "merge" to "merge",
+            "squash" to "squash",
+            "rebase" to "rebase",
+            "rebase-merge" to "rebase-merge",
+            "fast-forward" to "fast-forward-only",
+            "fast-forward-only" to "fast-forward-only"
+        )
+
+        internal val BASE64_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".toCharArray()
 
         // ----------------------------------------------------------------- parsing
 
@@ -774,5 +1181,132 @@ internal class GiteaApiClient(
             )
         }
 
+    }
+}
+
+/** The commit sha and tree sha of one git commit, as Gitea reports them. */
+internal data class GitCommitTree(val commitSha: String, val treeSha: String)
+
+/**
+ * Streams the `change-files` request body.
+ *
+ * The body is written straight to the socket instead of being built as one string: a
+ * change set can carry tens of megabytes, and materialising it twice (bytes plus the
+ * base64 text plus the JSON string) is how a phone runs out of memory during a push.
+ * Since each file's content is already in memory, the only extra allocation here is the
+ * `Message` and the per-character JSON escaping.
+ */
+private class ChangeFilesBody(
+    private val message: String,
+    private val branch: String,
+    private val newBranch: String?,
+    private val changes: List<GitFileChange>
+) : RequestBody() {
+
+    override fun contentType() = "application/json; charset=utf-8".toMediaType()
+
+    /** Unknown length: the body is streamed chunked. */
+    override fun contentLength(): Long = -1L
+
+    override fun writeTo(sink: BufferedSink) {
+        val out = sink.outputStream().writer(Charsets.UTF_8)
+        out.write("{\"message\":")
+        writeJsonString(out, message)
+        out.write(",\"branch\":")
+        writeJsonString(out, branch)
+        if (newBranch != null) {
+            out.write(",\"new_branch\":")
+            writeJsonString(out, newBranch)
+        }
+        // `force_push` is deliberately absent: the schema defaults it to false, and a
+        // publish must never overwrite a branch that already exists.
+        out.write(",\"files\":[")
+        changes.forEachIndexed { index, change ->
+            if (index > 0) out.write(",")
+            out.write("{\"path\":")
+            writeJsonString(out, change.path)
+            out.write(",\"operation\":\"")
+            // "create" fails when the path appeared remotely, "update" fails when its
+            // blob sha no longer matches, and both are refused instead of overwritten.
+            out.write(
+                when {
+                    change.content == null -> "delete"
+                    change.baseSha == null && change.upsert -> "upload"
+                    change.baseSha == null -> "create"
+                    else -> "update"
+                }
+            )
+            out.write("\"")
+            val content = change.content
+            if (content != null) {
+                out.write(",\"content\":\"")
+                writeBase64(out, content)
+                out.write("\"")
+            }
+            change.baseSha?.let {
+                out.write(",\"sha\":")
+                writeJsonString(out, it)
+            }
+            out.write("}")
+        }
+        out.write("]}")
+        out.flush()
+    }
+}
+
+/** Writes [value] as a JSON string, escaping only what JSON requires. */
+private fun writeJsonString(out: Writer, value: String) {
+    out.write('"'.code)
+    for (character in value) {
+        when (character) {
+            '"' -> out.write("\\\"")
+            '\\' -> out.write("\\\\")
+            '\n' -> out.write("\\n")
+            '\r' -> out.write("\\r")
+            '\t' -> out.write("\\t")
+            '\b' -> out.write("\\b")
+            '\u000C' -> out.write("\\f")
+            else -> if (character < ' ') {
+                out.write("\\u")
+                out.write(Integer.toHexString(character.code).padStart(4, '0'))
+            } else {
+                out.write(character.code)
+            }
+        }
+    }
+    out.write('"'.code)
+}
+
+/** Writes [bytes] as standard base64, without line breaks. */
+private fun writeBase64(out: Writer, bytes: ByteArray) {
+    val alphabet = GiteaApiClient.BASE64_ALPHABET
+    var index = 0
+    val full = bytes.size - (bytes.size % 3)
+    while (index < full) {
+        val chunk = ((bytes[index].toInt() and 0xFF) shl 16) or
+            ((bytes[index + 1].toInt() and 0xFF) shl 8) or
+            (bytes[index + 2].toInt() and 0xFF)
+        out.write(alphabet[(chunk ushr 18) and 0x3F].code)
+        out.write(alphabet[(chunk ushr 12) and 0x3F].code)
+        out.write(alphabet[(chunk ushr 6) and 0x3F].code)
+        out.write(alphabet[chunk and 0x3F].code)
+        index += 3
+    }
+    when (bytes.size - index) {
+        1 -> {
+            val chunk = (bytes[index].toInt() and 0xFF) shl 16
+            out.write(alphabet[(chunk ushr 18) and 0x3F].code)
+            out.write(alphabet[(chunk ushr 12) and 0x3F].code)
+            out.write('='.code)
+            out.write('='.code)
+        }
+        2 -> {
+            val chunk = ((bytes[index].toInt() and 0xFF) shl 16) or
+                ((bytes[index + 1].toInt() and 0xFF) shl 8)
+            out.write(alphabet[(chunk ushr 18) and 0x3F].code)
+            out.write(alphabet[(chunk ushr 12) and 0x3F].code)
+            out.write(alphabet[(chunk ushr 6) and 0x3F].code)
+            out.write('='.code)
+        }
     }
 }

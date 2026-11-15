@@ -333,21 +333,6 @@ internal fun StudioReposTab(
                             )
                         }
                     }
-                    if (!isGitHub) {
-                        WtaSectionDivider()
-                        Column(
-                            modifier = Modifier.padding(
-                                horizontal = WtaSpacing.RowHorizontal,
-                                vertical = WtaSpacing.ContentGap
-                            )
-                        ) {
-                            Text(
-                                Strings.studioProviderReadOnly,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -899,13 +884,17 @@ internal fun StudioReposTab(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        WtaButton(
-                            text = Strings.studioPrDraft,
-                            size = WtaButtonSize.Small,
-                            variant = if (prDraft) WtaButtonVariant.Tonal
-                            else WtaButtonVariant.Outlined,
-                            onClick = { prDraft = !prDraft }
-                        )
+                        // A host whose create endpoint has no draft field hides the
+                        // toggle rather than accepting it and ignoring it.
+                        if (capabilities?.draftChangeRequests == true) {
+                            WtaButton(
+                                text = Strings.studioPrDraft,
+                                size = WtaButtonSize.Small,
+                                variant = if (prDraft) WtaButtonVariant.Tonal
+                                else WtaButtonVariant.Outlined,
+                                onClick = { prDraft = !prDraft }
+                            )
+                        }
                         if (prBusy) StudioBusy(Strings.loading)
                     }
                 }

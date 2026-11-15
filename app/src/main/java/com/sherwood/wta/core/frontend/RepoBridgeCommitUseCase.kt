@@ -11,6 +11,7 @@ import com.sherwood.wta.core.studio.git.GitCommitWriterResolver
 import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitWriterResolution
 import com.sherwood.wta.core.studio.git.GitResult
+import com.sherwood.wta.core.studio.WorkspaceService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -35,6 +36,8 @@ enum class RepoBridgeCommitFailureKind {
     PROVIDER_READ_ONLY,
     /** The working copy changed after it was reviewed; review it again. */
     REVIEW_STALE,
+    /** A publish was asked for a branch that may not be created (base, protected, invalid). */
+    INVALID_BRANCH,
     /** A file contains a credential format that is never pushed. */
     SECRET_BLOCKED,
     /** A file may contain a secret and the user has not confirmed it. */
@@ -229,6 +232,138 @@ class RepoBridgeCommitUseCase(
         }
     }
 
+    /**
+     * Publishes the working copy as one commit on a brand-new branch [branch].
+     *
+     * This is the only path the agent's publish tool uses, and it keeps the rules the
+     * publisher states: the branch is new, it is never the branch the copy was imported
+     * from, and no ref is forced. On a single-step host (Gitea/Forgejo) the branch and
+     * the commit are created by the same request, so a refused change set leaves nothing
+     * behind; on a staged host (GitHub) the branch is created at the imported commit and
+     * removed again if the commit cannot be built.
+     *
+     * The working copy's provenance is updated to the new branch only after the host
+     * accepted the commit, so a failure leaves the copy exactly as it was.
+     */
+    suspend fun commitNewBranch(
+        message: String,
+        branch: String,
+        decision: ReviewDecision? = null
+    ): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
+        if (writer == null) {
+            return@withContext RepoBridgeCommitResult.Failure(
+                RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
+            )
+        }
+        try {
+            commitMutex.withLock { commitNewBranchInternal(message, branch, decision) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "New-branch commit failed: ${e.javaClass.simpleName}")
+            cachedPlan = null
+            RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.UNEXPECTED)
+        }
+    }
+
+    private suspend fun commitNewBranchInternal(
+        message: String,
+        branch: String,
+        decision: ReviewDecision?
+    ): RepoBridgeCommitResult {
+        val writer = writer ?: return RepoBridgeCommitResult.Failure(
+            RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
+        )
+        val trimmed = message.trim()
+        if (trimmed.isEmpty()) {
+            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_COMMIT_MESSAGE)
+        }
+        val plan = cachedPlan ?: when (val loaded = loadPlan()) {
+            is PlanLoad.Error -> return RepoBridgeCommitResult.Failure(loaded.reason, loaded.detail)
+            is PlanLoad.Ok -> loaded.plan.also { cachedPlan = it }
+        }
+        newBranchProblem(branch, plan.metadata.ref)?.let { problem ->
+            return RepoBridgeCommitResult.Failure(
+                RepoBridgeCommitFailureKind.INVALID_BRANCH,
+                problem
+            )
+        }
+        val prepared = when (val result = preparePush(plan, confirmedDeletions = 0, decision)) {
+            is PushPreparation.Error -> return RepoBridgeCommitResult.Failure(
+                result.reason,
+                result.detail
+            )
+            is PushPreparation.Ok -> result
+        }
+        val metadata = plan.metadata
+        val repo = GitRepoRef.of(metadata.owner, metadata.repo)
+            ?: return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_METADATA)
+
+        return when (
+            val published = writer.publishNewBranch(
+                ref = repo,
+                baseBranch = metadata.ref,
+                branch = branch,
+                expectedBaseSha = plan.baseSha,
+                message = trimmed,
+                changes = prepared.fileChanges
+            )
+        ) {
+            is GitResult.Success -> {
+                cachedPlan = null
+                // The copy now tracks the branch it just produced, so the next status and
+                // commit compare against the pushed state instead of re-offering the diff.
+                val saved = saveMetadata(
+                    metadata.copy(
+                        ref = branch,
+                        baseSha = published.value.commitSha,
+                        pendingBaseSha = null
+                    )
+                )
+                RepoBridgeCommitResult.Success(
+                    commitSha = published.value.commitSha,
+                    changedFiles = prepared.changes.total,
+                    metadataSaved = saved
+                )
+            }
+            is GitResult.Failure -> {
+                // Nothing was published; the cached diff may describe an older base.
+                cachedPlan = null
+                RepoBridgeCommitResult.Failure(
+                    published.kind.toCommitFailure(),
+                    published.message
+                )
+            }
+        }
+    }
+
+    /**
+     * The structural rule for a task branch: a valid ref, not the branch the copy was
+     * imported from and not one of the shared branches a task must never write to.
+     */
+    private fun newBranchProblem(branch: String, baseBranch: String): String? {
+        val name = branch.trim()
+        if (name.isEmpty()) return "the branch name is empty"
+        if (!WorkspaceService.isValidBranchName(name)) {
+            return "'$name' is not a valid Git branch name"
+        }
+        if (name.equals(baseBranch.trim(), ignoreCase = true)) {
+            return "'$name' is the branch the folder was imported from; a task always " +
+                "gets a new one"
+        }
+        if (name.lowercase() in PROTECTED_BRANCHES) {
+            return "'$name' is a shared branch a task must never write to"
+        }
+        return null
+    }
+
+    private fun saveMetadata(metadata: RepoBridgeMetadata): Boolean =
+        runCatching { metadataStore.write(projectDir, metadata) }
+            .onFailure {
+                AppLogger.w(TAG, "Commit pushed but metadata was not saved: ${it.javaClass.simpleName}")
+            }
+            .isSuccess
+
     private suspend fun commitInternal(
         message: String,
         confirmedDeletions: Int,
@@ -252,96 +387,52 @@ class RepoBridgeCommitUseCase(
             is PlanLoad.Ok -> loaded.plan.also { cachedPlan = it }
         }
 
-        val scanned = scanLocal(plan.prefix)
-        if (scanned is ScanResult.Error) {
-            return RepoBridgeCommitResult.Failure(scanned.reason, scanned.detail)
-        }
-        val files = (scanned as ScanResult.Ok).files
-        val allChanges = diff(files, plan.remoteBlobs)
-        if (allChanges.isEmpty) {
-            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_CHANGES)
-        }
-
-        // Size, count and exclusion gates run before any file is read, so a huge file
-        // that slipped in after Prepare fails fast instead of exhausting memory.
-        val excluded = decision?.excluded.orEmpty()
-        val changes = allChanges.without(excluded)
-        if (changes.isEmpty) {
-            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_CHANGES)
-        }
-        if (changes.total > MAX_CHANGED_FILES) {
-            return RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.TOO_MANY_FILES,
-                "${changes.total}"
+        val prepared = when (val result = preparePush(plan, confirmedDeletions, decision)) {
+            is PushPreparation.Error -> return RepoBridgeCommitResult.Failure(
+                result.reason,
+                result.detail
             )
-        }
-        oversizedChange(changes, files)?.let { detail ->
-            return RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.FILE_TOO_LARGE,
-                detail
-            )
-        }
-
-        val review = when (val built = buildReview(allChanges, files, plan)) {
-            is ReviewBuild.Error -> return RepoBridgeCommitResult.Failure(built.reason, built.detail)
-            is ReviewBuild.Ok -> built.review
-        }
-        if (decision != null && decision.fingerprint != review.fingerprint) {
-            cachedPlan = null
-            return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.REVIEW_STALE)
-        }
-
-        val pushed = review.items.filter { it.path !in excluded }
-        pushed.firstOrNull { it.hasBlocking }?.let { blocked ->
-            return RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.SECRET_BLOCKED,
-                blocked.path
-            )
-        }
-        val acceptedWarnings = decision?.acceptedWarnings.orEmpty()
-        pushed.firstOrNull { it.hasWarning && it.path !in acceptedWarnings }?.let { warned ->
-            return RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.SECRET_WARNINGS_UNACCEPTED,
-                warned.path
-            )
-        }
-
-        if (changes.isMassDeletion(plan.remoteBlobs.size) &&
-            changes.deleted.size > confirmedDeletions
-        ) {
-            return RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED,
-                "${changes.deleted.size} of ${plan.remoteBlobs.size}"
-            )
+            is PushPreparation.Ok -> result
         }
 
         val metadata = plan.metadata
         val repo = GitRepoRef.of(metadata.owner, metadata.repo)
             ?: return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.NO_METADATA)
-        val fileChanges = ArrayList<GitFileChange>(changes.total)
 
-        for (path in changes.added + changes.modified) {
-            val local = files[path] ?: continue
-            // The bytes uploaded must be the bytes that were reviewed: re-read and re-hash.
-            val content = try {
-                local.file.readBytes()
-            } catch (e: IOException) {
-                AppLogger.w(TAG, "Cannot read ${local.file.name}: ${e.javaClass.simpleName}")
-                return RepoBridgeCommitResult.Failure(
-                    RepoBridgeCommitFailureKind.IO_ERROR,
-                    path
+        // A single-step host writes the commit and the branch together, so there is no
+        // intermediate state to recover: `pendingBaseSha` is only meaningful for the
+        // staged sequence below.
+        if (writer.commitsInOneStep) {
+            return when (
+                val published = writer.publishToBranch(
+                    ref = repo,
+                    branch = metadata.ref,
+                    expectedBaseSha = plan.baseSha,
+                    message = trimmed,
+                    changes = prepared.fileChanges
                 )
+            ) {
+                is GitResult.Success -> {
+                    cachedPlan = null
+                    RepoBridgeCommitResult.Success(
+                        commitSha = published.value.commitSha,
+                        changedFiles = prepared.changes.total,
+                        metadataSaved = saveMetadata(
+                            metadata.copy(
+                                baseSha = published.value.commitSha,
+                                pendingBaseSha = null
+                            )
+                        )
+                    )
+                }
+                is GitResult.Failure -> {
+                    cachedPlan = null
+                    RepoBridgeCommitResult.Failure(
+                        published.kind.toCommitFailure(),
+                        published.message
+                    )
+                }
             }
-            if (blobShaOf(content) != local.blobSha) {
-                cachedPlan = null
-                return RepoBridgeCommitResult.Failure(RepoBridgeCommitFailureKind.REVIEW_STALE, path)
-            }
-            fileChanges += GitFileChange(path, mode = modeFor(plan, path), content = content)
-        }
-
-        // Deletions are explicit tree entries, never implied by omission.
-        for (path in changes.deleted) {
-            fileChanges += GitFileChange(path, mode = FILE_MODE, content = null)
         }
 
         val commitSha = when (val commit = writer.createCommit(
@@ -349,7 +440,7 @@ class RepoBridgeCommitUseCase(
             parentSha = plan.baseSha,
             baseTreeSha = plan.baseTreeSha,
             message = trimmed,
-            changes = fileChanges
+            changes = prepared.fileChanges
         )) {
             is GitResult.Success -> commit.value
             is GitResult.Failure -> return RepoBridgeCommitResult.Failure(
@@ -386,17 +477,141 @@ class RepoBridgeCommitUseCase(
         }
 
         cachedPlan = null
-        val metadataSaved = runCatching {
-            metadataStore.write(projectDir, metadata.copy(baseSha = commitSha, pendingBaseSha = null))
-        }.onFailure {
-            AppLogger.w(TAG, "Commit pushed but metadata was not saved: ${it.javaClass.simpleName}")
-        }.isSuccess
-
         return RepoBridgeCommitResult.Success(
             commitSha = commitSha,
-            changedFiles = changes.total,
-            metadataSaved = metadataSaved
+            changedFiles = prepared.changes.total,
+            metadataSaved = saveMetadata(
+                metadata.copy(baseSha = commitSha, pendingBaseSha = null)
+            )
         )
+    }
+
+    /** The change set a commit would send, after every local gate has passed. */
+    private sealed class PushPreparation {
+        data class Ok(
+            val changes: RepoBridgeChangeSet,
+            val fileChanges: List<GitFileChange>
+        ) : PushPreparation()
+
+        data class Error(
+            val reason: RepoBridgeCommitFailureKind,
+            val detail: String? = null
+        ) : PushPreparation()
+    }
+
+    /**
+     * Runs every gate between the working copy and the host: scan, diff, size, review,
+     * secret findings and mass deletion. Nothing is sent from here.
+     *
+     * The size limits come from the writer, because they bound the request body a host
+     * accepts and therefore differ per platform. An oversized set is refused, never
+     * truncated: a partial push would look like a complete one.
+     */
+    private fun preparePush(
+        plan: Plan,
+        confirmedDeletions: Int,
+        decision: ReviewDecision?
+    ): PushPreparation {
+        val limits = writer?.publishLimits ?: GitCommitWriter.DEFAULT_PUBLISH_LIMITS
+        val scanned = scanLocal(plan.prefix)
+        if (scanned is ScanResult.Error) {
+            return PushPreparation.Error(scanned.reason, scanned.detail)
+        }
+        val files = (scanned as ScanResult.Ok).files
+        val allChanges = diff(files, plan.remoteBlobs)
+        if (allChanges.isEmpty) {
+            return PushPreparation.Error(RepoBridgeCommitFailureKind.NO_CHANGES)
+        }
+
+        // Size, count and exclusion gates run before any file is read, so a huge file
+        // that slipped in after Prepare fails fast instead of exhausting memory.
+        val excluded = decision?.excluded.orEmpty()
+        val changes = allChanges.without(excluded)
+        if (changes.isEmpty) {
+            return PushPreparation.Error(RepoBridgeCommitFailureKind.NO_CHANGES)
+        }
+        if (changes.total > limits.maxFiles) {
+            return PushPreparation.Error(
+                RepoBridgeCommitFailureKind.TOO_MANY_FILES,
+                "${changes.total} (the server accepts ${limits.maxFiles} per commit)"
+            )
+        }
+        oversizedChange(changes, files, limits.maxFileBytes)?.let { detail ->
+            return PushPreparation.Error(RepoBridgeCommitFailureKind.FILE_TOO_LARGE, detail)
+        }
+        totalBytesProblem(changes, files, limits.maxBytes)?.let { detail ->
+            return PushPreparation.Error(RepoBridgeCommitFailureKind.FILE_TOO_LARGE, detail)
+        }
+
+        val review = when (val built = buildReview(allChanges, files, plan, limits.maxFileBytes)) {
+            is ReviewBuild.Error -> return PushPreparation.Error(built.reason, built.detail)
+            is ReviewBuild.Ok -> built.review
+        }
+        if (decision != null && decision.fingerprint != review.fingerprint) {
+            cachedPlan = null
+            return PushPreparation.Error(RepoBridgeCommitFailureKind.REVIEW_STALE)
+        }
+
+        val pushed = review.items.filter { it.path !in excluded }
+        pushed.firstOrNull { it.hasBlocking }?.let { blocked ->
+            return PushPreparation.Error(
+                RepoBridgeCommitFailureKind.SECRET_BLOCKED,
+                blocked.path
+            )
+        }
+        val acceptedWarnings = decision?.acceptedWarnings.orEmpty()
+        pushed.firstOrNull { it.hasWarning && it.path !in acceptedWarnings }?.let { warned ->
+            return PushPreparation.Error(
+                RepoBridgeCommitFailureKind.SECRET_WARNINGS_UNACCEPTED,
+                warned.path
+            )
+        }
+
+        if (changes.isMassDeletion(plan.remoteBlobs.size) &&
+            changes.deleted.size > confirmedDeletions
+        ) {
+            return PushPreparation.Error(
+                RepoBridgeCommitFailureKind.MASS_DELETION_UNCONFIRMED,
+                "${changes.deleted.size} of ${plan.remoteBlobs.size}"
+            )
+        }
+
+        val fileChanges = ArrayList<GitFileChange>(changes.total)
+
+        for (path in changes.added + changes.modified) {
+            val local = files[path] ?: continue
+            // The bytes uploaded must be the bytes that were reviewed: re-read and re-hash.
+            val content = try {
+                local.file.readBytes()
+            } catch (e: IOException) {
+                AppLogger.w(TAG, "Cannot read ${local.file.name}: ${e.javaClass.simpleName}")
+                return PushPreparation.Error(RepoBridgeCommitFailureKind.IO_ERROR, path)
+            }
+            if (blobShaOf(content) != local.blobSha) {
+                cachedPlan = null
+                return PushPreparation.Error(RepoBridgeCommitFailureKind.REVIEW_STALE, path)
+            }
+            fileChanges += GitFileChange(
+                path = path,
+                mode = modeFor(plan, path),
+                content = content,
+                // The blob the change was computed against. A host that validates it
+                // refuses the write when someone else changed the same file first.
+                baseSha = plan.remoteBlobs[path]
+            )
+        }
+
+        // Deletions are explicit tree entries, never implied by omission.
+        for (path in changes.deleted) {
+            fileChanges += GitFileChange(
+                path = path,
+                mode = FILE_MODE,
+                content = null,
+                baseSha = plan.remoteBlobs[path]
+            )
+        }
+
+        return PushPreparation.Ok(changes = changes, fileChanges = fileChanges)
     }
 
     private sealed class ReviewBuild {
@@ -415,7 +630,8 @@ class RepoBridgeCommitUseCase(
     private fun buildReview(
         changes: RepoBridgeChangeSet,
         files: Map<String, LocalFile>,
-        plan: Plan
+        plan: Plan,
+        maxFileBytes: Long
     ): ReviewBuild {
         val items = mutableListOf<ReviewItem>()
         val entries = mutableListOf<Triple<ReviewStatus, String, String>>()
@@ -427,7 +643,7 @@ class RepoBridgeCommitUseCase(
         for ((status, paths) in uploaded) {
             for (path in paths) {
                 val local = files[path] ?: continue
-                if (local.size > MAX_FILE_BYTES) {
+                if (local.size > maxFileBytes) {
                     return ReviewBuild.Error(RepoBridgeCommitFailureKind.FILE_TOO_LARGE, path)
                 }
                 val content = try {
@@ -641,12 +857,36 @@ class RepoBridgeCommitUseCase(
      */
     private fun oversizedChange(
         changes: RepoBridgeChangeSet,
-        files: Map<String, LocalFile>
+        files: Map<String, LocalFile>,
+        maxFileBytes: Long
     ): String? {
         for (path in changes.added + changes.modified) {
             val size = files[path]?.size ?: continue
-            if (size > MAX_FILE_BYTES) {
+            if (size > maxFileBytes) {
                 return "$path (${size / (1024 * 1024)} MB)"
+            }
+        }
+        return null
+    }
+
+    /**
+     * Reports a change set whose bytes alone exceed what one publish may carry.
+     *
+     * The per-file gate does not catch this: a thousand small files can add up to more
+     * than the upload path can hold in memory, and a partially sent change set is worse
+     * than a refused one.
+     */
+    private fun totalBytesProblem(
+        changes: RepoBridgeChangeSet,
+        files: Map<String, LocalFile>,
+        maxBytes: Long
+    ): String? {
+        var total = 0L
+        for (path in changes.added + changes.modified) {
+            total += files[path]?.size ?: 0L
+            if (total > maxBytes) {
+                return "${total / (1024 * 1024)} MB of changes; one commit may carry at " +
+                    "most ${maxBytes / (1024 * 1024)} MB"
             }
         }
         return null
@@ -750,6 +990,9 @@ class RepoBridgeCommitUseCase(
         /** Modes GitHub accepts for blobs: regular, executable, and symlink. */
         private val ALLOWED_MODES = setOf("100644", "100755", "120000")
         private const val GIT_DIR = ".git"
+
+        /** Shared branches a task branch must never write to. */
+        private val PROTECTED_BRANCHES = setOf("main", "master", "head", "trunk", "develop")
 
         private val HEX_CHARS = "0123456789abcdef".toCharArray()
     }

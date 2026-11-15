@@ -398,6 +398,7 @@ private fun RepoBridgeCommitFailureKind.description(): String = when (this) {
     RepoBridgeCommitFailureKind.UNEXPECTED ->
         Strings.repoBridgeCommitErrorRemote
     RepoBridgeCommitFailureKind.NO_CHANGES -> Strings.repoBridgeCommitNoChanges
+    RepoBridgeCommitFailureKind.INVALID_BRANCH -> Strings.repoBridgeCommitErrorInvalidBranch
     RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY -> Strings.studioProviderReadOnly
 }
 

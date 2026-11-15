@@ -536,22 +536,6 @@ private fun StudioSettingsScreen(
                                 )
                             }
                         }
-
-                        WtaSectionDivider()
-                        Column(
-                            modifier = Modifier.padding(
-                                horizontal = WtaSpacing.RowHorizontal,
-                                vertical = WtaSpacing.ContentGap
-                            )
-                        ) {
-                            // The read-only boundary is a fact about this build, so it is
-                            // always shown rather than hidden behind the description switch.
-                            Text(
-                                Strings.studioProviderReadOnly,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             }

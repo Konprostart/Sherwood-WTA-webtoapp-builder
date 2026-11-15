@@ -36,11 +36,11 @@ import com.sherwood.wta.core.agent.tool.builtin.GrepTool
 import com.sherwood.wta.core.agent.tool.builtin.InstallRuntimeTool
 import com.sherwood.wta.core.agent.tool.builtin.KillAllPortsTool
 import com.sherwood.wta.core.agent.tool.builtin.KillPortTool
-import com.sherwood.wta.core.agent.tool.builtin.GitHubCreateRepositoryTool
-import com.sherwood.wta.core.agent.tool.builtin.GitHubImportRepositoryTool
-import com.sherwood.wta.core.agent.tool.builtin.GitHubListRepositoriesTool
-import com.sherwood.wta.core.agent.tool.builtin.GitHubOpenPullRequestTool
-import com.sherwood.wta.core.agent.tool.builtin.GitHubStatusTool
+import com.sherwood.wta.core.agent.tool.builtin.GitCreateRepositoryTool
+import com.sherwood.wta.core.agent.tool.builtin.GitImportRepositoryTool
+import com.sherwood.wta.core.agent.tool.builtin.GitListRepositoriesTool
+import com.sherwood.wta.core.agent.tool.builtin.GitOpenChangeRequestTool
+import com.sherwood.wta.core.agent.tool.builtin.GitStatusTool
 import com.sherwood.wta.core.agent.tool.builtin.ListInstalledAppsTool
 import com.sherwood.wta.core.agent.tool.builtin.ListAppsTool
 import com.sherwood.wta.core.agent.tool.builtin.ListFilesTool
@@ -146,12 +146,13 @@ class ToolRegistryFactory(
         GetModuleTool(),
         CreateModuleTool(),
         UpdateModuleTool(),
-        // GitHub (create + read + local import + new-branch/PR publish; never forks, never merges, never force-pushes)
-        GitHubStatusTool(),
-        GitHubListRepositoriesTool(),
-        GitHubCreateRepositoryTool(),
-        GitHubImportRepositoryTool(),
-        GitHubOpenPullRequestTool(),
+        // Git hosting (create + read + local import + new-branch/PR publish on GitHub,
+        // Gitea or Forgejo; never forks, never merges, never force-pushes)
+        GitStatusTool(),
+        GitListRepositoriesTool(),
+        GitCreateRepositoryTool(),
+        GitImportRepositoryTool(),
+        GitOpenChangeRequestTool(),
         PreviewTool(),
     )
 

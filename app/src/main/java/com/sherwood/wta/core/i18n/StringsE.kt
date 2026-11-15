@@ -17432,6 +17432,19 @@ object StringsE {
         AppLanguage.KOREAN -> "토큰은 유효하지만 GitHub가 접근을 거부했습니다 (403). 토큰 권한을 확인하세요."
     }
 
+    val repoBridgeCommitErrorInvalidBranch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "该分支不能用于推送：它必须是一个新分支，不能是导入时使用的分支或共享分支。"
+        AppLanguage.ENGLISH -> "That branch cannot be used for a push: it must be a new branch, not the one this copy was imported from and not a shared branch."
+        AppLanguage.ARABIC -> "لا يمكن استخدام هذا الفرع للدفع: يجب أن يكون فرعًا جديدًا، وليس الفرع الذي استُوردت منه النسخة ولا فرعًا مشتركًا."
+        AppLanguage.PORTUGUESE -> "Essa ramificação não pode ser usada para envio: precisa ser uma ramificação nova, não a usada na importação nem uma ramificação compartilhada."
+        AppLanguage.SPANISH -> "Esa rama no se puede usar para subir cambios: debe ser una rama nueva, no la usada en la importación ni una rama compartida."
+        AppLanguage.FRENCH -> "Cette branche ne peut pas servir à l'envoi : elle doit être nouvelle, ni celle de l'importation ni une branche partagée."
+        AppLanguage.GERMAN -> "Dieser Branch kann nicht für einen Push verwendet werden: Er muss neu sein, nicht der importierte und kein gemeinsamer Branch."
+        AppLanguage.RUSSIAN -> "Эту ветку нельзя использовать для отправки: она должна быть новой, не той, из которой импортирована копия, и не общей."
+        AppLanguage.JAPANESE -> "このブランチはプッシュに使えません。新しいブランチである必要があり、インポート元や共有ブランチは使えません。"
+        AppLanguage.KOREAN -> "이 브랜치는 푸시에 사용할 수 없습니다. 새 브랜치여야 하며, 가져온 브랜치나 공유 브랜치는 안 됩니다."
+    }
+
     val repoBridgeCommitErrorStale: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "待推送的文件已与审阅时不同。请重新审阅后再推送。"
         AppLanguage.ENGLISH -> "The files changed after you reviewed them. Review them again before pushing."

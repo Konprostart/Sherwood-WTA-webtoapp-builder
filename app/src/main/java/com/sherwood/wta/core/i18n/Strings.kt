@@ -5337,6 +5337,7 @@ object Strings {
     val repoBridgeRuleSecretValue: String get() = StringsE.repoBridgeRuleSecretValue
     fun repoBridgeReviewIncludedSummary(included: Int, excluded: Int): String = StringsE.repoBridgeReviewIncludedSummary(included, excluded)
     val repoBridgeCommitErrorStale: String get() = StringsE.repoBridgeCommitErrorStale
+    val repoBridgeCommitErrorInvalidBranch: String get() = StringsE.repoBridgeCommitErrorInvalidBranch
     val repoBridgeCommitErrorSecretBlocked: String get() = StringsE.repoBridgeCommitErrorSecretBlocked
     val repoBridgeCommitErrorSecretWarnings: String get() = StringsE.repoBridgeCommitErrorSecretWarnings
     val repoBridgeCommitErrorTooLarge: String get() = StringsE.repoBridgeCommitErrorTooLarge

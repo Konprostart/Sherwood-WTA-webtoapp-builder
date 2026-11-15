@@ -271,7 +271,8 @@ class GitHubProvider(
             createBranches = true,
             mergeBranches = true,
             createChangeRequests = true,
-            mergeChangeRequests = true
+            mergeChangeRequests = true,
+            draftChangeRequests = true
         )
     }
 }

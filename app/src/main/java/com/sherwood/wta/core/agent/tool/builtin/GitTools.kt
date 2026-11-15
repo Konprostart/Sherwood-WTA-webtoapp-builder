@@ -10,6 +10,7 @@ import com.sherwood.wta.core.studio.EndpointSettingsStore
 import com.sherwood.wta.core.studio.StudioSettingsStore
 import com.sherwood.wta.core.studio.WorkspaceService
 import com.sherwood.wta.core.studio.git.GitCapabilities
+import com.sherwood.wta.core.studio.git.GitCredentialStore
 import com.sherwood.wta.core.studio.git.GitProvider
 import com.sherwood.wta.core.studio.git.GitProviderId
 import com.sherwood.wta.core.studio.git.GitProviderLookup
@@ -22,17 +23,19 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * GitHub tools for the in-app agent.
+ * Git tools for the in-app agent: one set that works against whichever host the user
+ * configured — GitHub, Gitea or Forgejo.
  *
- * They read the credential Studio already owns — [GitHubTokenStore], filled either by
- * Settings → Git access (personal access token) or by Studio's OAuth device flow — so
- * there is no second token path and no credential handling inside the agent loop.
+ * They read the credential Studio already owns — [GitCredentialStore], reached through
+ * [GitProviderRegistry], filled either by Settings → Git access (personal access token)
+ * or by Studio's GitHub OAuth device flow — so there is no second token path and no
+ * credential handling inside the agent loop.
  *
- * Boundary: these tools **read** GitHub and **write only into the agent session
+ * Boundary: these tools **read** the host and **write only into the agent session
  * sandbox**. Two tools write to the account itself, each behind its own fresh approval
- * tap on every call: [GitHubCreateRepositoryTool] in `GitHubCreateRepositoryTool.kt`
- * creates a new, independent repository (never a fork), and [GitHubOpenPullRequestTool]
- * in `GitHubPublishTool.kt` is the only path that sends changes to an existing one — it
+ * tap on every call: [GitCreateRepositoryTool] in `GitCreateRepositoryTool.kt`
+ * creates a new, independent repository (never a fork), and [GitOpenChangeRequestTool]
+ * in `GitPublishTool.kt` is the only path that sends changes to an existing one — it
  * is bounded to a new branch and a pull request and never merges or force-pushes.
  * Nothing here merges, comments or dispatches a workflow.
  */
@@ -43,7 +46,7 @@ private const val MAX_IMPORT_FILE_BYTES = 4L * 1024 * 1024
 private const val MAX_IMPORT_TOTAL_BYTES = 32L * 1024 * 1024
 
 /** Advice for a host with no stored token; the wording names the host and where to go. */
-internal fun notConnectedMessage(connection: GitHubConnection): String =
+internal fun notConnectedMessage(connection: GitConnection): String =
     if (connection.providerId == GitProviderId.GITHUB) {
         """
         GitHub is not connected: no token is stored on this device.
@@ -59,7 +62,7 @@ internal fun notConnectedMessage(connection: GitHubConnection): String =
     }
 
 /** What the stored credential can do, and which repository Studio is pointed at. */
-internal data class GitHubConnection(
+internal data class GitConnection(
     val hasToken: Boolean,
     val login: String?,
     /** Set when a token exists but cannot be used — never silently ignored. */
@@ -82,7 +85,7 @@ internal data class GitHubConnection(
  * sees a second path to a secret. Which host answers is decided by the saved provider
  * setting; an unavailable host is reported as a problem instead of falling back to GitHub.
  */
-internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection {
+internal suspend fun resolveGitConnection(ctx: ToolContext): GitConnection {
     val context = ctx.androidContext
     val studioSettings = StudioSettingsStore.getInstance(context)
     val endpoints = EndpointSettingsStore.current(context)
@@ -95,7 +98,7 @@ internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection
     val provider = (lookup as? GitProviderLookup.Available)?.provider
     if (provider == null) {
         val reason = (lookup as? GitProviderLookup.Unavailable)?.reason
-        return GitHubConnection(
+        return GitConnection(
             hasToken = state.hasToken,
             login = null,
             failure = "${state.displayName} is not usable in this build ($reason).",
@@ -110,7 +113,7 @@ internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection
         )
     }
     if (!state.hasToken) {
-        return GitHubConnection(
+        return GitConnection(
             hasToken = false,
             login = null,
             failure = null,
@@ -125,7 +128,7 @@ internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection
         )
     }
     return when (val user = provider.account()) {
-        is GitResult.Success -> GitHubConnection(
+        is GitResult.Success -> GitConnection(
             hasToken = true,
             login = user.value.login,
             failure = null,
@@ -138,7 +141,7 @@ internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection
             canPublish = state.canPublish,
             provider = provider
         )
-        is GitResult.Failure -> GitHubConnection(
+        is GitResult.Failure -> GitConnection(
             hasToken = true,
             login = null,
             failure = user.message
@@ -156,7 +159,7 @@ internal suspend fun resolveGitHubConnection(ctx: ToolContext): GitHubConnection
 }
 
 /**
- * GitHub account names are alphanumeric with single hyphens and may neither start nor end
+ * Host account names are alphanumeric with single hyphens and may neither start nor end
  * with one; repository names also allow `_` and `.` (`.github` is a real repository).
  * `.` and `..` are refused explicitly: the parsed name becomes a folder inside the session
  * sandbox, so a traversal segment must never be accepted as a repository.
@@ -200,14 +203,14 @@ internal fun sessionFolderName(raw: String?, fallback: String): String =
                 !candidate.contains('\\')
         } ?: fallback
 
-class GitHubStatusTool : Tool {
-    override val name = "GitHubStatus"
+class GitStatusTool : Tool {
+    override val name = "GitStatus"
     override val description = """
         Report the git host Studio is using — GitHub, Gitea or Forgejo, whichever the user
         configured: whether a token is stored, which account it authenticates as, the
         repository Studio last opened, the local working copies already imported, and
         whether this host can publish in this build.
-        Read-only. Call this first — GitHubImportRepository defaults to the repository
+        Read-only. Call this first — GitImportRepository defaults to the repository
         reported here, and when nothing is connected this explains what the user must do.
     """.trimIndent()
 
@@ -216,7 +219,7 @@ class GitHubStatusTool : Tool {
     override fun isReadOnly(): Boolean = true
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
-        val connection = resolveGitHubConnection(ctx)
+        val connection = resolveGitConnection(ctx)
         if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
 
         val workspace = WorkspaceService(ctx.androidContext)
@@ -245,25 +248,31 @@ class GitHubStatusTool : Tool {
                     }
                     if (imported.size > 10) appendLine("… ${imported.size - 10} more")
                 }
-                if (connection.canPublish) {
+                if (connection.capabilities?.createRepository == true) {
                     appendLine(
-                        "GitHubCreateRepository creates a new repository on this account " +
+                        "GitCreateRepository creates a new repository on this account " +
                             "(optionally seeded with a public repository's files) — it also " +
                             "asks for a fresh approval tap."
                     )
                 } else {
                     appendLine(
-                        "This host is read-only in this build: creating a repository, " +
-                            "opening a pull request and pushing a commit are unavailable."
+                        "Creating a repository is not available on this host: the server " +
+                            "does not expose a create endpoint this build can use."
+                    )
+                }
+                if (!connection.canPublish) {
+                    appendLine(
+                        "This host has no publish path in this build: opening a pull " +
+                            "request and pushing a commit are unavailable."
                     )
                 }
                 appendLine(
-                    "Next: GitHubImportRepository copies a repository into this session " +
+                    "Next: GitImportRepository copies a repository into this session " +
                         "folder, after which Read/Write/Edit/ListFiles/Glob/Grep work on its files."
                 )
                 if (connection.canPublish) {
                     appendLine(
-                        "GitHubOpenPullRequest then sends those edits as a NEW branch plus a " +
+                        "GitOpenChangeRequest then sends those edits as a NEW branch plus a " +
                             "pull request, with a fresh approval tap on every call."
                     )
                 }
@@ -272,12 +281,12 @@ class GitHubStatusTool : Tool {
     }
 }
 
-class GitHubListRepositoriesTool : Tool {
-    override val name = "GitHubListRepositories"
+class GitListRepositoriesTool : Tool {
+    override val name = "GitListRepositories"
     override val description = """
         List the repositories the stored token can see on the configured git host
         (GitHub, Gitea or Forgejo), newest activity first.
-        Read-only. Use it to find the repository the user means when GitHubStatus shows a
+        Read-only. Use it to find the repository the user means when GitStatus shows a
         repository that does not exist or that they did not mention.
     """.trimIndent()
 
@@ -289,7 +298,7 @@ class GitHubListRepositoriesTool : Tool {
     override fun isReadOnly(): Boolean = true
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
-        val connection = resolveGitHubConnection(ctx)
+        val connection = resolveGitConnection(ctx)
         if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
         connection.failure?.let { return ToolResult.error(it) }
         val provider = connection.provider
@@ -324,16 +333,16 @@ class GitHubListRepositoriesTool : Tool {
     }
 }
 
-class GitHubImportRepositoryTool : Tool {
-    override val name = "GitHubImportRepository"
+class GitImportRepositoryTool : Tool {
+    override val name = "GitImportRepository"
     override val description = """
         Copy a repository's files from the configured git host (GitHub, Gitea or Forgejo)
         into this chat's working folder so the file tools can read and edit them. Defaults
-        to the repository and branch Studio is pointed at (see GitHubStatus).
+        to the repository and branch Studio is pointed at (see GitStatus).
         Local only: this downloads files into the app's session storage. It does NOT
         commit, push, open a pull request or change the remote branch. On a host that
         cannot publish, importing is the end of the chain; elsewhere the edits can be sent
-        with GitHubOpenPullRequest (new branch + pull request) or from Studio's
+        with GitOpenChangeRequest (new branch + pull request) or from Studio's
         Repositories tab.
         Re-running replaces previously imported files of the same folder. Large
         repositories are capped (2000 files / 32 MB, 4 MB per file).
@@ -353,14 +362,14 @@ class GitHubImportRepositoryTool : Tool {
     }
 
     override suspend fun execute(args: JsonObject, ctx: ToolContext): ToolResult {
-        val connection = resolveGitHubConnection(ctx)
+        val connection = resolveGitConnection(ctx)
         if (!connection.hasToken) return ToolResult.ok(notConnectedMessage(connection))
         connection.failure?.let { return ToolResult.error(it) }
 
         val requested = argString(args, "repository")?.takeIf { it.isNotBlank() }
         val parsed = parseOwnerRepo(requested ?: connection.repository)
             ?: return ToolResult.error(
-                "GitHubImportRepository: '${requested ?: connection.repository}' is not " +
+                "GitImportRepository: '${requested ?: connection.repository}' is not " +
                     "an owner/repo identifier. Pass the repository explicitly."
             )
         val (owner, repo) = parsed
@@ -375,7 +384,7 @@ class GitHubImportRepositoryTool : Tool {
         }
         val source = outcome.getOrElse { failure ->
             return ToolResult.error(
-                "GitHubImportRepository: could not fetch $owner/$repo@$branch — " +
+                "GitImportRepository: could not fetch $owner/$repo@$branch — " +
                     (failure.message ?: failure.javaClass.simpleName)
             )
         }
@@ -385,7 +394,7 @@ class GitHubImportRepositoryTool : Tool {
         }
         if (stats.files == 0) {
             return ToolResult.error(
-                "GitHubImportRepository: $owner/$repo@$branch produced no readable files."
+                "GitImportRepository: $owner/$repo@$branch produced no readable files."
             )
         }
 
@@ -406,14 +415,14 @@ class GitHubImportRepositoryTool : Tool {
                 )
                 if (connection.canPublish) {
                     appendLine(
-                        "When the change is complete, call GitHubOpenPullRequest to push it " +
+                        "When the change is complete, call GitOpenChangeRequest to push it " +
                             "to a new branch and open a pull request (the user approves " +
                             "each push)."
                     )
                 } else {
                     appendLine(
-                        "${connection.providerName} is read-only in this build, so the edits " +
-                            "stay in this chat folder; they cannot be pushed from here."
+                        "${connection.providerName} has no publish path in this build, so " +
+                            "the edits stay in this chat folder; they cannot be pushed from here."
                     )
                 }
             }.trimEnd()
