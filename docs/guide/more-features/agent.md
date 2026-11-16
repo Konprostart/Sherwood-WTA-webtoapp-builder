@@ -28,6 +28,16 @@ Beyond generating web apps, plugins, userscripts, MV3 Chrome extensions, and loc
 
 [About → Local MCP](/guide/more-features/about) is off by default. When it is on, an external agent can call the same tools over `127.0.0.1`, with a bearer token. A read-only preview tool opens the page in a document task you can watch. Write tools still ask on the phone. Generated APKs do not ship this server. A computer reaches the port with `adb reverse`.
 
+## Floating assistant (Sidekick)
+
+A small consultation panel that floats above every screen, so you can ask about the work without leaving it. Turn it on in **Settings → Floating assistant**; a draggable button then appears above the app and remembers where you left it.
+
+- **What it is for** — explaining what the Agent just did, explaining an error or build failure in plain language, and rewriting a prompt into something the Agent can act on.
+- **It cannot act.** The Sidekick has no tools: it cannot read project files, change settings, build, or push. It answers, and tells you where in the app to do the thing.
+- **Context** — it can attach the tail of the current Agent session (a size-bounded digest, sent as system context, never as your own message) so "explain this error" works without copy-paste. A short "this installation" block answers questions like which git host is active without guessing.
+- **Its own model** — pick any saved model for it, including a [local Ollama model](/guide/more-features/ai-settings), or leave it on "Same as the agent" to follow the Agent's model. A model chosen here never changes the Agent's model, and a pick that was deleted from AI Settings falls back to the Agent's instead of failing.
+- **Host only** — the assistant is part of the builder app. Generated APKs do not contain it.
+
 ## Configuration
 
 Agent uses the model and keys configured in [AI Settings](/guide/more-features/ai-settings).

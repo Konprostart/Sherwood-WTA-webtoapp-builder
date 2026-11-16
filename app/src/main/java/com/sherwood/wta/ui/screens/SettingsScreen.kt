@@ -399,34 +399,37 @@ private fun SidekickModelPickerDialog(
             TextButton(onClick = onDismiss) {
                 Text(Strings.cancel)
             }
-        }
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            SidekickModelOption(
-                label = Strings.sidekickModelFollow,
-                subtitle = null,
-                selected = selectedId == null,
-                onClick = { onSelect(null) }
-            )
-            models.forEach { model ->
-                val label = model.alias?.takeIf { it.isNotBlank() } ?: model.model.name
+        },
+        // Named: WtaAlertDialog declares `content` before `properties`, so a trailing
+        // lambda would bind to the wrong parameter.
+        content = {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 SidekickModelOption(
-                    label = label,
-                    subtitle = model.model.provider.displayName,
-                    selected = model.id == selectedId,
-                    onClick = { onSelect(model.id) }
+                    label = Strings.sidekickModelFollow,
+                    subtitle = null,
+                    selected = selectedId == null,
+                    onClick = { onSelect(null) }
                 )
-            }
-            if (models.isEmpty()) {
-                Text(
-                    text = Strings.sidekickMissingModel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = WtaSpacing.Small)
-                )
+                models.forEach { model ->
+                    val label = model.alias?.takeIf { it.isNotBlank() } ?: model.model.name
+                    SidekickModelOption(
+                        label = label,
+                        subtitle = model.model.provider.displayName,
+                        selected = model.id == selectedId,
+                        onClick = { onSelect(model.id) }
+                    )
+                }
+                if (models.isEmpty()) {
+                    Text(
+                        text = Strings.sidekickMissingModel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = WtaSpacing.Small)
+                    )
+                }
             }
         }
-    }
+    )
 }
 
 @Composable
