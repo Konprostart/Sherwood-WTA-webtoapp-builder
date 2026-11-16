@@ -111,8 +111,8 @@ android {
         minSdk = 24
 
         targetSdk = 36
-        versionCode = 93
-        versionName = "2.10.1"
+        versionCode = 94
+        versionName = "2.10.2"
         buildConfigField("boolean", "SHELL_RUNTIME_ONLY", "false")
         buildConfigField("boolean", "FDROID", isFdroidBuild.toString())
         // True only in the gplay flavor (see productFlavors). Google Play policy does not allow
