@@ -25,7 +25,7 @@ class PrivateNetworkBridgeFetchTest {
         val javaRoot = listOf("app/src/main/java", "src/main/java").asSequence()
             .map(::File).firstOrNull(File::exists)
             ?: error("Cannot locate java directory")
-        val file = File(javaRoot, "com/webtoapp/core/webview/WebViewManager.kt")
+        val file = File(javaRoot, "com/sherwood/wta/core/webview/WebViewManager.kt")
         assertWithMessage("Test harness cannot find source file").that(file.isFile).isTrue()
         return file.readText()
     }
