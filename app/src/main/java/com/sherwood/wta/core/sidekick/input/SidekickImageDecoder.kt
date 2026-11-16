@@ -1,7 +1,6 @@
 package com.sherwood.wta.core.sidekick.input
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
@@ -37,24 +36,14 @@ object SidekickImageDecoder {
     private val SCALE_STEPS = floatArrayOf(1f, 0.75f, 0.5f)
 
     fun fromFile(file: File, name: String): SidekickAttachmentResult {
-        val bounds = BitmapFactory.Options().also { it.inJustDecodeBounds = true }
-        runCatching { BitmapFactory.decodeFile(file.absolutePath, bounds) }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            return SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.UNREADABLE)
-        }
-
-        val sample = BoundedBitmaps.calculateInSampleSize(
-            bounds.outWidth,
-            bounds.outHeight,
+        // BoundedBitmaps bounds-probes first and samples down to the cap, which is the only
+        // sanctioned way to decode user content in this app (`NoUnboundedBitmapDecodeTest`
+        // gates raw BitmapFactory calls because an oversized bitmap kills the process at
+        // DRAW time, past any try/catch).
+        val decoded = BoundedBitmaps.decodeBoundedBitmapFile(
+            file.absolutePath,
             SidekickAttachmentLimits.MAX_IMAGE_SIDE
-        )
-        val options = BitmapFactory.Options().also {
-            it.inSampleSize = sample
-            it.inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
-        val decoded = runCatching { BitmapFactory.decodeFile(file.absolutePath, options) }
-            .getOrNull()
-            ?: return SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.UNREADABLE)
+        ) ?: return SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.UNREADABLE)
 
         // Everything created below is recycled on the way out; a leak here would be a
         // bitmap the size of the photo held until the GC gets around to it.
