@@ -220,7 +220,7 @@ open class WebViewActivity : AppCompatActivity() {
         surface = { browserSurface }
     )
 
-    private var pendingPermissionRequest: PermissionRequest? = null
+    private val capturePermission = com.sherwood.wta.core.webview.CapturePermissionBridge()
     private var pendingEnginePermissionCallback: ((Boolean) -> Unit)? = null
     private var pendingGeolocationOrigin: String? = null
     private var pendingGeolocationCallback: GeolocationPermissions.Callback? = null
@@ -628,11 +628,14 @@ open class WebViewActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         com.sherwood.wta.core.webview.FileChooserLifetime.endPermissionDialog()
-        val request = pendingPermissionRequest
-        pendingPermissionRequest = null
-        if (request != null) {
-            com.sherwood.wta.core.webview.WebPermissionRequests.settle(request, permissions.values.all { it })
+        val allGranted = permissions.isNotEmpty() && permissions.values.all { it }
+        if (capturePermission.onRuntimeResult(allGranted)) {
+            window.decorView.post { reloadBrowser() }
         }
+    }
+
+    fun onCapturePermissionCanceled(request: PermissionRequest) {
+        capturePermission.onCanceled(request)
     }
 
     /**
@@ -853,12 +856,12 @@ open class WebViewActivity : AppCompatActivity() {
             com.sherwood.wta.core.webview.WebPermissionRequests.settle(request, true)
         } else {
 
-            pendingPermissionRequest = request
+            capturePermission.remember(request)
             val launched = com.sherwood.wta.core.webview.FileChooserLifetime.runPermissionDialog {
                 permissionLauncher.launch(notGranted.toTypedArray())
             }
             if (!launched) {
-                pendingPermissionRequest = null
+                capturePermission.clear()
                 com.sherwood.wta.core.webview.WebPermissionRequests.settle(request, false)
             }
         }
@@ -1918,16 +1921,21 @@ fun WebViewScreen(
                 activity.finish()
                 return@LaunchedEffect
             }
+            if (previewApp.adBlockEnabled) adBlocker.holdRuleInstall()
             webApp = previewApp
             isActivated = true
             isActivationChecked = true
 
-            adBlocker.prepareRuntimeFilters(
-                context = context,
-                enabled = previewApp.adBlockEnabled,
-                customRules = previewApp.adBlockRules,
-                subscriptionUrls = previewApp.adBlockSubscriptions
-            )
+            try {
+                adBlocker.prepareRuntimeFilters(
+                    context = context,
+                    enabled = previewApp.adBlockEnabled,
+                    customRules = previewApp.adBlockRules,
+                    subscriptionUrls = previewApp.adBlockSubscriptions
+                )
+            } finally {
+                if (previewApp.adBlockEnabled) adBlocker.releaseRuleInstall()
+            }
 
             (activity as? WebViewActivity)?.fullscreenVideoOrientation =
                 previewApp.webViewConfig.fullscreenVideoOrientation
@@ -1981,15 +1989,19 @@ fun WebViewScreen(
                 activity.finish()
                 return@LaunchedEffect
             }
+            if (app?.adBlockEnabled == true) adBlocker.holdRuleInstall()
             webApp = app
             if (app != null) {
-
-                adBlocker.prepareRuntimeFilters(
-                    context = context,
-                    enabled = app.adBlockEnabled,
-                    customRules = app.adBlockRules,
-                    subscriptionUrls = app.adBlockSubscriptions
-                )
+                try {
+                    adBlocker.prepareRuntimeFilters(
+                        context = context,
+                        enabled = app.adBlockEnabled,
+                        customRules = app.adBlockRules,
+                        subscriptionUrls = app.adBlockSubscriptions
+                    )
+                } finally {
+                    if (app.adBlockEnabled) adBlocker.releaseRuleInstall()
+                }
 
                 onSavedAppLoaded?.invoke(app)
 
@@ -3134,6 +3146,10 @@ fun WebViewScreen(
                 }
             }
 
+            override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+                request?.let { (activity as? WebViewActivity)?.onCapturePermissionCanceled(it) }
+            }
+
             override fun onShowFileChooser(
                 filePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: WebChromeClient.FileChooserParams?
@@ -3259,6 +3275,26 @@ fun WebViewScreen(
                         """.trimIndent(), null)
                     }
                 )
+            }
+
+            override fun onExternalDownloadResponse(
+                url: String,
+                userAgent: String,
+                contentDisposition: String,
+                mimeType: String,
+                contentLength: Long,
+                body: java.io.InputStream
+            ) {
+                val effectiveConfig = (webApp ?: previewApp)?.webViewConfig
+                    ?: com.sherwood.wta.data.model.WebViewConfig()
+                val filename = DownloadHelper.parseFileName(url, contentDisposition, mimeType)
+                com.sherwood.wta.core.webview.DownloadBridge(
+                    context,
+                    scope,
+                    effectiveConfig.downloadLocationMode,
+                    effectiveConfig.customDownloadDirUri,
+                    effectiveConfig.mediaAlbumName
+                ).saveExternalDownload(body, filename, mimeType)
             }
 
             override fun onLongPress(webView: WebView, x: Float, y: Float): Boolean {
@@ -3943,6 +3979,9 @@ fun WebViewScreen(
                         browserDisguiseConfig = mwApp.browserDisguiseConfig,
                         deviceDisguiseConfig = mwApp.deviceDisguiseConfig
                     )
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        com.sherwood.wta.ui.shell.LocalPageScrollTracker provides statusBarColorTracker
+                    ) {
                     com.sherwood.wta.ui.shell.MultiWebShellMode(
                         config = shellConfig,
                         webViewConfig = mwApp.webViewConfig,
@@ -3998,6 +4037,7 @@ fun WebViewScreen(
                             }
                         }
                     )
+                        }
                     }
                 } else {
 
@@ -4267,11 +4307,12 @@ fun WebViewScreen(
                                         // current entry instead of the configured start URL
                                         // (same contract as ShellBrowserView's state_restored tag).
                                         host?.markResumeConsumed()
-                                        reload()
+                                        adBlocker.runWhenRulesInstalled { reload() }
                                     } else {
                                         // Cold-start path: resume the last visited page after
                                         // process death when the store still matches this target.
-                                        loadUrl(host?.consumeResumeUrl() ?: targetUrl)
+                                        val startUrl = host?.consumeResumeUrl() ?: targetUrl
+                                        adBlocker.runWhenRulesInstalled { loadUrl(startUrl) }
                                     }
                                     }
                                     swipeChildWebView = createdWebView
@@ -4293,7 +4334,8 @@ fun WebViewScreen(
                                     // loadUrl(targetUrl); this branch never navigated at all, so
                                     // plain WEB/HTML previews on Gecko/ECH showed a blank view.
                                     if (targetUrl.isNotEmpty()) {
-                                        loadInBrowser((context as? WebViewActivity)?.consumeResumeUrl() ?: targetUrl)
+                                        val startUrl = (context as? WebViewActivity)?.consumeResumeUrl() ?: targetUrl
+                                        adBlocker.runWhenRulesInstalled { loadInBrowser(startUrl) }
                                     }
                                 }
                             }

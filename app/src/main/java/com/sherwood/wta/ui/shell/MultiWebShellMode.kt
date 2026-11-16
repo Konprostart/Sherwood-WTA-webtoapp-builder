@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -42,6 +43,7 @@ import androidx.compose.ui.zIndex
 import android.webkit.WebView
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.core.webview.multiWebSiteMatchesQuery
 import com.sherwood.wta.core.shell.MultiWebShellConfig
 import com.sherwood.wta.core.shell.MultiWebSiteShellConfig
 import com.sherwood.wta.core.shell.ShellConfig
@@ -95,6 +97,29 @@ fun MultiWebShellMode(
         return
     }
 
+    val darkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+    val barType = if (darkTheme) config.webViewConfig.statusBarBackgroundTypeDark else config.webViewConfig.statusBarBackgroundType
+    val barMode = if (darkTheme) config.webViewConfig.statusBarColorModeDark else config.webViewConfig.statusBarColorMode
+    val barColor = if (darkTheme) config.webViewConfig.statusBarColorDark else config.webViewConfig.statusBarColor
+    val barImage = if (darkTheme) config.webViewConfig.statusBarBackgroundImageDark else config.webViewConfig.statusBarBackgroundImage
+    val barAlpha = if (darkTheme) config.webViewConfig.statusBarBackgroundAlphaDark else config.webViewConfig.statusBarBackgroundAlpha
+    val explicitIcons = if (darkTheme) config.webViewConfig.statusBarDarkIconsDark else config.webViewConfig.statusBarDarkIcons
+    val paintsBand = barType != "COLOR" || barMode != com.sherwood.wta.data.model.StatusBarColorMode.TRANSPARENT.name
+    val lightStatusIcons = explicitIcons ?: when (barType) {
+        "COLOR" -> {
+            val hex = barColor
+            if (hex.isNullOrBlank()) {
+                !darkTheme
+            } else {
+                runCatching {
+                    com.sherwood.wta.ui.shared.WindowHelper.isColorLight(android.graphics.Color.parseColor(hex))
+                }.getOrDefault(!darkTheme)
+            }
+        }
+        else -> !darkTheme
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     when (multiWebConfig.displayMode.uppercase()) {
         "TABS" -> TabsMode(config, multiWebConfig, sites, webViewConfig, webViewCallbacks, webViewManager, onWebViewCreated, swipeRefreshEnabled, isRefreshing, onRefresh, onBrowserSurfaceCreated, TabBarPlacement.BOTTOM, onTopTabColor)
         "TOP_TABS" -> TabsMode(config, multiWebConfig, sites, webViewConfig, webViewCallbacks, webViewManager, onWebViewCreated, swipeRefreshEnabled, isRefreshing, onRefresh, onBrowserSurfaceCreated, TabBarPlacement.TOP, onTopTabColor)
@@ -102,6 +127,25 @@ fun MultiWebShellMode(
         "FEED" -> FeedMode(config, multiWebConfig, sites, webViewConfig, webViewCallbacks, webViewManager, onWebViewCreated, swipeRefreshEnabled, isRefreshing, onRefresh, onBrowserSurfaceCreated)
         "DRAWER" -> DrawerMode(config, multiWebConfig, sites, webViewConfig, webViewCallbacks, webViewManager, onWebViewCreated, swipeRefreshEnabled, isRefreshing, onRefresh, onBrowserSurfaceCreated)
         else -> TabsMode(config, multiWebConfig, sites, webViewConfig, webViewCallbacks, webViewManager, onWebViewCreated, swipeRefreshEnabled, isRefreshing, onRefresh, onBrowserSurfaceCreated)
+    }
+
+    if (paintsBand) {
+        com.sherwood.wta.ui.components.StatusBarOverlay(
+            show = true,
+            backgroundType = barType,
+            backgroundColor = barColor ?: if (darkTheme) "#1C1B1F" else "#FFFBFE",
+            backgroundImagePath = barImage,
+            alpha = barAlpha,
+            heightDp = config.webViewConfig.statusBarHeightDp
+        )
+        val view = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect {
+            val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+            val controller = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            controller.isAppearanceLightStatusBars = lightStatusIcons
+            controller.isAppearanceLightNavigationBars = lightStatusIcons
+        }
+    }
     }
 }
 
@@ -175,10 +219,37 @@ private fun SiteContent(
         )
     )
     val siteWvCfg = remember(site.id) { buildWebViewConfig(effectiveConfig) }
+
+    var recreationTick by remember(site.id) { mutableIntStateOf(0) }
+    var liveWebView by remember(site.id) { mutableStateOf<WebView?>(null) }
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, site.id) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                val wv = liveWebView ?: return@LifecycleEventObserver
+                com.sherwood.wta.core.webview.RendererLivenessProbe.probe(
+                    webView = wv,
+                    stillCurrent = { liveWebView === wv }
+                ) {
+                    liveWebView = null
+                    runCatching {
+                        wv.stopLoading()
+                        (wv.parent as? android.view.ViewGroup)?.removeView(wv)
+                        wv.destroy()
+                    }
+                    webViewManager.discardWebView(wv)
+                    recreationTick++
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     ShellContentRouter(
         appType = site.appType,
         config = effectiveConfig,
-        webViewRecreationKey = site.id.hashCode(),
+        webViewRecreationKey = site.id.hashCode() + recreationTick,
         webViewConfig = siteWvCfg,
         webViewCallbacks = webViewCallbacks,
         webViewManager = webViewManager,
@@ -187,9 +258,8 @@ private fun SiteContent(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         onWebViewCreated = { wv ->
-            // Stamp the site so the activity's WebView-state bundle only lands
-            // on the surface it was saved from (#1036).
             (wv as? com.sherwood.wta.core.webview.WtaWebView)?.siteId = site.id
+            liveWebView = wv
             onWebViewCreated(wv)
         },
         onWebViewRefUpdated = { },
@@ -824,24 +894,53 @@ private fun CardsMode(
         LaunchedEffect(site.id) {
             webViewCallbacks.onTitleChanged(site.name.ifBlank { extractDomain(site.url) })
         }
-        Scaffold(
-            containerColor = Color.Transparent,
-            contentWindowInsets = WindowInsets(0),
-            topBar = {
-                TopAppBar(
-                    title = { Text(site.name.ifBlank { extractDomain(site.url) }) },
-                    navigationIcon = {
-                        IconButton(onClick = { closeSite() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Strings.close)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val toolbarHeight = 64.dp + statusTop
+        val toolbarHeightPx = with(density) { toolbarHeight.toPx() }
+        var toolbarVisible by remember { mutableStateOf(true) }
+        var toolbarOffset by remember { mutableFloatStateOf(0f) }
+        var contentTop by remember { mutableStateOf(toolbarHeight) }
+        val pageScrollTracker = LocalPageScrollTracker.current
+
+        LaunchedEffect(site.id) {
+            toolbarVisible = true
+            contentTop = toolbarHeight
+            toolbarOffset = 0f
+        }
+        LaunchedEffect(toolbarVisible) {
+            if (toolbarVisible) {
+                androidx.compose.animation.core.animate(
+                    initialValue = toolbarOffset,
+                    targetValue = 0f,
+                    animationSpec = androidx.compose.animation.core.tween(220)
+                ) { value, _ -> toolbarOffset = value }
+                contentTop = toolbarHeight
+            } else {
+                contentTop = 0.dp
+                androidx.compose.animation.core.animate(
+                    initialValue = toolbarOffset,
+                    targetValue = -toolbarHeightPx,
+                    animationSpec = androidx.compose.animation.core.tween(220)
+                ) { value, _ -> toolbarOffset = value }
             }
-        ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        }
+        val reveal = remember(site.id) { ToolbarReveal() }
+        DisposableEffect(pageScrollTracker, site.id) {
+            if (pageScrollTracker == null) return@DisposableEffect onDispose {}
+            val listener: (Int) -> Unit = { y ->
+                if (reveal.onScroll(y)) toolbarVisible = reveal.visible
+            }
+            pageScrollTracker.addScrollListener(listener)
+            onDispose { pageScrollTracker.removeScrollListener(listener) }
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = contentTop)
+            ) {
                 key(site.id) {
                     SiteContent(
                         site, config, webViewConfig, webViewCallbacks, webViewManager,
@@ -859,6 +958,21 @@ private fun CardsMode(
                     )
                 }
             }
+            TopAppBar(
+                title = { Text(site.name.ifBlank { extractDomain(site.url) }) },
+                navigationIcon = {
+                    IconButton(onClick = { closeSite() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = Strings.close)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .offset { IntOffset(0, toolbarOffset.roundToInt()) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
         }
     } else {
         CardsHomeGrid(
@@ -1309,6 +1423,34 @@ private fun DrawerMode(
         MULTI_WEB_DEFAULT_DRAWER_COLUMNS,
         MULTI_WEB_MAX_DRAWER_COLUMNS
     )
+    var savedIds by remember { mutableStateOf(resumeStore.savedSiteIds(resumeKey)) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val knownSiteIds = remember(sites) { sites.map { it.id }.toSet() }
+    LaunchedEffect(knownSiteIds) {
+        val pruned = savedIds.filter { it in knownSiteIds }.toSet()
+        if (pruned != savedIds) {
+            savedIds = pruned
+            resumeStore.persistSavedSiteIds(resumeKey, pruned)
+        }
+    }
+    fun toggleSaved(siteId: String) {
+        val next = savedIds.toMutableSet()
+        if (!next.add(siteId)) next.remove(siteId)
+        savedIds = next
+        resumeStore.persistSavedSiteIds(resumeKey, next)
+    }
+    fun siteVisible(site: MultiWebSiteShellConfig): Boolean {
+        val domain = extractDomain(site.url)
+        return multiWebSiteMatchesQuery(
+            name = site.name.ifBlank { domain },
+            url = site.url,
+            domain = domain,
+            query = searchQuery
+        )
+    }
+    val visibleSites = sites.filter(::siteVisible)
+    val savedSites = visibleSites.filter { it.id in savedIds }
 
     LaunchedEffect(drawerVisible) {
         if (drawerVisible) scope.launch { drawerState.open() } else scope.launch { drawerState.close() }
@@ -1328,48 +1470,92 @@ private fun DrawerMode(
                 windowInsets = DrawerDefaults.windowInsets.exclude(WindowInsets.ime)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primaryContainer).padding(24.dp)
+                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primaryContainer).padding(start = 24.dp, top = 24.dp, end = 12.dp, bottom = 16.dp)
                 ) {
-                    Text(
-                        Strings.multiWebSiteList,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        Strings.multiWebSiteCount.replace("%d", sites.size.toString()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                Strings.multiWebSiteList,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                Strings.multiWebSiteCount.replace("%d", visibleSites.size.toString()),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                        IconButton(onClick = {
+                            searchOpen = !searchOpen
+                            if (!searchOpen) searchQuery = ""
+                        }) {
+                            Icon(
+                                if (searchOpen) Icons.Filled.Close else Icons.Outlined.Search,
+                                contentDescription = Strings.multiWebSearchSites,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                    if (searchOpen) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, end = 12.dp),
+                            singleLine = true,
+                            placeholder = { Text(Strings.multiWebSearchSites) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                focusedBorderColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f),
+                                cursorColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                focusedPlaceholderColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                            )
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
-                    if (drawerColumns <= 1) {
-                        items(sites) { site ->
-                            val isSelected = selectedSiteId == site.id
-                            DrawerSiteItem(site = site, isSelected = isSelected, onClick = { selectedSiteId = site.id; drawerVisible = false })
+                    if (searchQuery.isNotBlank() && visibleSites.isEmpty()) {
+                        item(key = "search-empty") {
+                            Text(
+                                Strings.multiWebSearchEmpty,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                            )
                         }
                     } else {
-                        val rows = sites.chunked(drawerColumns)
-                        items(rows) { row ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                row.forEach { site ->
-                                    val isSelected = selectedSiteId == site.id
-                                    DrawerSiteTile(
-                                        site = site,
-                                        isSelected = isSelected,
-                                        onClick = { selectedSiteId = site.id; drawerVisible = false },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                                repeat(drawerColumns - row.size) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
+                        if (savedSites.isNotEmpty()) {
+                            item(key = "saved-label") {
+                                Text(
+                                    Strings.multiWebSavedSites,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                                )
                             }
+                            drawerSiteBlocks(
+                                sites = savedSites,
+                                columns = drawerColumns,
+                                keyPrefix = "saved",
+                                selectedSiteId = selectedSiteId,
+                                savedIds = savedIds,
+                                onOpen = { selectedSiteId = it; drawerVisible = false },
+                                onToggleSaved = ::toggleSaved
+                            )
                         }
+                        drawerSiteBlocks(
+                            sites = visibleSites,
+                            columns = drawerColumns,
+                            keyPrefix = "all",
+                            selectedSiteId = selectedSiteId,
+                            savedIds = savedIds,
+                            onOpen = { selectedSiteId = it; drawerVisible = false },
+                            onToggleSaved = ::toggleSaved
+                        )
                     }
                 }
             }
@@ -1466,8 +1652,68 @@ private fun DrawerMode(
     }
 }
 
+private fun LazyListScope.drawerSiteBlocks(
+    sites: List<MultiWebSiteShellConfig>,
+    columns: Int,
+    keyPrefix: String,
+    selectedSiteId: String?,
+    savedIds: Set<String>,
+    onOpen: (String) -> Unit,
+    onToggleSaved: (String) -> Unit
+) {
+    if (columns <= 1) {
+        items(sites, key = { "$keyPrefix-${it.id}" }) { site ->
+            DrawerSiteItem(
+                site = site,
+                isSelected = selectedSiteId == site.id,
+                saved = site.id in savedIds,
+                onClick = { onOpen(site.id) },
+                onToggleSaved = { onToggleSaved(site.id) }
+            )
+        }
+    } else {
+        items(sites.chunked(columns), key = { row -> "$keyPrefix-" + row.joinToString("-") { it.id } }) { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row.forEach { site ->
+                    DrawerSiteTile(
+                        site = site,
+                        isSelected = selectedSiteId == site.id,
+                        saved = site.id in savedIds,
+                        onClick = { onOpen(site.id) },
+                        onToggleSaved = { onToggleSaved(site.id) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                repeat(columns - row.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
 @Composable
-private fun DrawerSiteItem(site: MultiWebSiteShellConfig, isSelected: Boolean, onClick: () -> Unit) {
+private fun DrawerSaveButton(saved: Boolean, onToggleSaved: () -> Unit) {
+    IconButton(onClick = onToggleSaved) {
+        Icon(
+            if (saved) Icons.Filled.Star else Icons.Outlined.StarBorder,
+            contentDescription = if (saved) Strings.multiWebUnsaveSite else Strings.multiWebSaveSite,
+            tint = if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun DrawerSiteItem(
+    site: MultiWebSiteShellConfig,
+    isSelected: Boolean,
+    saved: Boolean,
+    onClick: () -> Unit,
+    onToggleSaved: () -> Unit
+) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
@@ -1498,6 +1744,7 @@ private fun DrawerSiteItem(site: MultiWebSiteShellConfig, isSelected: Boolean, o
             )
         }
         if (isSelected) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
+        DrawerSaveButton(saved = saved, onToggleSaved = onToggleSaved)
     }
 }
 
@@ -1505,7 +1752,9 @@ private fun DrawerSiteItem(site: MultiWebSiteShellConfig, isSelected: Boolean, o
 private fun DrawerSiteTile(
     site: MultiWebSiteShellConfig,
     isSelected: Boolean,
+    saved: Boolean,
     onClick: () -> Unit,
+    onToggleSaved: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val backgroundColor by animateColorAsState(
@@ -1537,6 +1786,7 @@ private fun DrawerSiteTile(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+        DrawerSaveButton(saved = saved, onToggleSaved = onToggleSaved)
     }
 }
 

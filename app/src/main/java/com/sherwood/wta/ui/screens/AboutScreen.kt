@@ -403,8 +403,6 @@ private fun AuthorHeroCard(
         androidx.compose.runtime.mutableStateMapOf<String, com.sherwood.wta.core.update.UpdateDownloadState>()
     }
 
-    val apkBuilder = remember(context) { com.sherwood.wta.core.apkbuilder.ApkBuilder(context.applicationContext) }
-
     if (showUpdateDialog) {
         UpdateCheckDialog(
             isChecking = isCheckingUpdate,
@@ -425,7 +423,7 @@ private fun AuthorHeroCard(
                 downloadState = com.sherwood.wta.core.update.UpdateDownloadState.Idle
             },
             onInstall = { file ->
-                val started = apkBuilder.installApk(file)
+                val started = com.sherwood.wta.core.apkbuilder.ApkInstaller.install(context.applicationContext, file)
                 if (!started) {
                     Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
                 }
@@ -460,7 +458,7 @@ private fun AuthorHeroCard(
                 historyDownloadStates.remove(tag)
             },
             onInstall = { file ->
-                val started = apkBuilder.installApk(file)
+                val started = com.sherwood.wta.core.apkbuilder.ApkInstaller.install(context.applicationContext, file)
                 if (!started) {
                     Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
                 }

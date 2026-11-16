@@ -511,7 +511,7 @@ fun HomeScreen(
 
                     val listContext = LocalContext.current
                     val sharedExporter = remember { com.sherwood.wta.core.export.AppExporter(listContext) }
-                    val sharedApkBuilder = remember { ApkBuilder(listContext) }
+                    val sharedApkBuilder = remember { lazy { ApkBuilder(listContext) } }
                     val sharedScope = rememberCoroutineScope()
 
                     val healthMonitor: com.sherwood.wta.core.stats.AppHealthMonitor? = remember {
@@ -908,7 +908,7 @@ fun HomeScreen(
                                     val fullApp = viewModel.getWebApp(app.id) ?: return@launch
                                     shareApkFailureReport = null
                                     snackbarHostState.showSnackbar(Strings.shareApkBuilding)
-                                    val apkBuilder = sharedApkBuilder
+                                    val apkBuilder = withContext(Dispatchers.IO) { sharedApkBuilder.value }
                                     val result = apkBuilder.buildApk(fullApp) { _, _ -> }
                                     when (result) {
                                         is BuildResult.Success -> {

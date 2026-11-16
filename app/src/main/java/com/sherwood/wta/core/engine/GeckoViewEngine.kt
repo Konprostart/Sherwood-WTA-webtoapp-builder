@@ -983,9 +983,7 @@ class GeckoViewEngine(
                     AppLogger.d(TAG, "Download suppressed (downloadEnabled=false): ${response.uri}")
                     return
                 }
-                val contentType = response.headers["Content-Type"] ?: "application/octet-stream"
-                val contentDisposition = response.headers["Content-Disposition"] ?: ""
-                val contentLength = response.headers["Content-Length"]?.toLongOrNull() ?: -1L
+                val metadata = com.sherwood.wta.core.engine.download.GeckoDownloadResponse.metadata(response.headers)
                 val ua = lastUserAgentOverride ?: lastConfig?.let { cfg ->
                     when (cfg.userAgentMode) {
                         UserAgentMode.DEFAULT -> ""
@@ -993,12 +991,24 @@ class GeckoViewEngine(
                         else -> cfg.userAgentMode.userAgentString
                     }
                 } ?: ""
+                val body = response.body
+                if (body != null && com.sherwood.wta.core.engine.download.GeckoDownloadResponse.isStreamed(response.uri)) {
+                    callback.onExternalDownloadResponse(
+                        response.uri,
+                        ua,
+                        metadata.contentDisposition,
+                        metadata.mimeType,
+                        metadata.contentLength,
+                        body
+                    )
+                    return
+                }
                 callback.onDownloadStart(
                     response.uri,
                     ua,
-                    contentDisposition,
-                    contentType,
-                    contentLength
+                    metadata.contentDisposition,
+                    metadata.mimeType,
+                    metadata.contentLength
                 )
             }
 

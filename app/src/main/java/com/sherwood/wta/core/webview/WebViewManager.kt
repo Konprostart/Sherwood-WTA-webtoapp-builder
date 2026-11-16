@@ -63,6 +63,8 @@ class WebViewManager(
     private val shareInboxScriptHandlers = java.util.WeakHashMap<WebView, ScriptHandler>()
     private val cosmeticFilterScriptHandlers = java.util.WeakHashMap<WebView, ScriptHandler>()
     private val pageZoomScriptHandlers = java.util.WeakHashMap<WebView, ScriptHandler>()
+    private val videoFitScriptHandlers = java.util.WeakHashMap<WebView, ScriptHandler>()
+    private val wasmStreamScriptHandlers = java.util.WeakHashMap<WebView, ScriptHandler>()
     private val kernelFlavorScriptHandlers = java.util.WeakHashMap<WebView, ScriptHandler>()
 
     companion object {
@@ -180,11 +182,26 @@ class WebViewManager(
 
         private val WEBVIEW_WV_MARKER_REGEX = Regex(";\\s*wv\\s*\\)")
 
+        /**
+         * Android WebView appends `Version/4.0` beside `Chrome/`. That token is the
+         * old Android browser marker, not a Safari version. Emscripten still treats
+         * any UA containing `Safari/` and `Version/` as Safari, so a Godot web
+         * export throws "requires Safari 15.2" while `index.js` evaluates and the
+         * canvas stays blank.
+         */
+        private val WEBVIEW_VERSION_TOKEN_REGEX = Regex("\\sVersion/4\\.0(?=\\s)")
+
         @JvmStatic
         fun stripWebViewMarker(userAgent: String): String {
             if (userAgent.isEmpty()) return userAgent
-            if (!userAgent.contains("wv")) return userAgent
-            return WEBVIEW_WV_MARKER_REGEX.replace(userAgent, ")")
+            var ua = userAgent
+            if (ua.contains("wv")) {
+                ua = WEBVIEW_WV_MARKER_REGEX.replace(ua, ")")
+            }
+            if (ua.contains("Chrome/") && ua.contains("Version/4.0")) {
+                ua = WEBVIEW_VERSION_TOKEN_REGEX.replace(ua, "")
+            }
+            return ua
         }
 
         /**
@@ -369,18 +386,25 @@ class WebViewManager(
          *   [CookieManager.removeSessionCookies].
          */
         @Suppress("DEPRECATION")
-        fun clearBrowsingData(context: Context, webView: WebView?, holdNavigation: Boolean = false) {
+        fun clearBrowsingData(
+            context: Context,
+            webView: WebView?,
+            holdNavigation: Boolean = false
+        ): Boolean {
+            var cleared = true
             try {
                 webView?.stopLoading()
                 webView?.clearCache(true)
                 webView?.clearHistory()
                 webView?.clearFormData()
             } catch (e: Exception) {
+                cleared = false
                 AppLogger.w("WebViewManager", "Failed to clear WebView browsing data", e)
             }
             try {
                 WebStorage.getInstance().deleteAllData()
             } catch (e: Exception) {
+                cleared = false
                 AppLogger.w("WebViewManager", "Failed to clear WebStorage", e)
             }
             val ticket = if (holdNavigation) FreshSessionGate.open() else null
@@ -395,6 +419,7 @@ class WebViewManager(
                     if (ticket != null) FreshSessionGate.close(ticket)
                 }
             } catch (e: Exception) {
+                cleared = false
                 AppLogger.w("WebViewManager", "Failed to clear cookies", e)
                 if (ticket != null) FreshSessionGate.close(ticket)
             }
@@ -404,9 +429,11 @@ class WebViewManager(
                 db.clearUsernamePassword()
                 db.clearFormData()
             } catch (e: Exception) {
+                cleared = false
                 AppLogger.w("WebViewManager", "Failed to clear WebView database", e)
             }
             AppLogger.i("WebViewManager", "Fresh browsing session data cleared")
+            return cleared
         }
 
         private val COMMON_SECOND_LEVEL_TLDS = setOf(
@@ -1274,6 +1301,9 @@ class WebViewManager(
         """
     }
 
+    /** First page load waits here while a downloaded rule list is parsed off the main thread. */
+    fun runWhenAdBlockRulesReady(block: () -> Unit) = adBlocker.runWhenRulesInstalled(block)
+
     private var appPluginPayloads: List<com.sherwood.wta.core.plugin.PluginSession.Resolved> = emptyList()
 
     private var pluginsEnabled: Boolean = true
@@ -1337,6 +1367,8 @@ class WebViewManager(
     // rejected (hotlink / Referer); the retry is the request the user otherwise
     // makes by tapping the error page. A repeat 403 still shows that page.
     private val mainFrameHttpRetry = MainFrameHttpRetry()
+    private val offlineNavigationRetry = OfflineNavigationRetry()
+    private val OFFLINE_NAVIGATION_RETRY_DELAY_MS = 400L
     private var mainFrameRefererUrl: String? = null
 
     // Cross-URL budget over all app-initiated auto-reloads (#654): per-path counters
@@ -1760,23 +1792,35 @@ class WebViewManager(
 
                 val identity = resolvedBrowserIdentity
                 if (identity.userAgent != null) {
-
-                    userAgentString = stripWebViewMarker(identity.userAgent)
+                    val stripped = stripWebViewMarker(identity.userAgent)
+                    userAgentString = stripped
+                    com.sherwood.wta.core.kernel.KernelFlavorMetadata.apply(
+                        webView,
+                        com.sherwood.wta.core.kernel.UserAgentProfileDeriver.derive(stripped) ?: identity.profile
+                    )
                     AppLogger.d(
                         "WebViewManager",
                         "Browser identity applied (${identity.profile?.flavor?.name ?: "derived-from-UA"}): " +
                             "${userAgentString.take(80)}..."
                     )
                 } else {
-
-                    userAgentString = stripWebViewMarker(userAgentString)
+                    val stripped = stripWebViewMarker(userAgentString)
+                    userAgentString = stripped
+                    // The engine's own Sec-CH-UA still says "Android WebView" after the `; wv`
+                    // token is removed. Hints have to describe the string we actually send.
+                    com.sherwood.wta.core.kernel.UserAgentProfileDeriver.derive(stripped)?.let { profile ->
+                        com.sherwood.wta.core.kernel.KernelFlavorMetadata.apply(webView, profile)
+                        // Modern WebView publishes these hints into every frame, including
+                        // the Turnstile iframe. Older WebViews need the flavor script there.
+                        if (!androidx.webkit.WebViewFeature.isFeatureSupported(
+                                androidx.webkit.WebViewFeature.USER_AGENT_METADATA
+                            ) && cachedKernelFlavorJs.isNullOrEmpty()
+                        ) {
+                            cachedKernelFlavorJs = profile.buildFlavorJs().takeIf { it.isNotEmpty() }
+                        }
+                    }
                     AppLogger.d("WebViewManager", "User-Agent (system default, wv stripped): ${userAgentString.take(80)}...")
                 }
-
-                // Client hints are part of the same identity, never a separate decision: the
-                // engine would otherwise advertise its real brands in `Sec-CH-UA` while the UA
-                // above claims a different browser.
-                com.sherwood.wta.core.kernel.KernelFlavorMetadata.apply(webView, identity.profile)
 
                 if (!isDesktopModeRequested && identity.userAgent == null) {
                     val hasActiveChromeExt = getActivePluginsForCurrentApp().any { plugin ->
@@ -1929,6 +1973,8 @@ class WebViewManager(
             webChromeClient = createWebChromeClient(config, callbacks)
 
             installPageZoomDocumentStart(this, config)
+            installVideoFitDocumentStart(this, config)
+            installWasmStreamDocumentStart(this, config)
             installKernelFlavorDocumentStart(this)
 
             if (config.enablePrivateNetworkBridge || config.enableCorsBypass) {
@@ -1979,6 +2025,11 @@ class WebViewManager(
 
             if (config.enablePrintBridge) {
                 installPrintBridgeDocumentStart(this)
+            }
+
+            if (config.enableNotificationPolyfill) {
+                WebNotificationBridge.install(context)
+                installNotificationPolyfillDocumentStart(this)
             }
 
             // Cosmetic filtering at document start so the hide stylesheet and the
@@ -2284,6 +2335,13 @@ class WebViewManager(
                 request?.let {
                     val url = it.url?.toString() ?: ""
                     diagRequestCount++
+
+                    // Service-worker notification bridge. Some WebView versions fetch the
+                    // worker script through this client; the process-wide service-worker
+                    // client covers the rest. Both serve the same response.
+                    if (config.enableNotificationPolyfill) {
+                        WebNotificationBridge.intercept(context, url)?.let { bridged -> return bridged }
+                    }
 
                     // Feed the TLS-MITM bridge's host allowlist: every request the WebView
                     // issues passes through here before its network stack CONNECTs through
@@ -2647,6 +2705,7 @@ class WebViewManager(
                 view?.let { AudioUnlockInjector.inject(it) }
 
                 if (config.enableNotificationPolyfill) {
+                    WebNotificationBridge.install(context)
                     view?.let { injectNotificationPolyfill(it) }
                 }
 
@@ -2654,6 +2713,13 @@ class WebViewManager(
 
                 if (config.enableScrollMemory) {
                     startBatch.append("try{").append(SCROLL_SAVE_JS).append("}catch(e){};\n")
+                }
+
+                if (config.javaScriptEnabled) {
+                    // Fallback when document-start is unavailable. The script
+                    // no-ops once it is already installed on this document.
+                    startBatch.append("try{").append(VideoElementFit.SCRIPT).append("}catch(e){};\n")
+                    startBatch.append("try{").append(WasmStreamCompat.SCRIPT).append("}catch(e){};\n")
                 }
 
                 val pageZoomJs = view?.let { pageZoomScriptFor(it, config) }
@@ -2968,6 +3034,25 @@ class WebViewManager(
                             fileRetryCount = 0
                             fileRetryUrl = null
                         }
+                    }
+
+                    if (view != null &&
+                        !isLocalRuntimeUrl(failedUrl) &&
+                        !wasRecentlyInterceptedForDownload(failedUrl) &&
+                        offlineNavigationRetry.shouldSilentRetry(failedUrl, errorCode, rawDescription) &&
+                        reloadBreaker.noteAutoReload(failedUrl)
+                    ) {
+                        AppLogger.i(
+                            "WebViewManager",
+                            "Main-frame network error (code=$errorCode, desc=$rawDescription), retrying once before the error page: $failedUrl"
+                        )
+                        view.postDelayed({
+                            val currentUrl = view.url
+                            if (currentUrl == null || currentUrl == "about:blank" || currentUrl == failedUrl || currentMainFrameUrl == failedUrl) {
+                                view.loadUrl(failedUrl)
+                            }
+                        }, OFFLINE_NAVIGATION_RETRY_DELAY_MS)
+                        return
                     }
 
                     if (view != null && config.failoverEnabled && config.failoverTriggers.networkError) {
@@ -3895,16 +3980,19 @@ class WebViewManager(
                 return null
             }
 
-            val data = secureLoader.loadAsset(assetPath)
             val mimeType = getMimeType(assetPath)
             val encoding = if (isTextMimeType(mimeType)) "UTF-8" else null
 
-            AppLogger.d("WebViewManager", "Load resource: $assetPath (${data.size} bytes, $mimeType)")
+            // Stream rather than buffer: a packaged static asset can be a
+            // multi-megabyte model or video, and WebView reads it incrementally.
+            val stream = secureLoader.openAssetStream(assetPath) ?: return null
+
+            AppLogger.d("WebViewManager", "Load resource (stream): $assetPath ($mimeType)")
 
             WebResourceResponse(
                 mimeType,
                 encoding,
-                ByteArrayInputStream(data)
+                stream
             )
         } catch (e: Exception) {
             AppLogger.e("WebViewManager", "Failed to load resource: $assetPath", e)
@@ -3989,6 +4077,11 @@ class WebViewManager(
                 } else {
                     AppLogger.w("WebViewManager", "onPermissionRequest: request is null!")
                 }
+            }
+
+            override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+                AppLogger.d("WebViewManager", "onPermissionRequestCanceled")
+                callbacks.onPermissionRequestCanceled(request)
             }
 
             override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
@@ -4459,6 +4552,14 @@ class WebViewManager(
             runCatching { handler.remove() }
         }
         pageZoomScriptHandlers.clear()
+        videoFitScriptHandlers.values.toList().forEach { handler ->
+            runCatching { handler.remove() }
+        }
+        videoFitScriptHandlers.clear()
+        wasmStreamScriptHandlers.values.toList().forEach { handler ->
+            runCatching { handler.remove() }
+        }
+        wasmStreamScriptHandlers.clear()
         kernelFlavorScriptHandlers.values.toList().forEach { handler ->
             runCatching { handler.remove() }
         }
@@ -4500,7 +4601,7 @@ class WebViewManager(
         val rules = setOf("*")
         if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
             try {
-                privateNetworkScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+                privateNetworkScriptHandlers[webView] = addDocumentStartExceptChallenges(
                     webView,
                     privateNetworkScriptWithScope(config),
                     rules
@@ -4527,6 +4628,22 @@ class WebViewManager(
             webViewCssWidth(webView)
         )
     }
+
+    /**
+     * Other document-start scripts must not run inside a Turnstile / hCaptcha
+     * frame. Kernel flavor and device disguise are the exception: those frames
+     * have to see the same identity as the parent (#1121).
+     */
+    @Suppress("UNUSED_PARAMETER")
+    private fun addDocumentStartExceptChallenges(
+        webView: WebView,
+        script: String,
+        allowedOriginRules: Set<String>
+    ) = WebViewCompat.addDocumentStartJavaScript(
+        webView,
+        CloudflareCompat.exemptChallengeFrames(script),
+        setOf("*")
+    )
 
     /**
      * Chrome (and other kernel) flavor JS must run before the page's own scripts,
@@ -4578,7 +4695,7 @@ class WebViewManager(
             return
         }
         try {
-            pageZoomScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            pageZoomScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 script,
                 setOf("*")
@@ -4589,6 +4706,52 @@ class WebViewManager(
         }
     }
 
+    /**
+     * Keep a `<video>` inside the CSS box the page asked for. System WebView
+     * otherwise lays it out at the media's intrinsic pixel size.
+     */
+    private fun installVideoFitDocumentStart(webView: WebView, config: WebViewConfig) {
+        if (!config.javaScriptEnabled) return
+        if (videoFitScriptHandlers.containsKey(webView)) return
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            AppLogger.d("WebViewManager", "Document-start unsupported; video fit will use onPageStarted")
+            return
+        }
+        try {
+            videoFitScriptHandlers[webView] = addDocumentStartExceptChallenges(
+                webView,
+                VideoElementFit.SCRIPT,
+                setOf("*")
+            )
+            AppLogger.d("WebViewManager", "Video fit installed at document start")
+        } catch (e: Exception) {
+            AppLogger.w("WebViewManager", "Document-start video fit install failed", e)
+        }
+    }
+
+    /**
+     * Godot (and other wasm loaders) clone the wasm response and read only one
+     * side. Install before page scripts so the clone cannot stall the download.
+     */
+    private fun installWasmStreamDocumentStart(webView: WebView, config: WebViewConfig) {
+        if (!config.javaScriptEnabled) return
+        if (wasmStreamScriptHandlers.containsKey(webView)) return
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            AppLogger.d("WebViewManager", "Document-start unsupported; wasm stream compat will use onPageStarted")
+            return
+        }
+        try {
+            wasmStreamScriptHandlers[webView] = addDocumentStartExceptChallenges(
+                webView,
+                WasmStreamCompat.SCRIPT,
+                setOf("*")
+            )
+            AppLogger.d("WebViewManager", "Wasm stream compat installed at document start")
+        } catch (e: Exception) {
+            AppLogger.w("WebViewManager", "Document-start wasm stream compat install failed", e)
+        }
+    }
+
     private fun installCloudflareCompatDocumentStart(webView: WebView) {
         if (cloudflareCompatScriptHandlers.containsKey(webView)) return
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
@@ -4596,7 +4759,7 @@ class WebViewManager(
             return
         }
         try {
-            cloudflareCompatScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            cloudflareCompatScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 CloudflareCompat.generateCompatJs(),
                 setOf("*")
@@ -4611,7 +4774,7 @@ class WebViewManager(
         if (shareBridgeScriptHandlers.containsKey(webView)) return
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
         try {
-            shareBridgeScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            shareBridgeScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 ShareBridgeScript.INSTALL,
                 setOf("*")
@@ -4626,7 +4789,7 @@ class WebViewManager(
         if (backgroundMediaScriptHandlers.containsKey(webView)) return
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
         try {
-            backgroundMediaScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            backgroundMediaScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 BackgroundMediaScript.INSTALL,
                 setOf("*")
@@ -4643,7 +4806,7 @@ class WebViewManager(
             return
         }
         try {
-            backStateGuardScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            backStateGuardScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 BACK_STATE_GUARD_JS,
                 setOf("*")
@@ -4664,7 +4827,7 @@ class WebViewManager(
 
             val cfg = currentConfig
             val script = if (cfg != null) downloadBridgeScriptWithScope(cfg) else DownloadBridge.getInjectionScript()
-            downloadBridgeScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            downloadBridgeScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 script,
                 setOf("*")
@@ -4690,7 +4853,7 @@ class WebViewManager(
             return
         }
         try {
-            shareInboxScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            shareInboxScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 com.sherwood.wta.core.share.SHARE_INBOX_BOOTSTRAP_JS,
                 setOf("*")
@@ -4708,7 +4871,7 @@ class WebViewManager(
             return
         }
         try {
-            geolocationShimHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            geolocationShimHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 GeolocationBridge.getShimScript(),
                 setOf("*")
@@ -4727,7 +4890,7 @@ class WebViewManager(
             return
         }
         try {
-            blobCacheHookHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            blobCacheHookHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 DownloadBridge.getBlobCacheHookScript(),
                 setOf("*")
@@ -4771,7 +4934,7 @@ class WebViewManager(
         }
         try {
             webView.addJavascriptInterface(CosmeticFilterJsInterface(), COSMETIC_BRIDGE_NAME)
-            cosmeticFilterScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            cosmeticFilterScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 COSMETIC_DOCUMENT_START_JS,
                 setOf("*")
@@ -5049,7 +5212,7 @@ class WebViewManager(
             return
         }
         try {
-            printBridgeScriptHandlers[webView] = WebViewCompat.addDocumentStartJavaScript(
+            printBridgeScriptHandlers[webView] = addDocumentStartExceptChallenges(
                 webView,
                 PrintBridge.getInjectionScript(),
                 setOf("*")
@@ -5857,13 +6020,26 @@ class WebViewManager(
     ) {
         val identity = resolvedBrowserIdentity
         if (identity.userAgent != null) {
-            webView.settings.userAgentString = stripWebViewMarker(identity.userAgent)
-            com.sherwood.wta.core.kernel.KernelFlavorMetadata.apply(webView, identity.profile)
+            val stripped = stripWebViewMarker(identity.userAgent)
+            webView.settings.userAgentString = stripped
+            com.sherwood.wta.core.kernel.KernelFlavorMetadata.apply(
+                webView,
+                com.sherwood.wta.core.kernel.UserAgentProfileDeriver.derive(stripped) ?: identity.profile
+            )
             AppLogger.d(
                 "WebViewManager",
                 "Browser identity re-applied (${identity.profile?.flavor?.name ?: "derived-from-UA"}): " +
                     "${webView.settings.userAgentString.take(80)}..."
             )
+        } else {
+            val current = webView.settings.userAgentString
+            if (current.isNotBlank()) {
+                val stripped = stripWebViewMarker(current)
+                webView.settings.userAgentString = stripped
+                com.sherwood.wta.core.kernel.UserAgentProfileDeriver.derive(stripped)?.let { profile ->
+                    com.sherwood.wta.core.kernel.KernelFlavorMetadata.apply(webView, profile)
+                }
+            }
         }
 
         if (!isDesktopModeRequested && identity.userAgent == null) {
@@ -6416,12 +6592,11 @@ class WebViewManager(
                 'use strict';
 
                 if (window.__webtoapp_notification_polyfill__) return;
+                // Mark the polyfill only once the bridge exists: a document that
+                // loads before the bridge would otherwise never be retried.
+                if (typeof NativeBridge === 'undefined') return;
                 window.__webtoapp_notification_polyfill__ = true;
                 window.__sherwood_wta_notification_polyfill__ = true;
-
-                if (typeof NativeBridge === 'undefined') {
-                    return;
-                }
 
                 function getPermission() {
                     try {
@@ -6516,20 +6691,22 @@ class WebViewManager(
                     window.PushSubscription = WebToAppPushSubscription;
                 }
 
+                function showFromPage(title, options) {
+                    return new Promise(function(resolve, reject) {
+                        try {
+                            showNativeNotification(title, options);
+                            resolve();
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                }
+
                 if (navigator.serviceWorker && navigator.serviceWorker.ready) {
                     navigator.serviceWorker.ready.then(function(reg) {
-                        if (!reg.showNotification) {
-                            reg.showNotification = function(title, options) {
-                                return new Promise(function(resolve, reject) {
-                                    try {
-                                        showNativeNotification(title, options);
-                                        resolve();
-                                    } catch (e) {
-                                        reject(e);
-                                    }
-                                });
-                            };
-                        }
+                        reg.showNotification = function(title, options) {
+                            return showFromPage(title, options);
+                        };
                         if (!reg.pushManager) {
                             try {
                                 reg.pushManager = new window.PushManager();
@@ -6539,6 +6716,51 @@ class WebViewManager(
                             reg.getNotifications = function() { return Promise.resolve([]); };
                         }
                     }).catch(function(){});
+                }
+
+                // WebView never delivers ServiceWorkerRegistration.showNotification.
+                // Sites that post to the worker (某站点's SHOW_LOCAL_NOTIFICATION) only
+                // reach the shade if the worker script itself calls back into the bridge.
+                if (navigator.serviceWorker && navigator.serviceWorker.register &&
+                        !navigator.serviceWorker.__wtaRegisterPatched) {
+                    var originalRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+                    navigator.serviceWorker.__wtaRegisterPatched = true;
+                    navigator.serviceWorker.register = function(scriptURL, options) {
+                        try {
+                            if (options && options.type === 'module') {
+                                return originalRegister(scriptURL, options);
+                            }
+                            var abs = new URL(scriptURL, window.location.href);
+                            if (abs.protocol !== 'http:' && abs.protocol !== 'https:') {
+                                return originalRegister(scriptURL, options);
+                            }
+                            if (abs.origin !== window.location.origin || abs.pathname === '${WebNotificationBridge.BRIDGE_PATH}') {
+                                return originalRegister(scriptURL, options);
+                            }
+                            var scopeUrl = (options && options.scope)
+                                ? new URL(options.scope, window.location.href)
+                                : new URL('./', abs);
+                            var proxy = new URL('${WebNotificationBridge.BRIDGE_PATH}', window.location.origin);
+                            proxy.searchParams.set('src', abs.href);
+                            proxy.searchParams.set('wta', '${WebNotificationBridge.WRAPPER_VERSION}');
+                            var opts = {};
+                            if (options) {
+                                for (var key in options) {
+                                    if (Object.prototype.hasOwnProperty.call(options, key)) opts[key] = options[key];
+                                }
+                            }
+                            opts.scope = scopeUrl.href;
+                            return originalRegister(proxy.href, opts);
+                        } catch (e) {
+                            return originalRegister(scriptURL, options);
+                        }
+                    };
+                    navigator.serviceWorker.addEventListener('message', function(event) {
+                        var data = event.data;
+                        if (!data || data.__wtaShowNotification !== 1) return;
+                        if (window.top !== window) return;
+                        showFromPage(data.title, { body: data.body, tag: data.tag }).catch(function(){});
+                    });
                 }
 
             })();
@@ -6754,14 +6976,17 @@ class WebViewManager(
                             && window.__wta_private_network_scope__ === 'CORS_BYPASS';
                         if (!shouldBridge(payload.url)) return nativeFetch(input, init);
                         if (isCorsBypass) {
-                            return nativeHttpRequest(payload).then(function(result) {
-                                var bytes = base64ToBytes(result.bodyBase64 || '');
-                                return new Response(bytes, {
-                                    status: Number(result.status || 0),
-                                    statusText: String(result.statusText || ''),
-                                    headers: result.headers || {}
+                            var viaBridge = function() {
+                                return nativeHttpRequest(payload).then(function(result) {
+                                    var bytes = base64ToBytes(result.bodyBase64 || '');
+                                    return new Response(bytes, {
+                                        status: Number(result.status || 0),
+                                        statusText: String(result.statusText || ''),
+                                        headers: result.headers || {}
+                                    });
                                 });
-                            });
+                            };
+                            return nativeFetch(input, init).catch(viaBridge);
                         }
                         if (payload.method !== 'GET' && payload.method !== 'HEAD') {
                             return nativeFetch(input, init);
@@ -6811,13 +7036,36 @@ class WebViewManager(
                         });
                     }
 
+                    // responseText is readable only while the native type is '' or
+                    // 'text'; every other type makes that getter throw. Read the type
+                    // first instead of probing it with try/catch: a binary load then
+                    // never touches the throwing getter at all, rather than raising
+                    // and swallowing an InvalidStateError on all four
+                    // readystatechange transitions.
+                    // Replacing window.XMLHttpRequest drops the readyState constants that
+                    // live on the constructor. A page comparing
+                    // `xhr.readyState === XMLHttpRequest.DONE` would compare against
+                    // undefined and never treat the response as complete.
+                    BridgedXHR.UNSENT = 0;
+                    BridgedXHR.OPENED = 1;
+                    BridgedXHR.HEADERS_RECEIVED = 2;
+                    BridgedXHR.LOADING = 3;
+                    BridgedXHR.DONE = 4;
+
                     BridgedXHR.prototype._syncFromNative = function() {
-                        this.readyState = this._xhr.readyState;
-                        this.response = this._xhr.response;
-                        this.responseText = this._xhr.responseText || '';
-                        this.responseURL = this._xhr.responseURL || this._url;
-                        this.status = this._xhr.status || 0;
-                        this.statusText = this._xhr.statusText || '';
+                        var source = this._xhr;
+                        var type = source.responseType || '';
+                        this.readyState = source.readyState;
+                        this.response = source.response;
+                        // No text form exists for binary/json/document, so keep the
+                        // property a stable empty string. A page that probes it gets a
+                        // value instead of an exception; the data is in `response`.
+                        this.responseText = (type === '' || type === 'text')
+                            ? (source.responseText || '')
+                            : '';
+                        this.responseURL = source.responseURL || this._url;
+                        this.status = source.status || 0;
+                        this.statusText = source.statusText || '';
                     };
 
                     BridgedXHR.prototype._dispatch = function(type, sourceEvent) {
@@ -6927,10 +7175,35 @@ class WebViewManager(
                         if (this._native) return this._xhr.overrideMimeType(mimeType);
                     };
 
+                    // responseType has to be forwarded to the native XHR. Without this
+                    // the wrapper only stores the value on itself, the underlying
+                    // request stays on the default text type, and every binary loader
+                    // (GLTFLoader, fetch->arraybuffer) silently receives a String —
+                    // which is exactly how a 62 MB GLB ends up in JSON.parse.
+                    Object.defineProperty(BridgedXHR.prototype, 'responseType', {
+                        configurable: true,
+                        get: function() { return this._responseType || ''; },
+                        set: function(value) {
+                            this._responseType = value;
+                            if (this._xhr) {
+                                try { this._xhr.responseType = value; } catch (e) { }
+                            }
+                        }
+                    });
+
                     window.XMLHttpRequest = BridgedXHR;
                 }
             })();
         """.trimIndent()
+    }
+
+    private fun installNotificationPolyfillDocumentStart(webView: WebView) {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        try {
+            addDocumentStartExceptChallenges(webView, getNotificationPolyfillScript(), setOf("*"))
+        } catch (e: Exception) {
+            AppLogger.w("WebViewManager", "Notification polyfill document-start failed", e)
+        }
     }
 
     private fun injectNotificationPolyfill(webView: WebView) {

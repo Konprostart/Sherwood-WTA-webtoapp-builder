@@ -233,6 +233,10 @@ fun createShellWebViewCallbacks(
             } ?: AppLogger.w("ShellActivity", "Permission request is null")
         }
 
+        override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+            request?.let { (context as? ShellActivity)?.onCapturePermissionCanceled(it) }
+        }
+
         override fun onShowFileChooser(
             filePathCallback: android.webkit.ValueCallback<Array<Uri>>?,
             fileChooserParams: WebChromeClient.FileChooserParams?
@@ -251,6 +255,25 @@ fun createShellWebViewCallbacks(
             (context as? ShellActivity)?.handleDownloadWithPermission(
                 url, userAgent, contentDisposition, mimeType, contentLength
             )
+        }
+
+        override fun onExternalDownloadResponse(
+            url: String,
+            userAgent: String,
+            contentDisposition: String,
+            mimeType: String,
+            contentLength: Long,
+            body: java.io.InputStream
+        ) {
+
+            val shellActivity = context as? ShellActivity
+            if (shellActivity != null) {
+                shellActivity.handleExternalDownloadResponse(
+                    url, userAgent, contentDisposition, mimeType, contentLength, body
+                )
+            } else {
+                try { body.close() } catch (e: Exception) { }
+            }
         }
 
         override fun onLongPress(webView: WebView, x: Float, y: Float): Boolean {

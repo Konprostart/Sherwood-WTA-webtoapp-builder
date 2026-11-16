@@ -364,6 +364,13 @@ class ShellActivity : AppCompatActivity() {
     }
 
     fun handlePermissionRequest(request: PermissionRequest) = permissionDelegate.handlePermissionRequest(request)
+
+    fun onCapturePermissionCanceled(request: PermissionRequest) =
+        permissionDelegate.onCapturePermissionCanceled(request)
+
+    internal fun reloadForCapturePermission() {
+        reloadBrowser()
+    }
     fun handleAndroidPermissionsRequest(permissions: Array<String>, onResult: (Boolean) -> Unit) =
         permissionDelegate.requestAndroidPermissions(permissions, onResult)
     fun handleGeolocationPermission(origin: String?, callback: GeolocationPermissions.Callback?) {
@@ -390,6 +397,34 @@ class ShellActivity : AppCompatActivity() {
         mimeType: String,
         contentLength: Long
     ) = permissionDelegate.handleDownloadWithPermission(url, userAgent, contentDisposition, mimeType, contentLength, webView)
+
+    fun handleExternalDownloadResponse(
+        url: String,
+        userAgent: String,
+        contentDisposition: String,
+        mimeType: String,
+        contentLength: Long,
+        body: java.io.InputStream
+    ) {
+        val config = shellConfig
+        if (config == null || !config.webViewConfig.downloadEnabled) {
+            try { body.close() } catch (e: Exception) { }
+            return
+        }
+        val mode = try {
+            com.sherwood.wta.data.model.DownloadLocationMode.valueOf(config.webViewConfig.downloadLocationMode)
+        } catch (e: Exception) {
+            com.sherwood.wta.data.model.DownloadLocationMode.SYSTEM_DOWNLOAD
+        }
+        val filename = com.sherwood.wta.util.DownloadHelper.parseFileName(url, contentDisposition, mimeType)
+        com.sherwood.wta.core.webview.DownloadBridge(
+            this,
+            lifecycleScope,
+            mode,
+            config.webViewConfig.customDownloadDirUri,
+            config.webViewConfig.mediaAlbumName
+        ).saveExternalDownload(body, filename, mimeType)
+    }
 
     private fun resetFreshBrowsingSession() {
         // Drop any restored navigation first. A saved bundle would reload the

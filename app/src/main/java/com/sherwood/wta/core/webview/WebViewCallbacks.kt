@@ -18,6 +18,14 @@ interface WebViewCallbacks {
     fun onHideCustomView()
     fun onGeolocationPermission(origin: String?, callback: GeolocationPermissions.Callback?)
     fun onPermissionRequest(request: PermissionRequest?)
+
+    /**
+     * WebView drops a capture request when the activity pauses for the system
+     * permission dialog. Hosts use this to reload after the user allows access.
+     */
+    fun onPermissionRequestCanceled(request: PermissionRequest?) {}
+
+    fun onScrollChanged(webView: android.webkit.WebView?, scrollY: Int) {}
     fun onShowFileChooser(
         filePathCallback: ValueCallback<Array<Uri>>?,
         fileChooserParams: WebChromeClient.FileChooserParams?
@@ -30,6 +38,17 @@ interface WebViewCallbacks {
         mimeType: String,
         contentLength: Long
     )
+
+    fun onExternalDownloadResponse(
+        url: String,
+        userAgent: String,
+        contentDisposition: String,
+        mimeType: String,
+        contentLength: Long,
+        body: java.io.InputStream
+    ) {
+        onDownloadStart(url, userAgent, contentDisposition, mimeType, contentLength)
+    }
 
     fun onLongPress(webView: WebView, x: Float, y: Float): Boolean = false
 
