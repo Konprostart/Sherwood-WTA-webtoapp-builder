@@ -5651,6 +5651,41 @@ object Strings {
     val sidekickContextTitle: String get() = StringsE.sidekickContextTitle
     val sidekickContextDesc: String get() = StringsE.sidekickContextDesc
     val sidekickManageModels: String get() = StringsE.sidekickManageModels
+    val sidekickAttach: String get() = StringsE.sidekickAttach
+    val sidekickAttachImage: String get() = StringsE.sidekickAttachImage
+    val sidekickAttachFile: String get() = StringsE.sidekickAttachFile
+    val sidekickTakePhoto: String get() = StringsE.sidekickTakePhoto
+    val sidekickFromGallery: String get() = StringsE.sidekickFromGallery
+    val sidekickFromFiles: String get() = StringsE.sidekickFromFiles
+    val sidekickRemoveAttachment: String get() = StringsE.sidekickRemoveAttachment
+    val sidekickAttachmentTooLarge: String get() = StringsE.sidekickAttachmentTooLarge
+    val sidekickAttachmentNotText: String get() = StringsE.sidekickAttachmentNotText
+    val sidekickAttachmentUnreadable: String get() = StringsE.sidekickAttachmentUnreadable
+    val sidekickAttachmentEmpty: String get() = StringsE.sidekickAttachmentEmpty
+    val sidekickAttachmentBudget: String get() = StringsE.sidekickAttachmentBudget
+    val sidekickVisionUnsupported: String get() = StringsE.sidekickVisionUnsupported
+    val sidekickPhotoFailed: String get() = StringsE.sidekickPhotoFailed
+    val sidekickCameraPermission: String get() = StringsE.sidekickCameraPermission
+    val sidekickDictate: String get() = StringsE.sidekickDictate
+    val sidekickListening: String get() = StringsE.sidekickListening
+    val sidekickVoiceTitle: String get() = StringsE.sidekickVoiceTitle
+    val sidekickVoiceDesc: String get() = StringsE.sidekickVoiceDesc
+    val sidekickVoiceLanguage: String get() = StringsE.sidekickVoiceLanguage
+    val sidekickVoiceLanguageAuto: String get() = StringsE.sidekickVoiceLanguageAuto
+    val sidekickVoiceLanguageSerbian: String get() = StringsE.sidekickVoiceLanguageSerbian
+    val sidekickVoiceLanguageEnglish: String get() = StringsE.sidekickVoiceLanguageEnglish
+    val sidekickVoiceLanguageSwedish: String get() = StringsE.sidekickVoiceLanguageSwedish
+    val sidekickVoiceOnDevice: String get() = StringsE.sidekickVoiceOnDevice
+    val sidekickVoiceOnDeviceDesc: String get() = StringsE.sidekickVoiceOnDeviceDesc
+    val sidekickSpeechUnavailable: String get() = StringsE.sidekickSpeechUnavailable
+    val sidekickSpeechNetwork: String get() = StringsE.sidekickSpeechNetwork
+    val sidekickSpeechNoMatch: String get() = StringsE.sidekickSpeechNoMatch
+    val sidekickSpeechPermission: String get() = StringsE.sidekickSpeechPermission
+    val sidekickSpeechBusy: String get() = StringsE.sidekickSpeechBusy
+    val sidekickSpeechLanguage: String get() = StringsE.sidekickSpeechLanguage
+    val sidekickSpeechAudio: String get() = StringsE.sidekickSpeechAudio
+    val sidekickSpeechThrottled: String get() = StringsE.sidekickSpeechThrottled
+    val sidekickSpeechFailed: String get() = StringsE.sidekickSpeechFailed
 }
 
 

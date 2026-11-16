@@ -1,14 +1,22 @@
 package com.sherwood.wta.ui.sidekick
 
+import android.Manifest
 import android.app.Application
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -24,16 +32,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,12 +63,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -58,6 +80,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -65,6 +89,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.sidekick.SidekickTurn
+import com.sherwood.wta.core.sidekick.input.SidekickAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
 import com.sherwood.wta.ui.agent.components.MarkdownText
 import com.sherwood.wta.ui.design.WtaButton
 import com.sherwood.wta.ui.design.WtaButtonSize
@@ -72,6 +99,10 @@ import com.sherwood.wta.ui.design.WtaButtonVariant
 import com.sherwood.wta.ui.design.WtaChip
 import com.sherwood.wta.ui.design.WtaSpacing
 import com.sherwood.wta.ui.design.WtaTextField
+import com.sherwood.wta.util.BoundedBitmaps
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * The floating Sidekick: a draggable button plus a non-modal panel that floats above
@@ -164,6 +195,8 @@ private fun SidekickOverlay(
             }
         }
 
+        val pickers = rememberSidekickPickers(vm)
+
         AnimatedVisibility(
             visible = state.open,
             modifier = Modifier.align(Alignment.BottomEnd),
@@ -179,6 +212,7 @@ private fun SidekickOverlay(
             SidekickPanel(
                 state = state,
                 vm = vm,
+                pickers = pickers,
                 width = panelWidth,
                 height = panelHeight,
                 modifier = Modifier.padding(margin)
@@ -227,6 +261,7 @@ private fun Modifier.draggableAnchor(
 private fun SidekickPanel(
     state: SidekickUiState,
     vm: SidekickViewModel,
+    pickers: SidekickPickers,
     width: Dp,
     height: Dp,
     modifier: Modifier = Modifier
@@ -246,7 +281,7 @@ private fun SidekickPanel(
             state.error?.let { message ->
                 SidekickError(message = message, onDismiss = { vm.dismissError() })
             }
-            SidekickComposer(state = state, vm = vm)
+            SidekickComposer(state = state, vm = vm, pickers = pickers)
         }
     }
 }
@@ -396,15 +431,28 @@ private fun SidekickBubble(turn: SidekickTurn, streaming: Boolean) {
                 color = MaterialTheme.colorScheme.primaryContainer,
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text(
-                    text = turn.text,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                Column(
                     modifier = Modifier.padding(
                         horizontal = WtaSpacing.Medium,
                         vertical = WtaSpacing.Small
-                    )
-                )
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(WtaSpacing.Tiny)
+                ) {
+                    if (turn.attachments.isNotEmpty()) {
+                        AttachmentStrip(
+                            attachments = turn.attachments,
+                            onRemove = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    if (turn.text.isNotBlank()) {
+                        Text(
+                            text = turn.text,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
             }
         }
     } else {
@@ -452,8 +500,111 @@ private fun SidekickError(message: String, onDismiss: () -> Unit) {
     }
 }
 
+/** The pickers the composer needs, created once above the panel's animation. */
+private class SidekickPickers(
+    val pickImage: () -> Unit,
+    val takePhoto: () -> Unit,
+    val pickFiles: () -> Unit,
+    val dictate: () -> Unit
+)
+
+/**
+ * Creates the document pickers for the composer.
+ *
+ * They are registered here, above the panel, rather than inside it: a launcher created
+ * inside a disappearing panel can lose its result when the panel closes in the same frame
+ * the picker returns, which would drop the file the user just chose.
+ *
+ * No storage permission is requested anywhere — the photo picker and the document picker
+ * both hand back a read-only `content://` grant.
+ */
 @Composable
-private fun SidekickComposer(state: SidekickUiState, vm: SidekickViewModel) {
+private fun rememberSidekickPickers(vm: SidekickViewModel): SidekickPickers {
+    val context = LocalContext.current
+    var pendingCapture by remember { mutableStateOf<File?>(null) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) vm.addAttachments(listOf(uri)) }
+
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris -> if (uris.isNotEmpty()) vm.addAttachments(uris) }
+
+    val camera = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = pendingCapture
+        pendingCapture = null
+        if (success && file != null) vm.addCameraPhoto(file) else file?.delete()
+    }
+
+    val capture = {
+        val directory = File(context.cacheDir, "sidekick").apply { mkdirs() }
+        val file = File(directory, "capture-${System.currentTimeMillis()}.jpg")
+        pendingCapture = file
+        try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            camera.launch(uri)
+        } catch (t: Throwable) {
+            // The provider is declared in the manifest; a failure here means the ROM or the
+            // installer mangled it, which is worth reporting rather than swallowing.
+            pendingCapture = null
+            runCatching { file.delete() }
+            vm.reportError(Strings.sidekickPhotoFailed)
+        }
+        Unit
+    }
+
+    val cameraPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) capture() else vm.reportError(Strings.sidekickCameraPermission)
+    }
+
+    val audioPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) vm.startVoiceInput() else vm.reportError(Strings.sidekickSpeechPermission)
+    }
+
+    return SidekickPickers(
+        pickImage = {
+            imagePicker.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        },
+        takePhoto = {
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+            if (granted) capture() else cameraPermission.launch(Manifest.permission.CAMERA)
+        },
+        // `application/octet-stream` is included because file managers report `.log`, `.kt`
+        // and friends that way. The reader still decides by extension and refuses binaries,
+        // so a broader picker cannot smuggle a PDF into the prompt.
+        pickFiles = { filePicker.launch(FILE_MIME_TYPES) },
+        dictate = {
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+            if (granted) vm.startVoiceInput() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    )
+}
+
+@Composable
+private fun SidekickComposer(
+    state: SidekickUiState,
+    vm: SidekickViewModel,
+    pickers: SidekickPickers
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -472,12 +623,29 @@ private fun SidekickComposer(state: SidekickUiState, vm: SidekickViewModel) {
             )
             Spacer(Modifier.height(WtaSpacing.Tiny))
         }
+        if (state.pendingAttachments.isNotEmpty()) {
+            AttachmentStrip(
+                attachments = state.pendingAttachments,
+                onRemove = vm::removeAttachment,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(WtaSpacing.Tiny))
+        }
+        if (state.speechListening) {
+            ListeningRow(onCancel = { vm.cancelVoiceInput() })
+            Spacer(Modifier.height(WtaSpacing.Tiny))
+        }
         Row(verticalAlignment = Alignment.Bottom) {
             WtaTextField(
                 value = state.draft,
                 onValueChange = { vm.setDraft(it) },
-                placeholder = Strings.sidekickInputHint,
+                placeholder = if (state.speechListening) {
+                    Strings.sidekickListening
+                } else {
+                    Strings.sidekickInputHint
+                },
                 maxLines = 4,
+                enabled = !state.speechListening,
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(WtaSpacing.Small))
@@ -499,5 +667,223 @@ private fun SidekickComposer(state: SidekickUiState, vm: SidekickViewModel) {
                 )
             }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AttachMenuButton(
+                state = state,
+                pickers = pickers
+            )
+            IconButton(
+                onClick = { pickers.dictate() },
+                enabled = !state.streaming && !state.speechListening && state.speechAvailable
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Mic,
+                    contentDescription = Strings.sidekickDictate,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        // A disabled image action without a reason reads as a broken button, so the panel
+        // always says why images are unavailable.
+        if (!state.visionSupported) {
+            Text(
+                text = Strings.sidekickVisionUnsupported,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
+
+@Composable
+private fun AttachMenuButton(state: SidekickUiState, pickers: SidekickPickers) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            enabled = !state.streaming && !state.speechListening
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AttachFile,
+                contentDescription = Strings.sidekickAttach,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(Strings.sidekickAttachImage) },
+                leadingIcon = {
+                    Icon(Icons.Outlined.PhotoLibrary, contentDescription = null)
+                },
+                enabled = state.visionSupported,
+                onClick = {
+                    expanded = false
+                    if (state.visionSupported) pickers.pickImage() else Unit
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(Strings.sidekickTakePhoto) },
+                leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
+                enabled = state.visionSupported,
+                onClick = {
+                    expanded = false
+                    if (state.visionSupported) pickers.takePhoto() else Unit
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(Strings.sidekickFromFiles) },
+                leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+                onClick = {
+                    expanded = false
+                    pickers.pickFiles()
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Shows the staged attachments above the composer.
+ *
+ * Images render as a thumbnail so the user can confirm they picked the right screenshot;
+ * text files render as a chip with the character count, which is also how the truncation
+ * becomes visible instead of surprising the model.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AttachmentStrip(
+    attachments: List<SidekickAttachment>,
+    onRemove: ((Int) -> Unit)?,
+    tint: androidx.compose.ui.graphics.Color
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(WtaSpacing.Tiny),
+        verticalArrangement = Arrangement.spacedBy(WtaSpacing.Tiny)
+    ) {
+        attachments.forEachIndexed { index, attachment ->
+            when (attachment) {
+                is SidekickImageAttachment -> ImageChip(
+                    attachment = attachment,
+                    onRemove = onRemove?.let { remove -> { remove(index) } }
+                )
+                is SidekickTextAttachment -> Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = WtaSpacing.Small, top = 2.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Description,
+                            contentDescription = null,
+                            tint = tint,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = attachment.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tint,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 140.dp)
+                        )
+                        if (onRemove != null) {
+                            IconButton(onClick = { onRemove(index) }, modifier = Modifier.size(28.dp)) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Close,
+                                    contentDescription = Strings.sidekickRemoveAttachment,
+                                    tint = tint,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        } else {
+                            Spacer(Modifier.width(WtaSpacing.Small))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageChip(attachment: SidekickImageAttachment, onRemove: (() -> Unit)?) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+            initialValue = null,
+            key1 = attachment
+        ) {
+            // Decoding happens off the main thread: two 1568px JPEGs on the main thread is
+            // a visible hitch on lower-end devices.
+            value = withContext(Dispatchers.IO) {
+                BoundedBitmaps.decodeBoundedBitmapBytes(attachment.bytes, 160)?.asImageBitmap()
+            }
+        }
+        bitmap?.let {
+            Image(
+                bitmap = it,
+                contentDescription = attachment.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        if (onRemove != null) {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(20.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = Strings.sidekickRemoveAttachment,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListeningRow(onCancel: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+        Spacer(Modifier.width(WtaSpacing.Small))
+        Text(
+            text = Strings.sidekickListening,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = Strings.sidekickStop,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+private val FILE_MIME_TYPES = arrayOf(
+    "text/*",
+    "application/json",
+    "application/xml",
+    "application/x-yaml",
+    "application/javascript",
+    "application/octet-stream"
+)

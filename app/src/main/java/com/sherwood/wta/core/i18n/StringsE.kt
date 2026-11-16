@@ -21349,4 +21349,459 @@ object StringsE {
         AppLanguage.KOREAN -> "이 패널의 답변에만 사용되며, 메인 에이전트는 자체 모델을 그대로 사용합니다."
     }
 
+
+    val sidekickAttach: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "添加附件"
+        AppLanguage.ENGLISH -> "Attach"
+        AppLanguage.ARABIC -> "إرفاق"
+        AppLanguage.PORTUGUESE -> "Anexar"
+        AppLanguage.SPANISH -> "Adjuntar"
+        AppLanguage.FRENCH -> "Joindre"
+        AppLanguage.GERMAN -> "Anhängen"
+        AppLanguage.RUSSIAN -> "Прикрепить"
+        AppLanguage.JAPANESE -> "添付"
+        AppLanguage.KOREAN -> "첨부"
+    }
+
+    val sidekickAttachImage: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "添加图片"
+        AppLanguage.ENGLISH -> "Add image"
+        AppLanguage.ARABIC -> "إضافة صورة"
+        AppLanguage.PORTUGUESE -> "Adicionar imagem"
+        AppLanguage.SPANISH -> "Añadir imagen"
+        AppLanguage.FRENCH -> "Ajouter une image"
+        AppLanguage.GERMAN -> "Bild hinzufügen"
+        AppLanguage.RUSSIAN -> "Добавить изображение"
+        AppLanguage.JAPANESE -> "画像を追加"
+        AppLanguage.KOREAN -> "이미지 추가"
+    }
+
+    val sidekickAttachFile: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "添加文件"
+        AppLanguage.ENGLISH -> "Add file"
+        AppLanguage.ARABIC -> "إضافة ملف"
+        AppLanguage.PORTUGUESE -> "Adicionar ficheiro"
+        AppLanguage.SPANISH -> "Añadir archivo"
+        AppLanguage.FRENCH -> "Ajouter un fichier"
+        AppLanguage.GERMAN -> "Datei hinzufügen"
+        AppLanguage.RUSSIAN -> "Добавить файл"
+        AppLanguage.JAPANESE -> "ファイルを追加"
+        AppLanguage.KOREAN -> "파일 추가"
+    }
+
+    val sidekickTakePhoto: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "拍照"
+        AppLanguage.ENGLISH -> "Take photo"
+        AppLanguage.ARABIC -> "التقاط صورة"
+        AppLanguage.PORTUGUESE -> "Tirar foto"
+        AppLanguage.SPANISH -> "Hacer foto"
+        AppLanguage.FRENCH -> "Prendre une photo"
+        AppLanguage.GERMAN -> "Foto aufnehmen"
+        AppLanguage.RUSSIAN -> "Сделать фото"
+        AppLanguage.JAPANESE -> "写真を撮る"
+        AppLanguage.KOREAN -> "사진 촬영"
+    }
+
+    val sidekickFromGallery: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "从相册选择"
+        AppLanguage.ENGLISH -> "From the gallery"
+        AppLanguage.ARABIC -> "من المعرض"
+        AppLanguage.PORTUGUESE -> "Da galeria"
+        AppLanguage.SPANISH -> "Desde la galería"
+        AppLanguage.FRENCH -> "Depuis la galerie"
+        AppLanguage.GERMAN -> "Aus der Galerie"
+        AppLanguage.RUSSIAN -> "Из галереи"
+        AppLanguage.JAPANESE -> "ギャラリーから"
+        AppLanguage.KOREAN -> "갤러리에서"
+    }
+
+    val sidekickFromFiles: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "选择文件"
+        AppLanguage.ENGLISH -> "Choose files"
+        AppLanguage.ARABIC -> "اختيار ملفات"
+        AppLanguage.PORTUGUESE -> "Escolher ficheiros"
+        AppLanguage.SPANISH -> "Elegir archivos"
+        AppLanguage.FRENCH -> "Choisir des fichiers"
+        AppLanguage.GERMAN -> "Dateien wählen"
+        AppLanguage.RUSSIAN -> "Выбрать файлы"
+        AppLanguage.JAPANESE -> "ファイルを選択"
+        AppLanguage.KOREAN -> "파일 선택"
+    }
+
+    val sidekickRemoveAttachment: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "移除"
+        AppLanguage.ENGLISH -> "Remove"
+        AppLanguage.ARABIC -> "إزالة"
+        AppLanguage.PORTUGUESE -> "Remover"
+        AppLanguage.SPANISH -> "Quitar"
+        AppLanguage.FRENCH -> "Retirer"
+        AppLanguage.GERMAN -> "Entfernen"
+        AppLanguage.RUSSIAN -> "Убрать"
+        AppLanguage.JAPANESE -> "削除"
+        AppLanguage.KOREAN -> "제거"
+    }
+
+    val sidekickAttachmentTooLarge: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "文件太大，无法在这里读取。"
+        AppLanguage.ENGLISH -> "That file is too large to read here."
+        AppLanguage.ARABIC -> "الملف كبير جدًا لقراءته هنا."
+        AppLanguage.PORTUGUESE -> "O ficheiro é demasiado grande para ser lido aqui."
+        AppLanguage.SPANISH -> "El archivo es demasiado grande para leerlo aquí."
+        AppLanguage.FRENCH -> "Ce fichier est trop volumineux pour être lu ici."
+        AppLanguage.GERMAN -> "Diese Datei ist zu groß, um sie hier zu lesen."
+        AppLanguage.RUSSIAN -> "Файл слишком большой, чтобы прочитать его здесь."
+        AppLanguage.JAPANESE -> "ファイルが大きすぎて読み込めません。"
+        AppLanguage.KOREAN -> "파일이 너무 커서 여기에서 읽을 수 없습니다."
+    }
+
+    val sidekickAttachmentNotText: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "只能添加图片和文本文件。"
+        AppLanguage.ENGLISH -> "Only images and text files can be attached."
+        AppLanguage.ARABIC -> "يمكن إرفاق الصور والملفات النصية فقط."
+        AppLanguage.PORTUGUESE -> "Só é possível anexar imagens e ficheiros de texto."
+        AppLanguage.SPANISH -> "Solo se pueden adjuntar imágenes y archivos de texto."
+        AppLanguage.FRENCH -> "Seules les images et les fichiers texte peuvent être joints."
+        AppLanguage.GERMAN -> "Es können nur Bilder und Textdateien angehängt werden."
+        AppLanguage.RUSSIAN -> "Можно прикреплять только изображения и текстовые файлы."
+        AppLanguage.JAPANESE -> "添付できるのは画像とテキストファイルのみです。"
+        AppLanguage.KOREAN -> "이미지와 텍스트 파일만 첨부할 수 있습니다."
+    }
+
+    val sidekickAttachmentUnreadable: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法打开该文件。"
+        AppLanguage.ENGLISH -> "That file could not be opened."
+        AppLanguage.ARABIC -> "تعذّر فتح الملف."
+        AppLanguage.PORTUGUESE -> "Não foi possível abrir o ficheiro."
+        AppLanguage.SPANISH -> "No se pudo abrir el archivo."
+        AppLanguage.FRENCH -> "Impossible d'ouvrir ce fichier."
+        AppLanguage.GERMAN -> "Die Datei konnte nicht geöffnet werden."
+        AppLanguage.RUSSIAN -> "Не удалось открыть файл."
+        AppLanguage.JAPANESE -> "ファイルを開けませんでした。"
+        AppLanguage.KOREAN -> "파일을 열 수 없습니다."
+    }
+
+    val sidekickAttachmentEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "该文件为空。"
+        AppLanguage.ENGLISH -> "That file is empty."
+        AppLanguage.ARABIC -> "الملف فارغ."
+        AppLanguage.PORTUGUESE -> "O ficheiro está vazio."
+        AppLanguage.SPANISH -> "El archivo está vacío."
+        AppLanguage.FRENCH -> "Ce fichier est vide."
+        AppLanguage.GERMAN -> "Die Datei ist leer."
+        AppLanguage.RUSSIAN -> "Файл пуст."
+        AppLanguage.JAPANESE -> "ファイルが空です。"
+        AppLanguage.KOREAN -> "파일이 비어 있습니다."
+    }
+
+    val sidekickAttachmentBudget: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "一个问题最多只能带这些附件。"
+        AppLanguage.ENGLISH -> "That is the most attachments one question can carry."
+        AppLanguage.ARABIC -> "هذا هو الحد الأقصى للمرفقات في سؤال واحد."
+        AppLanguage.PORTUGUESE -> "É o máximo de anexos por pergunta."
+        AppLanguage.SPANISH -> "Es el máximo de adjuntos por pregunta."
+        AppLanguage.FRENCH -> "C'est le maximum de pièces jointes par question."
+        AppLanguage.GERMAN -> "Mehr Anhänge passen nicht in eine Frage."
+        AppLanguage.RUSSIAN -> "Это максимум вложений для одного вопроса."
+        AppLanguage.JAPANESE -> "1つの質問に添付できる上限です。"
+        AppLanguage.KOREAN -> "한 질문에 첨부할 수 있는 최대 개수입니다."
+    }
+
+    val sidekickVisionUnsupported: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "该模型无法读取图片。请换用视觉模型，或添加文本文件。"
+        AppLanguage.ENGLISH -> "This model cannot read images. Pick a vision model or attach a text file."
+        AppLanguage.ARABIC -> "لا يستطيع هذا النموذج قراءة الصور. اختر نموذجًا بصريًا أو أرفق ملفًا نصيًا."
+        AppLanguage.PORTUGUESE -> "Este modelo não lê imagens. Escolhe um modelo com visão ou anexa um ficheiro de texto."
+        AppLanguage.SPANISH -> "Este modelo no lee imágenes. Elige un modelo con visión o adjunta un archivo de texto."
+        AppLanguage.FRENCH -> "Ce modèle ne lit pas les images. Choisissez un modèle visuel ou joignez un fichier texte."
+        AppLanguage.GERMAN -> "Dieses Modell kann keine Bilder lesen. Wähle ein Vision-Modell oder hänge eine Textdatei an."
+        AppLanguage.RUSSIAN -> "Эта модель не читает изображения. Выберите модель со зрением или прикрепите текстовый файл."
+        AppLanguage.JAPANESE -> "このモデルは画像を読み取れません。視覚対応モデルを選ぶか、テキストファイルを添付してください。"
+        AppLanguage.KOREAN -> "이 모델은 이미지를 읽을 수 없습니다. 비전 모델을 선택하거나 텍스트 파일을 첨부하세요."
+    }
+
+    val sidekickPhotoFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法读取照片。"
+        AppLanguage.ENGLISH -> "The photo could not be read."
+        AppLanguage.ARABIC -> "تعذّرت قراءة الصورة."
+        AppLanguage.PORTUGUESE -> "Não foi possível ler a foto."
+        AppLanguage.SPANISH -> "No se pudo leer la foto."
+        AppLanguage.FRENCH -> "Impossible de lire la photo."
+        AppLanguage.GERMAN -> "Das Foto konnte nicht gelesen werden."
+        AppLanguage.RUSSIAN -> "Не удалось прочитать фотографию."
+        AppLanguage.JAPANESE -> "写真を読み取れませんでした。"
+        AppLanguage.KOREAN -> "사진을 읽을 수 없습니다."
+    }
+
+    val sidekickCameraPermission: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "相机权限被拒绝，可以改用相册。"
+        AppLanguage.ENGLISH -> "Camera permission was denied. Use the gallery instead."
+        AppLanguage.ARABIC -> "تم رفض إذن الكاميرا. استخدم المعرض بدلًا من ذلك."
+        AppLanguage.PORTUGUESE -> "A permissão da câmara foi negada. Usa a galeria."
+        AppLanguage.SPANISH -> "Se denegó el permiso de cámara. Usa la galería."
+        AppLanguage.FRENCH -> "L'autorisation de la caméra a été refusée. Utilisez la galerie."
+        AppLanguage.GERMAN -> "Die Kameraerlaubnis wurde verweigert. Nutze stattdessen die Galerie."
+        AppLanguage.RUSSIAN -> "Доступ к камере отклонён. Используйте галерею."
+        AppLanguage.JAPANESE -> "カメラの権限が拒否されました。ギャラリーをご利用ください。"
+        AppLanguage.KOREAN -> "카메라 권한이 거부되었습니다. 갤러리를 사용하세요."
+    }
+
+    val sidekickDictate: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "语音输入"
+        AppLanguage.ENGLISH -> "Dictate"
+        AppLanguage.ARABIC -> "إملاء"
+        AppLanguage.PORTUGUESE -> "Ditar"
+        AppLanguage.SPANISH -> "Dictar"
+        AppLanguage.FRENCH -> "Dicter"
+        AppLanguage.GERMAN -> "Diktieren"
+        AppLanguage.RUSSIAN -> "Диктовать"
+        AppLanguage.JAPANESE -> "音声入力"
+        AppLanguage.KOREAN -> "받아쓰기"
+    }
+
+    val sidekickListening: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在聆听…"
+        AppLanguage.ENGLISH -> "Listening…"
+        AppLanguage.ARABIC -> "جارٍ الاستماع…"
+        AppLanguage.PORTUGUESE -> "A ouvir…"
+        AppLanguage.SPANISH -> "Escuchando…"
+        AppLanguage.FRENCH -> "Écoute…"
+        AppLanguage.GERMAN -> "Hört zu…"
+        AppLanguage.RUSSIAN -> "Слушаю…"
+        AppLanguage.JAPANESE -> "聞き取り中…"
+        AppLanguage.KOREAN -> "듣는 중…"
+    }
+
+    val sidekickVoiceTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "语音输入"
+        AppLanguage.ENGLISH -> "Voice input"
+        AppLanguage.ARABIC -> "الإدخال الصوتي"
+        AppLanguage.PORTUGUESE -> "Entrada de voz"
+        AppLanguage.SPANISH -> "Entrada de voz"
+        AppLanguage.FRENCH -> "Saisie vocale"
+        AppLanguage.GERMAN -> "Spracheingabe"
+        AppLanguage.RUSSIAN -> "Голосовой ввод"
+        AppLanguage.JAPANESE -> "音声入力"
+        AppLanguage.KOREAN -> "음성 입력"
+    }
+
+    val sidekickVoiceDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "用语音代替键盘输入。使用手机自带的语音服务。"
+        AppLanguage.ENGLISH -> "Dictate into the panel instead of typing. Uses the phone's speech service."
+        AppLanguage.ARABIC -> "أملِ الإدخال في اللوحة بدلًا من الكتابة. يستخدم خدمة الكلام في الهاتف."
+        AppLanguage.PORTUGUESE -> "Dita no painel em vez de escrever. Usa o serviço de voz do telefone."
+        AppLanguage.SPANISH -> "Dicta en el panel en lugar de escribir. Usa el servicio de voz del teléfono."
+        AppLanguage.FRENCH -> "Dictez dans le panneau au lieu de taper. Utilise le service vocal du téléphone."
+        AppLanguage.GERMAN -> "Diktiere ins Panel statt zu tippen. Nutzt den Sprachdienst des Telefons."
+        AppLanguage.RUSSIAN -> "Диктуйте в панель вместо ввода с клавиатуры. Используется речевая служба телефона."
+        AppLanguage.JAPANESE -> "入力の代わりに音声でパネルに話しかけます。端末の音声サービスを使用します。"
+        AppLanguage.KOREAN -> "입력 대신 패널에 말하세요. 휴대폰의 음성 서비스를 사용합니다."
+    }
+
+    val sidekickVoiceLanguage: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "听写语言"
+        AppLanguage.ENGLISH -> "Dictation language"
+        AppLanguage.ARABIC -> "لغة الإملاء"
+        AppLanguage.PORTUGUESE -> "Idioma do ditado"
+        AppLanguage.SPANISH -> "Idioma del dictado"
+        AppLanguage.FRENCH -> "Langue de dictée"
+        AppLanguage.GERMAN -> "Diktiersprache"
+        AppLanguage.RUSSIAN -> "Язык диктовки"
+        AppLanguage.JAPANESE -> "音声入力の言語"
+        AppLanguage.KOREAN -> "받아쓰기 언어"
+    }
+
+    val sidekickVoiceLanguageAuto: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "自动"
+        AppLanguage.ENGLISH -> "Automatic"
+        AppLanguage.ARABIC -> "تلقائي"
+        AppLanguage.PORTUGUESE -> "Automático"
+        AppLanguage.SPANISH -> "Automático"
+        AppLanguage.FRENCH -> "Automatique"
+        AppLanguage.GERMAN -> "Automatisch"
+        AppLanguage.RUSSIAN -> "Автоматически"
+        AppLanguage.JAPANESE -> "自動"
+        AppLanguage.KOREAN -> "자동"
+    }
+
+    val sidekickVoiceLanguageSerbian: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "塞尔维亚语"
+        AppLanguage.ENGLISH -> "Serbian"
+        AppLanguage.ARABIC -> "الصربية"
+        AppLanguage.PORTUGUESE -> "Sérvio"
+        AppLanguage.SPANISH -> "Serbio"
+        AppLanguage.FRENCH -> "Serbe"
+        AppLanguage.GERMAN -> "Serbisch"
+        AppLanguage.RUSSIAN -> "Сербский"
+        AppLanguage.JAPANESE -> "セルビア語"
+        AppLanguage.KOREAN -> "세르비아어"
+    }
+
+    val sidekickVoiceLanguageEnglish: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "英语"
+        AppLanguage.ENGLISH -> "English"
+        AppLanguage.ARABIC -> "الإنجليزية"
+        AppLanguage.PORTUGUESE -> "Inglês"
+        AppLanguage.SPANISH -> "Inglés"
+        AppLanguage.FRENCH -> "Anglais"
+        AppLanguage.GERMAN -> "Englisch"
+        AppLanguage.RUSSIAN -> "Английский"
+        AppLanguage.JAPANESE -> "英語"
+        AppLanguage.KOREAN -> "영어"
+    }
+
+    val sidekickVoiceLanguageSwedish: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "瑞典语"
+        AppLanguage.ENGLISH -> "Swedish"
+        AppLanguage.ARABIC -> "السويدية"
+        AppLanguage.PORTUGUESE -> "Sueco"
+        AppLanguage.SPANISH -> "Sueco"
+        AppLanguage.FRENCH -> "Suédois"
+        AppLanguage.GERMAN -> "Schwedisch"
+        AppLanguage.RUSSIAN -> "Шведский"
+        AppLanguage.JAPANESE -> "スウェーデン語"
+        AppLanguage.KOREAN -> "스웨덴어"
+    }
+
+    val sidekickVoiceOnDevice: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "优先使用设备端识别"
+        AppLanguage.ENGLISH -> "Prefer on-device recognition"
+        AppLanguage.ARABIC -> "تفضيل التعرّف على الجهاز"
+        AppLanguage.PORTUGUESE -> "Preferir reconhecimento no dispositivo"
+        AppLanguage.SPANISH -> "Preferir reconocimiento en el dispositivo"
+        AppLanguage.FRENCH -> "Préférer la reconnaissance sur l'appareil"
+        AppLanguage.GERMAN -> "Erkennung auf dem Gerät bevorzugen"
+        AppLanguage.RUSSIAN -> "Предпочитать распознавание на устройстве"
+        AppLanguage.JAPANESE -> "オンデバイス認識を優先"
+        AppLanguage.KOREAN -> "기기 내 인식 우선"
+    }
+
+    val sidekickVoiceOnDeviceDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请求手机在本地处理音频。并非所有设备或语言都支持。"
+        AppLanguage.ENGLISH -> "Asks the phone to keep the audio local. Not every device or language supports it."
+        AppLanguage.ARABIC -> "يطلب من الهاتف إبقاء الصوت محليًا. ليس كل جهاز أو لغة يدعم ذلك."
+        AppLanguage.PORTUGUESE -> "Pede ao telefone para manter o áudio local. Nem todos os dispositivos ou idiomas o suportam."
+        AppLanguage.SPANISH -> "Pide al teléfono que mantenga el audio local. No todos los dispositivos o idiomas lo admiten."
+        AppLanguage.FRENCH -> "Demande au téléphone de garder l'audio en local. Tous les appareils ou langues ne le prennent pas en charge."
+        AppLanguage.GERMAN -> "Bittet das Telefon, die Audiodaten lokal zu behalten. Nicht jedes Gerät oder jede Sprache unterstützt das."
+        AppLanguage.RUSSIAN -> "Просит телефон обрабатывать звук локально. Поддерживается не на всех устройствах и не для всех языков."
+        AppLanguage.JAPANESE -> "音声を端末内に保つよう電話に要求します。すべての端末や言語で対応しているわけではありません。"
+        AppLanguage.KOREAN -> "오디오를 기기 내에서 처리하도록 요청합니다. 모든 기기나 언어가 지원하는 것은 아닙니다."
+    }
+
+    val sidekickSpeechUnavailable: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此设备没有语音识别服务。"
+        AppLanguage.ENGLISH -> "No speech recognition service on this device."
+        AppLanguage.ARABIC -> "لا توجد خدمة تعرّف على الكلام على هذا الجهاز."
+        AppLanguage.PORTUGUESE -> "Não há serviço de reconhecimento de voz neste dispositivo."
+        AppLanguage.SPANISH -> "No hay servicio de reconocimiento de voz en este dispositivo."
+        AppLanguage.FRENCH -> "Aucun service de reconnaissance vocale sur cet appareil."
+        AppLanguage.GERMAN -> "Auf diesem Gerät gibt es keinen Spracherkennungsdienst."
+        AppLanguage.RUSSIAN -> "На этом устройстве нет службы распознавания речи."
+        AppLanguage.JAPANESE -> "この端末には音声認識サービスがありません。"
+        AppLanguage.KOREAN -> "이 기기에는 음성 인식 서비스가 없습니다."
+    }
+
+    val sidekickSpeechNetwork: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法连接语音服务。"
+        AppLanguage.ENGLISH -> "The speech service could not be reached."
+        AppLanguage.ARABIC -> "تعذّر الوصول إلى خدمة الكلام."
+        AppLanguage.PORTUGUESE -> "Não foi possível contactar o serviço de voz."
+        AppLanguage.SPANISH -> "No se pudo contactar con el servicio de voz."
+        AppLanguage.FRENCH -> "Impossible de joindre le service vocal."
+        AppLanguage.GERMAN -> "Der Sprachdienst war nicht erreichbar."
+        AppLanguage.RUSSIAN -> "Не удалось связаться с речевой службой."
+        AppLanguage.JAPANESE -> "音声サービスに接続できませんでした。"
+        AppLanguage.KOREAN -> "음성 서비스에 연결할 수 없습니다."
+    }
+
+    val sidekickSpeechNoMatch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "没有识别到内容，请重试。"
+        AppLanguage.ENGLISH -> "Nothing was recognised. Try again."
+        AppLanguage.ARABIC -> "لم يتم التعرّف على شيء. حاول مرة أخرى."
+        AppLanguage.PORTUGUESE -> "Nada foi reconhecido. Tenta novamente."
+        AppLanguage.SPANISH -> "No se reconoció nada. Inténtalo de nuevo."
+        AppLanguage.FRENCH -> "Rien n'a été reconnu. Réessayez."
+        AppLanguage.GERMAN -> "Nichts erkannt. Versuche es erneut."
+        AppLanguage.RUSSIAN -> "Ничего не распознано. Попробуйте снова."
+        AppLanguage.JAPANESE -> "認識できませんでした。もう一度お試しください。"
+        AppLanguage.KOREAN -> "인식된 내용이 없습니다. 다시 시도하세요."
+    }
+
+    val sidekickSpeechPermission: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "语音输入需要麦克风权限。"
+        AppLanguage.ENGLISH -> "Microphone permission is needed for dictation."
+        AppLanguage.ARABIC -> "إذن الميكروفون مطلوب للإملاء."
+        AppLanguage.PORTUGUESE -> "É necessária permissão de microfone para ditar."
+        AppLanguage.SPANISH -> "Se necesita permiso de micrófono para dictar."
+        AppLanguage.FRENCH -> "L'autorisation du microphone est nécessaire pour dicter."
+        AppLanguage.GERMAN -> "Für das Diktieren wird die Mikrofonberechtigung benötigt."
+        AppLanguage.RUSSIAN -> "Для диктовки нужно разрешение на микрофон."
+        AppLanguage.JAPANESE -> "音声入力にはマイクの権限が必要です。"
+        AppLanguage.KOREAN -> "받아쓰기에는 마이크 권한이 필요합니다."
+    }
+
+    val sidekickSpeechBusy: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "语音服务正忙，请稍后再试。"
+        AppLanguage.ENGLISH -> "The speech service is busy. Try again in a moment."
+        AppLanguage.ARABIC -> "خدمة الكلام مشغولة. حاول بعد قليل."
+        AppLanguage.PORTUGUESE -> "O serviço de voz está ocupado. Tenta daqui a pouco."
+        AppLanguage.SPANISH -> "El servicio de voz está ocupado. Inténtalo en un momento."
+        AppLanguage.FRENCH -> "Le service vocal est occupé. Réessayez dans un instant."
+        AppLanguage.GERMAN -> "Der Sprachdienst ist beschäftigt. Versuche es gleich noch einmal."
+        AppLanguage.RUSSIAN -> "Речевая служба занята. Попробуйте через момент."
+        AppLanguage.JAPANESE -> "音声サービスが混み合っています。しばらくしてからお試しください。"
+        AppLanguage.KOREAN -> "음성 서비스가 사용 중입니다. 잠시 후 다시 시도하세요."
+    }
+
+    val sidekickSpeechLanguage: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "语音服务不支持该语言。"
+        AppLanguage.ENGLISH -> "The speech service does not support this language."
+        AppLanguage.ARABIC -> "خدمة الكلام لا تدعم هذه اللغة."
+        AppLanguage.PORTUGUESE -> "O serviço de voz não suporta este idioma."
+        AppLanguage.SPANISH -> "El servicio de voz no admite este idioma."
+        AppLanguage.FRENCH -> "Le service vocal ne prend pas en charge cette langue."
+        AppLanguage.GERMAN -> "Der Sprachdienst unterstützt diese Sprache nicht."
+        AppLanguage.RUSSIAN -> "Речевая служба не поддерживает этот язык."
+        AppLanguage.JAPANESE -> "音声サービスはこの言語に対応していません。"
+        AppLanguage.KOREAN -> "음성 서비스가 이 언어를 지원하지 않습니다."
+    }
+
+    val sidekickSpeechAudio: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法读取麦克风。"
+        AppLanguage.ENGLISH -> "The microphone could not be read."
+        AppLanguage.ARABIC -> "تعذّرت قراءة الميكروفون."
+        AppLanguage.PORTUGUESE -> "Não foi possível ler o microfone."
+        AppLanguage.SPANISH -> "No se pudo leer el micrófono."
+        AppLanguage.FRENCH -> "Impossible de lire le microphone."
+        AppLanguage.GERMAN -> "Das Mikrofon konnte nicht gelesen werden."
+        AppLanguage.RUSSIAN -> "Не удалось прочитать микрофон."
+        AppLanguage.JAPANESE -> "マイクを読み取れませんでした。"
+        AppLanguage.KOREAN -> "마이크를 읽을 수 없습니다."
+    }
+
+    val sidekickSpeechThrottled: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "语音服务繁忙或已限流。"
+        AppLanguage.ENGLISH -> "The speech service is busy or rate-limited."
+        AppLanguage.ARABIC -> "خدمة الكلام مشغولة أو محدودة المعدل."
+        AppLanguage.PORTUGUESE -> "O serviço de voz está ocupado ou limitado."
+        AppLanguage.SPANISH -> "El servicio de voz está ocupado o limitado."
+        AppLanguage.FRENCH -> "Le service vocal est occupé ou limité."
+        AppLanguage.GERMAN -> "Der Sprachdienst ist ausgelastet oder begrenzt."
+        AppLanguage.RUSSIAN -> "Речевая служба перегружена или ограничена."
+        AppLanguage.JAPANESE -> "音声サービスが混雑しているか制限中です。"
+        AppLanguage.KOREAN -> "음성 서비스가 혼잡하거나 속도 제한 중입니다."
+    }
+
+    val sidekickSpeechFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "语音输入失败。"
+        AppLanguage.ENGLISH -> "Dictation failed."
+        AppLanguage.ARABIC -> "فشل الإملاء."
+        AppLanguage.PORTUGUESE -> "O ditado falhou."
+        AppLanguage.SPANISH -> "El dictado falló."
+        AppLanguage.FRENCH -> "La dictée a échoué."
+        AppLanguage.GERMAN -> "Diktieren fehlgeschlagen."
+        AppLanguage.RUSSIAN -> "Диктовка не удалась."
+        AppLanguage.JAPANESE -> "音声入力に失敗しました。"
+        AppLanguage.KOREAN -> "받아쓰기에 실패했습니다."
+    }
 }

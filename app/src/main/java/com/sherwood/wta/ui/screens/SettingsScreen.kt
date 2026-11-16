@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sherwood.wta.core.ai.AiConfigManager
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.sidekick.SidekickSettings
+import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 import com.sherwood.wta.ui.animation.CardCollapseTransition
 import com.sherwood.wta.ui.animation.CardExpandTransition
 import com.sherwood.wta.ui.design.WtaAlertDialog
@@ -78,11 +80,21 @@ fun SettingsScreen(
     var sidekickModelId by remember { mutableStateOf(sidekickSettings.modelId) }
     var sidekickIncludeContext by remember { mutableStateOf(sidekickSettings.includeAgentContext) }
     var sidekickModelPickerOpen by remember { mutableStateOf(false) }
+    var sidekickVoiceLanguage by remember { mutableStateOf(sidekickSettings.voiceLanguage) }
+    var sidekickPreferOnDevice by remember { mutableStateOf(sidekickSettings.preferOnDeviceSpeech) }
+    var sidekickVoicePickerOpen by remember { mutableStateOf(false) }
 
     val sidekickModelLabel = sidekickModelId
         ?.let { id -> savedModels.firstOrNull { it.id == id } }
         ?.let { model -> model.alias?.takeIf { it.isNotBlank() } ?: model.model.name }
         ?: Strings.sidekickModelFollow
+
+    val sidekickVoiceLanguageLabel = when (sidekickVoiceLanguage) {
+        SidekickVoiceLanguage.AUTO -> Strings.sidekickVoiceLanguageAuto
+        SidekickVoiceLanguage.SERBIAN -> Strings.sidekickVoiceLanguageSerbian
+        SidekickVoiceLanguage.ENGLISH -> Strings.sidekickVoiceLanguageEnglish
+        SidekickVoiceLanguage.SWEDISH -> Strings.sidekickVoiceLanguageSwedish
+    }
 
     val accentOptions = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -316,6 +328,35 @@ fun SettingsScreen(
                             )
                             WtaSectionDivider()
                             WtaSettingRow(
+                                title = Strings.sidekickVoiceLanguage,
+                                subtitle = Strings.sidekickVoiceDesc.ifDescriptionsShown(),
+                                onClick = { sidekickVoicePickerOpen = true }
+                            ) {
+                                Text(
+                                    text = sidekickVoiceLanguageLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(WtaSpacing.Tiny))
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null
+                                )
+                            }
+                            WtaSectionDivider()
+                            WtaToggleRow(
+                                title = Strings.sidekickVoiceOnDevice,
+                                subtitle = Strings.sidekickVoiceOnDeviceDesc.ifDescriptionsShown(),
+                                checked = sidekickPreferOnDevice,
+                                onCheckedChange = { prefer ->
+                                    sidekickPreferOnDevice = prefer
+                                    sidekickSettings.preferOnDeviceSpeech = prefer
+                                }
+                            )
+                            WtaSectionDivider()
+                            WtaSettingRow(
                                 title = Strings.sidekickManageModels,
                                 onClick = onOpenAiSettings
                             ) {
@@ -361,6 +402,18 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (sidekickVoicePickerOpen) {
+        SidekickVoiceLanguageDialog(
+            selected = sidekickVoiceLanguage,
+            onSelect = { language ->
+                sidekickVoiceLanguage = language
+                sidekickSettings.voiceLanguage = language
+                sidekickVoicePickerOpen = false
+            },
+            onDismiss = { sidekickVoicePickerOpen = false }
+        )
     }
 
     if (sidekickModelPickerOpen) {
@@ -430,6 +483,75 @@ private fun SidekickModelPickerDialog(
             }
         }
     )
+}
+
+/**
+ * Picks the dictation language.
+ *
+ * A fixed list, not the device's supported-language set: a device query would silently hide
+ * Serbian on the phones where it matters most, and a missing language has to be reported by
+ * the recognizer, not guessed at here.
+ */
+@Composable
+private fun SidekickVoiceLanguageDialog(
+    selected: SidekickVoiceLanguage,
+    onSelect: (SidekickVoiceLanguage) -> Unit,
+    onDismiss: () -> Unit
+) {
+    WtaAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = Icons.Outlined.Mic,
+        title = Strings.sidekickVoiceLanguage,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(Strings.cancel)
+            }
+        },
+        content = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                SidekickVoiceLabel(
+                    label = Strings.sidekickVoiceLanguageAuto,
+                    selected = selected == SidekickVoiceLanguage.AUTO,
+                    onClick = { onSelect(SidekickVoiceLanguage.AUTO) }
+                )
+                SidekickVoiceLabel(
+                    label = Strings.sidekickVoiceLanguageSerbian,
+                    selected = selected == SidekickVoiceLanguage.SERBIAN,
+                    onClick = { onSelect(SidekickVoiceLanguage.SERBIAN) }
+                )
+                SidekickVoiceLabel(
+                    label = Strings.sidekickVoiceLanguageEnglish,
+                    selected = selected == SidekickVoiceLanguage.ENGLISH,
+                    onClick = { onSelect(SidekickVoiceLanguage.ENGLISH) }
+                )
+                SidekickVoiceLabel(
+                    label = Strings.sidekickVoiceLanguageSwedish,
+                    selected = selected == SidekickVoiceLanguage.SWEDISH,
+                    onClick = { onSelect(SidekickVoiceLanguage.SWEDISH) }
+                )
+            }
+        }
+    )
+}
+
+@Composable
+private fun SidekickVoiceLabel(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = label, style = MaterialTheme.typography.bodySmall)
+    }
 }
 
 @Composable

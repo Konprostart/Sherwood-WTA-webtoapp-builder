@@ -1,6 +1,7 @@
 package com.sherwood.wta.ui.sidekick
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -14,6 +15,18 @@ import com.sherwood.wta.core.sidekick.SidekickEngine
 import com.sherwood.wta.core.sidekick.SidekickEnvironment
 import com.sherwood.wta.core.sidekick.SidekickSettings
 import com.sherwood.wta.core.sidekick.SidekickTurn
+import com.sherwood.wta.core.sidekick.input.SidekickAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickAttachmentBudget
+import com.sherwood.wta.core.sidekick.input.SidekickAttachmentReader
+import com.sherwood.wta.core.sidekick.input.SidekickAttachmentRejection
+import com.sherwood.wta.core.sidekick.input.SidekickAttachmentResult
+import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickSpeechFailure
+import com.sherwood.wta.core.sidekick.input.SidekickSpeechListener
+import com.sherwood.wta.core.sidekick.input.SidekickSpeechRecognizer
+import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,9 +63,29 @@ data class SidekickUiState(
     val contextTitle: String? = null,
     val modelId: String? = null,
     /** Vertical anchor of the floating button as a fraction of its travel, 0 = top. */
-    val fabAnchor: Float = SidekickSettings.DEFAULT_FAB_ANCHOR
+    val fabAnchor: Float = SidekickSettings.DEFAULT_FAB_ANCHOR,
+
+    /** Images and text files staged for the next question, cleared on send. */
+    val pendingAttachments: List<SidekickAttachment> = emptyList(),
+    /**
+     * Whether the resolved model accepts images. Drives the attachment buttons: an
+     * image into a text-only model is a guaranteed provider error, so the button is
+     * disabled with a reason instead of failing after the pick.
+     */
+    val visionSupported: Boolean = true,
+
+    /** Dictation state; [speechPartial] is interim text replaced on every update. */
+    val speechListening: Boolean = false,
+    val speechPartial: String = "",
+    /** False when no recognition service exists; the mic button then explains why. */
+    val speechAvailable: Boolean = true,
+    val voiceLanguage: SidekickVoiceLanguage = SidekickVoiceLanguage.AUTO,
+    val preferOnDeviceSpeech: Boolean = true
 ) {
-    val canSend: Boolean get() = draft.isNotBlank() && !streaming
+    val canSend: Boolean
+        get() = !streaming && !speechListening && (draft.isNotBlank() || pendingAttachments.isNotEmpty())
+
+    val canAttachImage: Boolean get() = visionSupported
 }
 
 /**
@@ -68,13 +101,21 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     private val settings = SidekickSettings.getInstance(application)
     private val engine = SidekickEngine.create(application)
     private val contextSource = SidekickContextSource(application)
+    private val attachmentReader = SidekickAttachmentReader(application)
+    private val speech = SidekickSpeechRecognizer(application)
+
+    /** Draft as it was when dictation started; interim text is appended to it. */
+    private var voiceBaseDraft: String = ""
 
     private val _ui = MutableStateFlow(
         SidekickUiState(
             enabled = settings.enabled,
             includeContext = settings.includeAgentContext,
             modelId = settings.modelId,
-            fabAnchor = settings.fabAnchor
+            fabAnchor = settings.fabAnchor,
+            voiceLanguage = settings.voiceLanguage,
+            preferOnDeviceSpeech = settings.preferOnDeviceSpeech,
+            speechAvailable = speech.isAvailable()
         )
     )
     val ui: StateFlow<SidekickUiState> = _ui.asStateFlow()
@@ -111,7 +152,9 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
                 enabled = settings.enabled,
                 includeContext = settings.includeAgentContext,
                 modelId = settings.modelId,
-                fabAnchor = settings.fabAnchor
+                fabAnchor = settings.fabAnchor,
+                voiceLanguage = settings.voiceLanguage,
+                preferOnDeviceSpeech = settings.preferOnDeviceSpeech
             )
         }
         if (_ui.value.open) refreshBinding()
@@ -142,9 +185,27 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             when (val result = engine.resolve(settings.modelId)) {
                 is SidekickEngine.BindingResult.Ok -> _ui.update {
+                    val vision = result.binding.supportsVision
+                    val hadImages = it.pendingAttachments.any { a -> a is SidekickImageAttachment }
                     it.copy(
                         bindingLabel = result.binding.label,
-                        bindingError = null
+                        bindingError = null,
+                        visionSupported = vision,
+                        // A model switch must not leave an unreadable image staged: the next
+                        // request would be rejected by the provider. The drop is reported,
+                        // because a photo quietly disappearing looks like a bug.
+                        pendingAttachments = if (vision) {
+                            it.pendingAttachments
+                        } else {
+                            it.pendingAttachments.filterNot { attachment ->
+                                attachment is SidekickImageAttachment
+                            }
+                        },
+                        error = if (!vision && hadImages) {
+                            Strings.sidekickVisionUnsupported
+                        } else {
+                            it.error
+                        }
                     )
                 }
                 SidekickEngine.BindingResult.MissingModel -> _ui.update {
@@ -175,11 +236,16 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
 
     fun clear() {
         if (_ui.value.streaming) return
-        _ui.update { it.copy(turns = emptyList(), error = null) }
+        _ui.update { it.copy(turns = emptyList(), error = null, pendingAttachments = emptyList()) }
     }
 
     fun dismissError() {
         _ui.update { it.copy(error = null) }
+    }
+
+    /** Surfaces a message the panel generated itself (permission denied, picker cancel). */
+    fun reportError(message: String) {
+        _ui.update { it.copy(error = message) }
     }
 
     fun stop() {
@@ -197,27 +263,234 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // ------------------------------------------------------------ attachments
+
+    /**
+     * Reads picked documents and stages them.
+     *
+     * Each URI is read off the main thread and can be refused for a concrete reason, so the
+     * panel reports the first refusal rather than silently attaching nothing. One bad pick
+     * does not stop the others: a user who selects a log and a PDF should still get the log.
+     */
+    fun addAttachments(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val rejections = mutableListOf<SidekickAttachmentRejection>()
+            for (uri in uris) {
+                when (val result = withContext(Dispatchers.IO) { attachmentReader.read(uri) }) {
+                    is SidekickAttachmentResult.Ok -> {
+                        val rejection = stage(result.attachment)
+                        if (rejection != null) rejections += rejection
+                    }
+                    is SidekickAttachmentResult.Rejected -> rejections += result.reason
+                }
+            }
+            rejections.firstOrNull()?.let { reason ->
+                _ui.update { it.copy(error = rejectionMessage(reason)) }
+            }
+        }
+    }
+
+    /** Stages a photo captured by the system camera. The temp file is owned by the caller. */
+    fun addCameraPhoto(file: File) {
+        viewModelScope.launch {
+            val name = "photo-${System.currentTimeMillis()}.jpg"
+            val result = withContext(Dispatchers.IO) {
+                com.sherwood.wta.core.sidekick.input.SidekickImageDecoder.fromFile(file, name)
+            }
+            when (result) {
+                is SidekickAttachmentResult.Ok -> {
+                    stage(result.attachment)?.let { reason ->
+                        _ui.update { it.copy(error = rejectionMessage(reason)) }
+                    }
+                }
+                is SidekickAttachmentResult.Rejected ->
+                    _ui.update { it.copy(error = rejectionMessage(result.reason)) }
+            }
+            runCatching { file.delete() }
+        }
+    }
+
+    fun removeAttachment(index: Int) {
+        _ui.update { state ->
+            if (index !in state.pendingAttachments.indices) return@update state
+            state.copy(
+                pendingAttachments = state.pendingAttachments.filterIndexed { i, _ -> i != index }
+            )
+        }
+    }
+
+    fun clearAttachments() {
+        _ui.update { it.copy(pendingAttachments = emptyList()) }
+    }
+
+    /** Applies the per-message budget; returns the reason when the attachment was refused. */
+    private fun stage(attachment: SidekickAttachment): SidekickAttachmentRejection? {
+        val state = _ui.value
+        // Text files still work with a text-only model; only images are blocked, and with
+        // their own reason so the panel explains the model, not the file type.
+        if (attachment is SidekickImageAttachment && !state.visionSupported) {
+            return SidekickAttachmentRejection.VISION_UNSUPPORTED
+        }
+        val existing = state.pendingAttachments
+        val budget = SidekickAttachmentBudget.rejection(existing, attachment)
+        if (budget != null) return budget
+
+        val fitted = if (attachment is SidekickTextAttachment) {
+            SidekickAttachmentBudget.fitText(existing, attachment)
+                ?: return SidekickAttachmentRejection.BUDGET
+        } else {
+            attachment
+        }
+        _ui.update { it.copy(pendingAttachments = it.pendingAttachments + fitted, error = null) }
+        return null
+    }
+
+    private fun rejectionMessage(reason: SidekickAttachmentRejection): String = when (reason) {
+        SidekickAttachmentRejection.TOO_LARGE -> Strings.sidekickAttachmentTooLarge
+        SidekickAttachmentRejection.NOT_TEXT -> Strings.sidekickAttachmentNotText
+        SidekickAttachmentRejection.UNREADABLE -> Strings.sidekickAttachmentUnreadable
+        SidekickAttachmentRejection.EMPTY -> Strings.sidekickAttachmentEmpty
+        SidekickAttachmentRejection.BUDGET -> Strings.sidekickAttachmentBudget
+        SidekickAttachmentRejection.VISION_UNSUPPORTED -> Strings.sidekickVisionUnsupported
+    }
+
+    // ------------------------------------------------------------ dictation
+
+    /**
+     * Starts dictation.
+     *
+     * The recognizer needs `RECORD_AUDIO`; the caller requests it before calling this, and
+     * the service reports a permission error if it is missing anyway.
+     */
+    fun startVoiceInput() {
+        if (_ui.value.streaming) return
+        if (!speech.isAvailable()) {
+            _ui.update {
+                it.copy(
+                    speechAvailable = false,
+                    error = Strings.sidekickSpeechUnavailable
+                )
+            }
+            return
+        }
+        voiceBaseDraft = _ui.value.draft
+        _ui.update { it.copy(speechListening = true, speechPartial = "", error = null) }
+        val started = speech.start(
+            language = settings.voiceLanguage,
+            preferOnDevice = settings.preferOnDeviceSpeech,
+            listener = DictationListener()
+        )
+        if (!started) {
+            _ui.update {
+                it.copy(speechListening = false, speechPartial = "", speechAvailable = speech.isAvailable())
+            }
+        }
+    }
+
+    /** Ends dictation and keeps the final transcript. */
+    fun stopVoiceInput() {
+        if (!_ui.value.speechListening) return
+        speech.stop()
+    }
+
+    /** Ends dictation and discards the transcript. */
+    fun cancelVoiceInput() {
+        if (!_ui.value.speechListening) return
+        speech.cancel()
+        _ui.update { it.copy(speechListening = false, speechPartial = "") }
+    }
+
+    fun setVoiceLanguage(language: SidekickVoiceLanguage) {
+        settings.voiceLanguage = language
+        _ui.update { it.copy(voiceLanguage = language) }
+    }
+
+    fun setPreferOnDeviceSpeech(prefer: Boolean) {
+        settings.preferOnDeviceSpeech = prefer
+        _ui.update { it.copy(preferOnDeviceSpeech = prefer) }
+    }
+
+    private inner class DictationListener : SidekickSpeechListener {
+        override fun onPartial(text: String) {
+            _ui.update {
+                it.copy(
+                    speechPartial = text,
+                    // The interim transcript is written straight into the draft so the user
+                    // reads what the recognizer heard, exactly like typing.
+                    draft = composeDraft(voiceBaseDraft, text)
+                )
+            }
+        }
+
+        override fun onResult(text: String) {
+            _ui.update {
+                it.copy(
+                    speechListening = false,
+                    speechPartial = "",
+                    draft = composeDraft(voiceBaseDraft, text)
+                )
+            }
+        }
+
+        override fun onFailure(failure: SidekickSpeechFailure) {
+            _ui.update {
+                it.copy(
+                    speechListening = false,
+                    speechPartial = "",
+                    // The dictation may have replaced the draft with interim text; put the
+                    // user's typed text back so a failed attempt loses nothing.
+                    draft = voiceBaseDraft,
+                    error = speechFailureMessage(failure),
+                    speechAvailable = failure != SidekickSpeechFailure.NO_SERVICE
+                )
+            }
+        }
+
+        private fun speechFailureMessage(failure: SidekickSpeechFailure): String =
+            when (failure) {
+                SidekickSpeechFailure.NO_SERVICE -> Strings.sidekickSpeechUnavailable
+                SidekickSpeechFailure.NETWORK -> Strings.sidekickSpeechNetwork
+                SidekickSpeechFailure.NO_MATCH -> Strings.sidekickSpeechNoMatch
+                SidekickSpeechFailure.PERMISSION -> Strings.sidekickSpeechPermission
+                SidekickSpeechFailure.BUSY -> Strings.sidekickSpeechBusy
+                SidekickSpeechFailure.LANGUAGE_UNSUPPORTED -> Strings.sidekickSpeechLanguage
+                SidekickSpeechFailure.AUDIO -> Strings.sidekickSpeechAudio
+                SidekickSpeechFailure.THROTTLED -> Strings.sidekickSpeechThrottled
+                SidekickSpeechFailure.UNKNOWN -> Strings.sidekickSpeechFailed
+            }
+    }
+
+    private fun composeDraft(base: String, spoken: String): String {
+        if (spoken.isBlank()) return base
+        if (base.isBlank()) return spoken
+        return base.trimEnd() + " " + spoken.trim()
+    }
+
     // ------------------------------------------------------------ asking
 
     fun send() {
         val state = _ui.value
-        if (state.streaming) return
+        if (state.streaming || state.speechListening) return
         val question = state.draft.trim()
-        if (question.isEmpty()) return
-        ask(question)
+        val attachments = state.pendingAttachments
+        // Attachments alone are a valid question: "here is the screenshot, what is wrong?"
+        if (question.isEmpty() && attachments.isEmpty()) return
+        ask(question, attachments)
     }
 
-    private fun ask(question: String) {
+    private fun ask(question: String, attachments: List<SidekickAttachment>) {
         val history = _ui.value.turns
         val includeContext = _ui.value.includeContext
 
         _ui.update {
             it.copy(
                 draft = "",
+                pendingAttachments = emptyList(),
                 error = null,
                 streaming = true,
                 turns = it.turns +
-                    SidekickTurn(SidekickTurn.Role.USER, question) +
+                    SidekickTurn(SidekickTurn.Role.USER, question, attachments = attachments) +
                     SidekickTurn(SidekickTurn.Role.ASSISTANT, "")
             )
         }
@@ -258,7 +531,8 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
                     history = history,
                     question = question,
                     contextDigest = digest?.text,
-                    environment = environment
+                    environment = environment,
+                    attachments = attachments
                 ).collectWithIdleTimeout(
                     idleTimeoutMs = STREAM_IDLE_TIMEOUT_MS,
                     onTimeout = { stalled = true }
@@ -321,6 +595,9 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         detachSettingsListener?.invoke()
         detachSettingsListener = null
         answerJob?.cancel()
+        // A recognizer left alive keeps an audio session open; the microphone indicator can
+        // stay lit after the panel is gone.
+        speech.release()
         super.onCleared()
     }
 

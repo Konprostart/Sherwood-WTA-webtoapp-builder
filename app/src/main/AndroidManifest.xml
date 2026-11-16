@@ -206,6 +206,15 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+
+        <!-- Host-only: dictation in the floating assistant asks the platform which speech
+             recognition service exists. Without this the package-visibility filter hides it
+             on Android 11+ and SpeechRecognizer.isRecognitionAvailable() reports false on
+             devices that do have one. The shell template has its own manifest and never
+             receives this block. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <!--

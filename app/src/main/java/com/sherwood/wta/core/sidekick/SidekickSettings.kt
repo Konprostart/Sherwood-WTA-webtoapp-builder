@@ -1,6 +1,7 @@
 package com.sherwood.wta.core.sidekick
 
 import android.content.Context
+import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 
 /**
  * Preferences for the floating in-app assistant ("Sidekick").
@@ -88,6 +89,32 @@ class SidekickSettings private constructor(context: Context) {
             prefs.edit().putFloat(KEY_FAB_ANCHOR, value.coerceIn(0f, 1f)).apply()
         }
 
+    /**
+     * Language hint for dictation.
+     *
+     * Not tied to the interface language: Serbian and Swedish are not among the ten UI
+     * languages, so following the UI would make them unreachable. [SidekickVoiceLanguage.AUTO]
+     * lets the recognition service decide.
+     */
+    var voiceLanguage: SidekickVoiceLanguage
+        get() = SidekickVoiceLanguage.fromId(prefs.getString(KEY_VOICE_LANGUAGE, null))
+        set(value) {
+            prefs.edit().putString(KEY_VOICE_LANGUAGE, value.id).apply()
+        }
+
+    /**
+     * Whether to ask for on-device recognition when the platform offers one.
+     *
+     * On by default: cloud dictation ships the audio off the device, and the Sidekick is
+     * the one place in the app where the user is speaking rather than typing. Devices
+     * without an on-device recognizer simply use the default service.
+     */
+    var preferOnDeviceSpeech: Boolean
+        get() = prefs.getBoolean(KEY_PREFER_ON_DEVICE, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_PREFER_ON_DEVICE, value).apply()
+        }
+
     /** A stored model id that no longer resolves must not silently pin a dead model. */
     fun resetModel() {
         prefs.edit().remove(KEY_MODEL).apply()
@@ -99,6 +126,8 @@ class SidekickSettings private constructor(context: Context) {
         private const val KEY_MODEL = "model_id"
         private const val KEY_INCLUDE_CONTEXT = "include_agent_context"
         private const val KEY_FAB_ANCHOR = "fab_anchor"
+        private const val KEY_VOICE_LANGUAGE = "voice_language"
+        private const val KEY_PREFER_ON_DEVICE = "prefer_on_device_speech"
 
         /** Slightly above the bottom edge: clear of a navigation bar, still thumb-reachable. */
         const val DEFAULT_FAB_ANCHOR = 0.92f

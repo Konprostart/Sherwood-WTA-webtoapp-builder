@@ -3,6 +3,9 @@ package com.sherwood.wta.core.sidekick
 import com.google.common.truth.Truth.assertThat
 import com.sherwood.wta.core.agent.llm.LlmEvent
 import com.sherwood.wta.core.agent.llm.LlmGateway
+import com.sherwood.wta.core.sidekick.input.SidekickAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
 import com.sherwood.wta.data.model.AiModel
 import com.sherwood.wta.data.model.AiProvider
 import com.sherwood.wta.data.model.ApiKeyConfig
@@ -222,5 +225,177 @@ class SidekickEngineTest {
         val out = mutableListOf<LlmEvent>()
         flow.collect { out += it }
         out
+    }
+
+    // ------------------------------------------------------------------ attachments
+
+    private fun imageAttachment(name: String = "shot.jpg") =
+        SidekickImageAttachment(name = name, bytes = byteArrayOf(1, 2, 3))
+
+    @Test
+    fun `images ride on the user turn as vision input`() {
+        val engine = engine(models = listOf(model("m", capability = ModelCapability.MULTIMODAL)))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = emptyList(),
+            question = "what is wrong here?",
+            contextDigest = null,
+            attachments = listOf(imageAttachment())
+        )
+
+        assertThat(binding.supportsVision).isTrue()
+        val last = request.messages.last()
+        assertThat(last.images).hasSize(1)
+        assertThat(last.images.single().mimeType).isEqualTo("image/jpeg")
+        // The vision block belongs to the question, never to the system message.
+        assertThat(request.messages.first().images).isEmpty()
+    }
+
+    @Test
+    fun `a text-only model never receives an image block`() {
+        val engine = engine(models = listOf(model("m", capability = ModelCapability.TEXT)))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = emptyList(),
+            question = "look at this",
+            contextDigest = null,
+            attachments = listOf(
+                imageAttachment(),
+                SidekickTextAttachment(name = "app.log", text = "boom")
+            )
+        )
+
+        assertThat(binding.supportsVision).isFalse()
+        assertThat(request.messages.last().images).isEmpty()
+        // The text file is still usable, so it must survive the downgrade.
+        assertThat(request.messages.last().content).contains("boom")
+    }
+
+    @Test
+    fun `a text file is fenced inside the user turn`() {
+        val engine = engine(models = listOf(model("m")))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = emptyList(),
+            question = "why did this fail?",
+            contextDigest = null,
+            attachments = listOf(SidekickTextAttachment(name = "app.log", text = "NullPointerException"))
+        )
+
+        val user = request.messages.last()
+        assertThat(user.content).contains("why did this fail?")
+        assertThat(user.content).contains("NullPointerException")
+        assertThat(user.content).contains("UNTRUSTED_FILE_DATA")
+        // Exactly one user turn: the attachment is data inside it, not a second message.
+        assertThat(request.messages.count { it.role == com.sherwood.wta.core.agent.llm.LlmMessage.Role.USER })
+            .isEqualTo(1)
+    }
+
+    @Test
+    fun `an attachment-only question still produces a non-empty user turn`() {
+        val engine = engine(models = listOf(model("m", capability = ModelCapability.MULTIMODAL)))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = emptyList(),
+            question = "",
+            contextDigest = null,
+            attachments = listOf(imageAttachment())
+        )
+
+        assertThat(request.messages.last().content)
+            .isEqualTo(SidekickPrompt.ATTACHMENT_ONLY_QUESTION)
+    }
+
+    @Test
+    fun `an empty question without attachments stays empty`() {
+        val engine = engine(models = listOf(model("m")))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = emptyList(),
+            question = "",
+            contextDigest = null
+        )
+
+        // Nothing was attached, so no instruction may be invented on the user's behalf.
+        assertThat(request.messages.last().content).isEmpty()
+    }
+
+    @Test
+    fun `older turns lose their images and say so`() {
+        val engine = engine(models = listOf(model("m", capability = ModelCapability.MULTIMODAL)))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val withImage = { label: String ->
+            SidekickTurn(
+                role = SidekickTurn.Role.USER,
+                text = label,
+                attachments = listOf(imageAttachment("$label.jpg"))
+            )
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = listOf(withImage("one"), withImage("two"), withImage("three")),
+            question = "and now?",
+            contextDigest = null,
+            attachments = listOf(imageAttachment("current.jpg"))
+        )
+
+        val userTurns = request.messages.filter {
+            it.role == com.sherwood.wta.core.agent.llm.LlmMessage.Role.USER
+        }
+        // three history turns + the question
+        assertThat(userTurns).hasSize(4)
+        // Only "three" keeps its image alongside the current question.
+        assertThat(userTurns[0].images).isEmpty()
+        assertThat(userTurns[1].images).isEmpty()
+        assertThat(userTurns[2].images).hasSize(1)
+        assertThat(userTurns[3].images).hasSize(1)
+        // The dropped image is replaced by a marker rather than vanishing silently.
+        assertThat(userTurns[0].content).contains(SidekickPrompt.OMITTED_IMAGE_MARKER)
+        assertThat(userTurns[1].content).contains(SidekickPrompt.OMITTED_IMAGE_MARKER)
+        assertThat(userTurns[2].content).doesNotContain(SidekickPrompt.OMITTED_IMAGE_MARKER)
+    }
+
+    @Test
+    fun `the attachment rule rides in the system prompt`() {
+        val engine = engine(models = listOf(model("m")))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = emptyList(),
+            question = "read this",
+            contextDigest = null,
+            attachments = listOf<SidekickAttachment>(
+                SidekickTextAttachment(name = "a.log", text = "x")
+            )
+        )
+
+        assertThat(request.messages.first().content).contains("UNTRUSTED_FILE_DATA")
     }
 }
