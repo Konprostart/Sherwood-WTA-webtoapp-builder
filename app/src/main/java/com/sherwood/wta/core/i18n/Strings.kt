@@ -5616,6 +5616,41 @@ object Strings {
     val telegramCallbackUnknown: String get() = StringsE.telegramCallbackUnknown
     val telegramNotifyBuilds: String get() = StringsE.telegramNotifyBuilds
     val telegramNotifyBuildsDesc: String get() = StringsE.telegramNotifyBuildsDesc
+
+    // ---- Floating in-app assistant (Sidekick) ---------------------------------
+    val sidekickTitle: String get() = StringsE.sidekickTitle
+    val sidekickOpen: String get() = StringsE.sidekickOpen
+    val sidekickClose: String get() = StringsE.sidekickClose
+    val sidekickClear: String get() = StringsE.sidekickClear
+    val sidekickIntro: String get() = StringsE.sidekickIntro
+    val sidekickInputHint: String get() = StringsE.sidekickInputHint
+    val sidekickSend: String get() = StringsE.sidekickSend
+    val sidekickStop: String get() = StringsE.sidekickStop
+    val sidekickThinking: String get() = StringsE.sidekickThinking
+    val sidekickQuickExplainLabel: String get() = StringsE.sidekickQuickExplainLabel
+    val sidekickQuickExplain: String get() = StringsE.sidekickQuickExplain
+    val sidekickQuickErrorLabel: String get() = StringsE.sidekickQuickErrorLabel
+    val sidekickQuickError: String get() = StringsE.sidekickQuickError
+    val sidekickQuickPromptLabel: String get() = StringsE.sidekickQuickPromptLabel
+    val sidekickQuickPrompt: String get() = StringsE.sidekickQuickPrompt
+    val sidekickNoModel: String get() = StringsE.sidekickNoModel
+    val sidekickMissingModel: String get() = StringsE.sidekickMissingModel
+    val sidekickMissingApiKey: String get() = StringsE.sidekickMissingApiKey
+    val sidekickStalled: String get() = StringsE.sidekickStalled
+    val sidekickEmptyAnswer: String get() = StringsE.sidekickEmptyAnswer
+    fun sidekickModelWithContext(model: String, session: String): String =
+        StringsE.sidekickModelWithContext(model, session)
+    val sidekickSettingsTitle: String get() = StringsE.sidekickSettingsTitle
+    val sidekickSettingsDesc: String get() = StringsE.sidekickSettingsDesc
+    val sidekickEnable: String get() = StringsE.sidekickEnable
+    val sidekickEnableDesc: String get() = StringsE.sidekickEnableDesc
+    val sidekickModelTitle: String get() = StringsE.sidekickModelTitle
+    val sidekickModelDesc: String get() = StringsE.sidekickModelDesc
+    val sidekickModelFollow: String get() = StringsE.sidekickModelFollow
+    val sidekickModelPickerTitle: String get() = StringsE.sidekickModelPickerTitle
+    val sidekickContextTitle: String get() = StringsE.sidekickContextTitle
+    val sidekickContextDesc: String get() = StringsE.sidekickContextDesc
+    val sidekickManageModels: String get() = StringsE.sidekickManageModels
 }
 
 

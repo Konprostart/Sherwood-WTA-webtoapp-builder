@@ -779,7 +779,8 @@ fun AppNavigation() {
                 SettingsScreen(
                     onBack = { navController.popBackStackSafely() },
                     onOpenGitSettings = { navController.navigate(Routes.GIT_SETTINGS) },
-                    onOpenStudio = { navController.navigate(Routes.STUDIO) }
+                    onOpenStudio = { navController.navigate(Routes.STUDIO) },
+                    onOpenAiSettings = { navController.navigate(Routes.AI_SETTINGS) }
                 )
             }
 

@@ -1,6 +1,7 @@
 package com.sherwood.wta.ui.screens
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sherwood.wta.core.ai.AiConfigManager
 import com.sherwood.wta.core.i18n.Strings
+import com.sherwood.wta.core.sidekick.SidekickSettings
+import com.sherwood.wta.ui.animation.CardCollapseTransition
+import com.sherwood.wta.ui.animation.CardExpandTransition
+import com.sherwood.wta.ui.design.WtaAlertDialog
 import com.sherwood.wta.ui.design.WtaChip
 import com.sherwood.wta.ui.design.WtaScreen
 import com.sherwood.wta.ui.design.WtaSection
@@ -35,6 +42,7 @@ import com.sherwood.wta.ui.design.WtaSpacing
 import com.sherwood.wta.ui.design.WtaToggleRow
 import com.sherwood.wta.ui.theme.AppAccent
 import com.sherwood.wta.ui.theme.ThemeManager
+import com.sherwood.wta.ui.theme.ifDescriptionsShown
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -42,7 +50,8 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onBack: () -> Unit = {},
     onOpenGitSettings: () -> Unit = {},
-    onOpenStudio: () -> Unit = {}
+    onOpenStudio: () -> Unit = {},
+    onOpenAiSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val themeManager = remember { ThemeManager.getInstance(context) }
@@ -56,6 +65,24 @@ fun SettingsScreen(
     val enableParticles by themeManager.enableParticlesFlow.collectAsStateWithLifecycle()
     val enableHaptics by themeManager.enableHapticsFlow.collectAsStateWithLifecycle()
     val animSpeed by themeManager.animationSpeedFlow.collectAsStateWithLifecycle()
+
+    // ---- floating assistant (Sidekick) --------------------------------------
+    // The overlay itself lives above the navigation graph; this screen only owns the
+    // switches. Writes go straight to SidekickSettings, which notifies the overlay.
+    val sidekickSettings = remember { SidekickSettings.getInstance(context) }
+    val aiConfigManager = remember { AiConfigManager(context) }
+    val savedModels by aiConfigManager.savedModelsFlow.collectAsStateWithLifecycle(
+        initialValue = emptyList<com.sherwood.wta.data.model.SavedModel>()
+    )
+    var sidekickEnabled by remember { mutableStateOf(sidekickSettings.enabled) }
+    var sidekickModelId by remember { mutableStateOf(sidekickSettings.modelId) }
+    var sidekickIncludeContext by remember { mutableStateOf(sidekickSettings.includeAgentContext) }
+    var sidekickModelPickerOpen by remember { mutableStateOf(false) }
+
+    val sidekickModelLabel = sidekickModelId
+        ?.let { id -> savedModels.firstOrNull { it.id == id } }
+        ?.let { model -> model.alias?.takeIf { it.isNotBlank() } ?: model.model.name }
+        ?: Strings.sidekickModelFollow
 
     val accentOptions = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -237,6 +264,71 @@ fun SettingsScreen(
                 }
             }
 
+            WtaSection(
+                title = Strings.sidekickSettingsTitle,
+                description = Strings.sidekickSettingsDesc.ifDescriptionsShown()
+            ) {
+                WtaSettingCard {
+                    WtaToggleRow(
+                        title = Strings.sidekickEnable,
+                        subtitle = Strings.sidekickEnableDesc.ifDescriptionsShown(),
+                        icon = Icons.Outlined.SmartToy,
+                        checked = sidekickEnabled,
+                        onCheckedChange = { enabled ->
+                            sidekickEnabled = enabled
+                            sidekickSettings.enabled = enabled
+                        }
+                    )
+                    AnimatedVisibility(
+                        visible = sidekickEnabled,
+                        enter = CardExpandTransition,
+                        exit = CardCollapseTransition
+                    ) {
+                        Column {
+                            WtaSectionDivider()
+                            WtaSettingRow(
+                                title = Strings.sidekickModelTitle,
+                                subtitle = Strings.sidekickModelDesc.ifDescriptionsShown(),
+                                onClick = { sidekickModelPickerOpen = true }
+                            ) {
+                                Text(
+                                    text = sidekickModelLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(WtaSpacing.Tiny))
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null
+                                )
+                            }
+                            WtaSectionDivider()
+                            WtaToggleRow(
+                                title = Strings.sidekickContextTitle,
+                                subtitle = Strings.sidekickContextDesc.ifDescriptionsShown(),
+                                checked = sidekickIncludeContext,
+                                onCheckedChange = { include ->
+                                    sidekickIncludeContext = include
+                                    sidekickSettings.includeAgentContext = include
+                                }
+                            )
+                            WtaSectionDivider()
+                            WtaSettingRow(
+                                title = Strings.sidekickManageModels,
+                                onClick = onOpenAiSettings
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             WtaSection(title = Strings.studioTitle) {
                 WtaSettingCard {
                     WtaSettingRow(
@@ -267,6 +359,108 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    if (sidekickModelPickerOpen) {
+        SidekickModelPickerDialog(
+            models = savedModels,
+            selectedId = sidekickModelId,
+            onSelect = { id ->
+                sidekickModelId = id
+                sidekickSettings.modelId = id
+                sidekickModelPickerOpen = false
+            },
+            onDismiss = { sidekickModelPickerOpen = false }
+        )
+    }
+}
+
+/**
+ * Picks the model the assistant answers with.
+ *
+ * "Same as the agent" is the first row and the default: the pair (model, credential) is
+ * resolved at ask time, so following the agent never goes stale when the agent's model
+ * changes or a profile pins a different one.
+ */
+@Composable
+private fun SidekickModelPickerDialog(
+    models: List<com.sherwood.wta.data.model.SavedModel>,
+    selectedId: String?,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    WtaAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = Icons.Outlined.SmartToy,
+        title = Strings.sidekickModelPickerTitle,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(Strings.cancel)
+            }
+        }
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            SidekickModelOption(
+                label = Strings.sidekickModelFollow,
+                subtitle = null,
+                selected = selectedId == null,
+                onClick = { onSelect(null) }
+            )
+            models.forEach { model ->
+                val label = model.alias?.takeIf { it.isNotBlank() } ?: model.model.name
+                SidekickModelOption(
+                    label = label,
+                    subtitle = model.model.provider.displayName,
+                    selected = model.id == selectedId,
+                    onClick = { onSelect(model.id) }
+                )
+            }
+            if (models.isEmpty()) {
+                Text(
+                    text = Strings.sidekickMissingModel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = WtaSpacing.Small)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SidekickModelOption(
+    label: String,
+    subtitle: String?,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(modifier = Modifier.width(4.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

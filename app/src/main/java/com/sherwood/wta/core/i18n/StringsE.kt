@@ -20921,4 +20921,432 @@ object StringsE {
         AppLanguage.KOREAN -> "로컬 모델 설정을 저장할 수 없습니다"
     }
 
+    // ---- Floating in-app assistant (Sidekick) ---------------------------------
+
+    val sidekickTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "助手"
+        AppLanguage.ENGLISH -> "Sidekick"
+        AppLanguage.ARABIC -> "المساعد"
+        AppLanguage.PORTUGUESE -> "Sidekick"
+        AppLanguage.SPANISH -> "Sidekick"
+        AppLanguage.FRENCH -> "Sidekick"
+        AppLanguage.GERMAN -> "Sidekick"
+        AppLanguage.RUSSIAN -> "Sidekick"
+        AppLanguage.JAPANESE -> "サイドキック"
+        AppLanguage.KOREAN -> "사이드킥"
+    }
+
+    val sidekickOpen: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "打开助手"
+        AppLanguage.ENGLISH -> "Open the assistant"
+        AppLanguage.ARABIC -> "فتح المساعد"
+        AppLanguage.PORTUGUESE -> "Abrir o assistente"
+        AppLanguage.SPANISH -> "Abrir el asistente"
+        AppLanguage.FRENCH -> "Ouvrir l'assistant"
+        AppLanguage.GERMAN -> "Assistent öffnen"
+        AppLanguage.RUSSIAN -> "Открыть помощника"
+        AppLanguage.JAPANESE -> "アシスタントを開く"
+        AppLanguage.KOREAN -> "어시스턴트 열기"
+    }
+
+    val sidekickClose: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "关闭"
+        AppLanguage.ENGLISH -> "Close"
+        AppLanguage.ARABIC -> "إغلاق"
+        AppLanguage.PORTUGUESE -> "Fechar"
+        AppLanguage.SPANISH -> "Cerrar"
+        AppLanguage.FRENCH -> "Fermer"
+        AppLanguage.GERMAN -> "Schließen"
+        AppLanguage.RUSSIAN -> "Закрыть"
+        AppLanguage.JAPANESE -> "閉じる"
+        AppLanguage.KOREAN -> "닫기"
+    }
+
+    val sidekickClear: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "清空对话"
+        AppLanguage.ENGLISH -> "Clear the conversation"
+        AppLanguage.ARABIC -> "مسح المحادثة"
+        AppLanguage.PORTUGUESE -> "Limpar a conversa"
+        AppLanguage.SPANISH -> "Borrar la conversación"
+        AppLanguage.FRENCH -> "Effacer la conversation"
+        AppLanguage.GERMAN -> "Unterhaltung löschen"
+        AppLanguage.RUSSIAN -> "Очистить беседу"
+        AppLanguage.JAPANESE -> "会話を消去"
+        AppLanguage.KOREAN -> "대화 지우기"
+    }
+
+    val sidekickIntro: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE ->
+            "代理工作时随时提问：解释它刚做了什么、构建为什么失败，或帮你把提示词写得更好。它只回答问题，不会读取或修改文件。"
+        AppLanguage.ENGLISH ->
+            "Ask while the agent works: explain what it just did, why a build failed, or how to phrase a better prompt. It only answers — it never reads or changes files."
+        AppLanguage.ARABIC ->
+            "اسأل أثناء عمل الوكيل: اشرح ما فعله للتو، أو سبب فشل البناء، أو كيف تصيغ طلبًا أفضل. إنه يجيب فقط ولا يقرأ الملفات أو يغيّرها."
+        AppLanguage.PORTUGUESE ->
+            "Pergunte enquanto o agente trabalha: explique o que ele acabou de fazer, por que uma compilação falhou ou como escrever um prompt melhor. Ele apenas responde — nunca lê nem altera ficheiros."
+        AppLanguage.SPANISH ->
+            "Pregunta mientras el agente trabaja: explica qué acaba de hacer, por qué falló una compilación o cómo redactar un prompt mejor. Solo responde — nunca lee ni cambia archivos."
+        AppLanguage.FRENCH ->
+            "Posez vos questions pendant que l'agent travaille : expliquez ce qu'il vient de faire, pourquoi une compilation a échoué, ou comment mieux formuler un prompt. Il répond seulement — il ne lit ni ne modifie aucun fichier."
+        AppLanguage.GERMAN ->
+            "Frag nach, während der Agent arbeitet: was er gerade getan hat, warum ein Build fehlgeschlagen ist oder wie ein Prompt besser formuliert wird. Er antwortet nur — er liest und ändert keine Dateien."
+        AppLanguage.RUSSIAN ->
+            "Спрашивайте, пока агент работает: объяснить, что он только что сделал, почему сборка не удалась или как лучше сформулировать запрос. Он только отвечает — файлы не читает и не меняет."
+        AppLanguage.JAPANESE ->
+            "エージェントの作業中に質問できます。直前の操作、ビルドが失敗した理由、より良いプロンプトの書き方を説明します。回答のみで、ファイルの読み書きは行いません。"
+        AppLanguage.KOREAN ->
+            "에이전트가 작업하는 동안 질문하세요. 방금 한 일, 빌드가 실패한 이유, 더 나은 프롬프트 작성법을 설명합니다. 답변만 하며 파일을 읽거나 변경하지 않습니다."
+    }
+
+    val sidekickInputHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "询问当前的工作…"
+        AppLanguage.ENGLISH -> "Ask about the current work…"
+        AppLanguage.ARABIC -> "اسأل عن العمل الحالي…"
+        AppLanguage.PORTUGUESE -> "Pergunte sobre o trabalho atual…"
+        AppLanguage.SPANISH -> "Pregunta sobre el trabajo actual…"
+        AppLanguage.FRENCH -> "Posez une question sur le travail en cours…"
+        AppLanguage.GERMAN -> "Frag zur aktuellen Arbeit…"
+        AppLanguage.RUSSIAN -> "Спросите о текущей работе…"
+        AppLanguage.JAPANESE -> "現在の作業について質問…"
+        AppLanguage.KOREAN -> "현재 작업에 대해 질문하세요…"
+    }
+
+    val sidekickSend: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "提问"
+        AppLanguage.ENGLISH -> "Ask"
+        AppLanguage.ARABIC -> "اسأل"
+        AppLanguage.PORTUGUESE -> "Perguntar"
+        AppLanguage.SPANISH -> "Preguntar"
+        AppLanguage.FRENCH -> "Demander"
+        AppLanguage.GERMAN -> "Fragen"
+        AppLanguage.RUSSIAN -> "Спросить"
+        AppLanguage.JAPANESE -> "質問"
+        AppLanguage.KOREAN -> "질문"
+    }
+
+    val sidekickStop: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "停止"
+        AppLanguage.ENGLISH -> "Stop"
+        AppLanguage.ARABIC -> "إيقاف"
+        AppLanguage.PORTUGUESE -> "Parar"
+        AppLanguage.SPANISH -> "Detener"
+        AppLanguage.FRENCH -> "Arrêter"
+        AppLanguage.GERMAN -> "Stoppen"
+        AppLanguage.RUSSIAN -> "Стоп"
+        AppLanguage.JAPANESE -> "停止"
+        AppLanguage.KOREAN -> "중지"
+    }
+
+    val sidekickThinking: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在思考…"
+        AppLanguage.ENGLISH -> "Thinking…"
+        AppLanguage.ARABIC -> "جارٍ التفكير…"
+        AppLanguage.PORTUGUESE -> "A pensar…"
+        AppLanguage.SPANISH -> "Pensando…"
+        AppLanguage.FRENCH -> "Réflexion…"
+        AppLanguage.GERMAN -> "Denkt nach…"
+        AppLanguage.RUSSIAN -> "Думает…"
+        AppLanguage.JAPANESE -> "考えています…"
+        AppLanguage.KOREAN -> "생각 중…"
+    }
+
+    val sidekickQuickExplainLabel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "刚才做了什么"
+        AppLanguage.ENGLISH -> "What happened?"
+        AppLanguage.ARABIC -> "ماذا حدث؟"
+        AppLanguage.PORTUGUESE -> "O que aconteceu?"
+        AppLanguage.SPANISH -> "¿Qué ha pasado?"
+        AppLanguage.FRENCH -> "Que s'est-il passé ?"
+        AppLanguage.GERMAN -> "Was ist passiert?"
+        AppLanguage.RUSSIAN -> "Что произошло?"
+        AppLanguage.JAPANESE -> "何が起きた？"
+        AppLanguage.KOREAN -> "무슨 일이 있었나요?"
+    }
+
+    val sidekickQuickExplain: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "用简单的语言解释主代理刚才做了什么，以及为什么这样做。"
+        AppLanguage.ENGLISH -> "Explain what the main agent just did, in plain language, and why."
+        AppLanguage.ARABIC -> "اشرح بلغة بسيطة ما فعله الوكيل الرئيسي للتو ولماذا."
+        AppLanguage.PORTUGUESE -> "Explica em linguagem simples o que o agente principal acabou de fazer e porquê."
+        AppLanguage.SPANISH -> "Explica en lenguaje sencillo qué acaba de hacer el agente principal y por qué."
+        AppLanguage.FRENCH -> "Explique en termes simples ce que l'agent principal vient de faire, et pourquoi."
+        AppLanguage.GERMAN -> "Erkläre in einfachen Worten, was der Hauptagent gerade getan hat und warum."
+        AppLanguage.RUSSIAN -> "Простыми словами объясни, что только что сделал основной агент и почему."
+        AppLanguage.JAPANESE -> "メインエージェントが今何をしたのか、なぜそうしたのかを平易な言葉で説明してください。"
+        AppLanguage.KOREAN -> "메인 에이전트가 방금 무엇을 했고 왜 그렇게 했는지 쉬운 말로 설명해 주세요."
+    }
+
+    val sidekickQuickErrorLabel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "解释错误"
+        AppLanguage.ENGLISH -> "Explain error"
+        AppLanguage.ARABIC -> "اشرح الخطأ"
+        AppLanguage.PORTUGUESE -> "Explicar erro"
+        AppLanguage.SPANISH -> "Explicar error"
+        AppLanguage.FRENCH -> "Expliquer l'erreur"
+        AppLanguage.GERMAN -> "Fehler erklären"
+        AppLanguage.RUSSIAN -> "Объяснить ошибку"
+        AppLanguage.JAPANESE -> "エラーを説明"
+        AppLanguage.KOREAN -> "오류 설명"
+    }
+
+    val sidekickQuickError: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "解释这个会话中最近的错误，并给出最小的修复步骤。"
+        AppLanguage.ENGLISH -> "Explain the last error in this session and give the smallest fix."
+        AppLanguage.ARABIC -> "اشرح آخر خطأ في هذه الجلسة واقترح أصغر إصلاح."
+        AppLanguage.PORTUGUESE -> "Explica o último erro desta sessão e indica a correção mais pequena."
+        AppLanguage.SPANISH -> "Explica el último error de esta sesión e indica la corrección más pequeña."
+        AppLanguage.FRENCH -> "Explique la dernière erreur de cette session et propose la plus petite correction."
+        AppLanguage.GERMAN -> "Erkläre den letzten Fehler in dieser Sitzung und nenne die kleinste Korrektur."
+        AppLanguage.RUSSIAN -> "Объясни последнюю ошибку в этой сессии и предложи минимальное исправление."
+        AppLanguage.JAPANESE -> "このセッションの直近のエラーを説明し、最小限の修正を教えてください。"
+        AppLanguage.KOREAN -> "이 세션의 마지막 오류를 설명하고 가장 작은 수정 방법을 알려 주세요."
+    }
+
+    val sidekickQuickPromptLabel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "改进提示词"
+        AppLanguage.ENGLISH -> "Improve prompt"
+        AppLanguage.ARABIC -> "حسّن الطلب"
+        AppLanguage.PORTUGUESE -> "Melhorar prompt"
+        AppLanguage.SPANISH -> "Mejorar prompt"
+        AppLanguage.FRENCH -> "Améliorer le prompt"
+        AppLanguage.GERMAN -> "Prompt verbessern"
+        AppLanguage.RUSSIAN -> "Улучшить запрос"
+        AppLanguage.JAPANESE -> "プロンプト改善"
+        AppLanguage.KOREAN -> "프롬프트 개선"
+    }
+
+    val sidekickQuickPrompt: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "把我的上一条指令改写得更清楚、更具体，然后给出可以直接粘贴的版本。"
+        AppLanguage.ENGLISH -> "Rewrite my last instruction to the agent so it is clearer and more specific, then give the ready-to-paste version."
+        AppLanguage.ARABIC -> "أعد صياغة آخر تعليماتي للوكيل لتكون أوضح وأدق، ثم اعرض النسخة الجاهزة للصق."
+        AppLanguage.PORTUGUESE -> "Reescreve a minha última instrução ao agente de forma mais clara e específica e dá a versão pronta a colar."
+        AppLanguage.SPANISH -> "Reescribe mi última instrucción al agente de forma más clara y concreta y da la versión lista para pegar."
+        AppLanguage.FRENCH -> "Réécris ma dernière instruction à l'agent de façon plus claire et précise, puis donne la version prête à coller."
+        AppLanguage.GERMAN -> "Formuliere meine letzte Anweisung an den Agenten klarer und konkreter und gib die fertige Version zum Einfügen."
+        AppLanguage.RUSSIAN -> "Перепиши мою последнюю инструкцию агенту яснее и конкретнее и дай готовый к вставке вариант."
+        AppLanguage.JAPANESE -> "エージェントへの直前の指示を、より明確で具体的に書き直し、貼り付けられる形で提示してください。"
+        AppLanguage.KOREAN -> "에이전트에게 한 마지막 지시를 더 명확하고 구체적으로 다시 써서 붙여넣을 수 있는 형태로 보여 주세요."
+    }
+
+    val sidekickNoModel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "未选择模型"
+        AppLanguage.ENGLISH -> "No model"
+        AppLanguage.ARABIC -> "لا يوجد نموذج"
+        AppLanguage.PORTUGUESE -> "Sem modelo"
+        AppLanguage.SPANISH -> "Sin modelo"
+        AppLanguage.FRENCH -> "Aucun modèle"
+        AppLanguage.GERMAN -> "Kein Modell"
+        AppLanguage.RUSSIAN -> "Нет модели"
+        AppLanguage.JAPANESE -> "モデル未選択"
+        AppLanguage.KOREAN -> "모델 없음"
+    }
+
+    val sidekickMissingModel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "尚未配置文本模型，请在 AI 设置中添加。"
+        AppLanguage.ENGLISH -> "No text model is configured. Add one in AI settings."
+        AppLanguage.ARABIC -> "لا يوجد نموذج نصي مُهيّأ. أضف واحدًا في إعدادات الذكاء الاصطناعي."
+        AppLanguage.PORTUGUESE -> "Não há nenhum modelo de texto configurado. Adiciona um nas definições de IA."
+        AppLanguage.SPANISH -> "No hay ningún modelo de texto configurado. Añade uno en los ajustes de IA."
+        AppLanguage.FRENCH -> "Aucun modèle de texte n'est configuré. Ajoutez-en un dans les réglages IA."
+        AppLanguage.GERMAN -> "Es ist kein Textmodell eingerichtet. Füge eines in den KI-Einstellungen hinzu."
+        AppLanguage.RUSSIAN -> "Текстовая модель не настроена. Добавьте её в настройках ИИ."
+        AppLanguage.JAPANESE -> "テキストモデルが設定されていません。AI 設定で追加してください。"
+        AppLanguage.KOREAN -> "텍스트 모델이 설정되어 있지 않습니다. AI 설정에서 추가하세요."
+    }
+
+    val sidekickMissingApiKey: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "所选模型的 API 密钥缺失，请在 AI 设置中重新添加。"
+        AppLanguage.ENGLISH -> "The chosen model's API key is missing. Re-add it in AI settings."
+        AppLanguage.ARABIC -> "مفتاح API للنموذج المحدد مفقود. أضفه مرة أخرى في إعدادات الذكاء الاصطناعي."
+        AppLanguage.PORTUGUESE -> "Falta a chave de API do modelo escolhido. Adiciona-a novamente nas definições de IA."
+        AppLanguage.SPANISH -> "Falta la clave de API del modelo elegido. Vuelve a añadirla en los ajustes de IA."
+        AppLanguage.FRENCH -> "La clé d'API du modèle choisi est manquante. Ajoutez-la de nouveau dans les réglages IA."
+        AppLanguage.GERMAN -> "Der API-Schlüssel des gewählten Modells fehlt. Füge ihn in den KI-Einstellungen erneut hinzu."
+        AppLanguage.RUSSIAN -> "Отсутствует ключ API выбранной модели. Добавьте его снова в настройках ИИ."
+        AppLanguage.JAPANESE -> "選択したモデルの API キーがありません。AI 設定で再追加してください。"
+        AppLanguage.KOREAN -> "선택한 모델의 API 키가 없습니다. AI 설정에서 다시 추가하세요."
+    }
+
+    val sidekickStalled: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "模型停止响应，请重试。"
+        AppLanguage.ENGLISH -> "The model stopped responding. Try again."
+        AppLanguage.ARABIC -> "توقف النموذج عن الاستجابة. أعد المحاولة."
+        AppLanguage.PORTUGUESE -> "O modelo parou de responder. Tenta novamente."
+        AppLanguage.SPANISH -> "El modelo dejó de responder. Inténtalo de nuevo."
+        AppLanguage.FRENCH -> "Le modèle ne répond plus. Réessayez."
+        AppLanguage.GERMAN -> "Das Modell antwortet nicht mehr. Versuche es erneut."
+        AppLanguage.RUSSIAN -> "Модель перестала отвечать. Попробуйте ещё раз."
+        AppLanguage.JAPANESE -> "モデルの応答が止まりました。もう一度お試しください。"
+        AppLanguage.KOREAN -> "모델 응답이 멈췄습니다. 다시 시도하세요."
+    }
+
+    val sidekickEmptyAnswer: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "模型返回了空回答。"
+        AppLanguage.ENGLISH -> "The model returned an empty answer."
+        AppLanguage.ARABIC -> "أعاد النموذج إجابة فارغة."
+        AppLanguage.PORTUGUESE -> "O modelo devolveu uma resposta vazia."
+        AppLanguage.SPANISH -> "El modelo devolvió una respuesta vacía."
+        AppLanguage.FRENCH -> "Le modèle a renvoyé une réponse vide."
+        AppLanguage.GERMAN -> "Das Modell hat eine leere Antwort geliefert."
+        AppLanguage.RUSSIAN -> "Модель вернула пустой ответ."
+        AppLanguage.JAPANESE -> "モデルが空の回答を返しました。"
+        AppLanguage.KOREAN -> "모델이 빈 답변을 반환했습니다."
+    }
+
+    fun sidekickModelWithContext(model: String, session: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "${model} · 上下文：${session}"
+        AppLanguage.ENGLISH -> "${model} · context: ${session}"
+        AppLanguage.ARABIC -> "${model} · السياق: ${session}"
+        AppLanguage.PORTUGUESE -> "${model} · contexto: ${session}"
+        AppLanguage.SPANISH -> "${model} · contexto: ${session}"
+        AppLanguage.FRENCH -> "${model} · contexte : ${session}"
+        AppLanguage.GERMAN -> "${model} · Kontext: ${session}"
+        AppLanguage.RUSSIAN -> "${model} · контекст: ${session}"
+        AppLanguage.JAPANESE -> "${model} · コンテキスト: ${session}"
+        AppLanguage.KOREAN -> "${model} · 컨텍스트: ${session}"
+    }
+
+    val sidekickSettingsTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "浮动助手"
+        AppLanguage.ENGLISH -> "Floating assistant"
+        AppLanguage.ARABIC -> "المساعد العائم"
+        AppLanguage.PORTUGUESE -> "Assistente flutuante"
+        AppLanguage.SPANISH -> "Asistente flotante"
+        AppLanguage.FRENCH -> "Assistant flottant"
+        AppLanguage.GERMAN -> "Schwebender Assistent"
+        AppLanguage.RUSSIAN -> "Плавающий помощник"
+        AppLanguage.JAPANESE -> "フローティングアシスタント"
+        AppLanguage.KOREAN -> "플로팅 어시스턴트"
+    }
+
+    val sidekickSettingsDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "解释代理的消息、错误与提示词的浮动助手，不执行任何工具。"
+        AppLanguage.ENGLISH -> "A floating assistant that explains the agent's messages, errors and prompts. It never runs tools."
+        AppLanguage.ARABIC -> "مساعد عائم يشرح رسائل الوكيل وأخطاءه وطلباته. لا يشغّل أي أدوات."
+        AppLanguage.PORTUGUESE -> "Um assistente flutuante que explica as mensagens, erros e prompts do agente. Nunca executa ferramentas."
+        AppLanguage.SPANISH -> "Un asistente flotante que explica los mensajes, errores y prompts del agente. Nunca ejecuta herramientas."
+        AppLanguage.FRENCH -> "Un assistant flottant qui explique les messages, erreurs et prompts de l'agent. Il n'exécute aucun outil."
+        AppLanguage.GERMAN -> "Ein schwebender Assistent, der Nachrichten, Fehler und Prompts des Agenten erklärt. Er führt keine Tools aus."
+        AppLanguage.RUSSIAN -> "Плавающий помощник, который объясняет сообщения, ошибки и запросы агента. Инструменты не запускает."
+        AppLanguage.JAPANESE -> "エージェントのメッセージ、エラー、プロンプトを説明するフローティングアシスタントです。ツールは実行しません。"
+        AppLanguage.KOREAN -> "에이전트의 메시지, 오류, 프롬프트를 설명하는 플로팅 어시스턴트입니다. 도구는 실행하지 않습니다."
+    }
+
+    val sidekickEnable: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "启用浮动助手"
+        AppLanguage.ENGLISH -> "Enable the floating assistant"
+        AppLanguage.ARABIC -> "تفعيل المساعد العائم"
+        AppLanguage.PORTUGUESE -> "Ativar o assistente flutuante"
+        AppLanguage.SPANISH -> "Activar el asistente flotante"
+        AppLanguage.FRENCH -> "Activer l'assistant flottant"
+        AppLanguage.GERMAN -> "Schwebenden Assistenten aktivieren"
+        AppLanguage.RUSSIAN -> "Включить плавающего помощника"
+        AppLanguage.JAPANESE -> "フローティングアシスタントを有効化"
+        AppLanguage.KOREAN -> "플로팅 어시스턴트 사용"
+    }
+
+    val sidekickEnableDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在所有界面上显示一个可拖动的按钮，点击打开助手，拖动改变位置。"
+        AppLanguage.ENGLISH -> "Shows a draggable button above every screen. Tap it to open the assistant, drag it to move it."
+        AppLanguage.ARABIC -> "يعرض زرًا قابلًا للسحب فوق كل الشاشات. اضغطه لفتح المساعد واسحبه لتغيير موضعه."
+        AppLanguage.PORTUGUESE -> "Mostra um botão arrastável sobre todos os ecrãs. Toca para abrir o assistente e arrasta para o mover."
+        AppLanguage.SPANISH -> "Muestra un botón arrastrable sobre todas las pantallas. Tócalo para abrir el asistente y arrástralo para moverlo."
+        AppLanguage.FRENCH -> "Affiche un bouton déplaçable au-dessus de tous les écrans. Touchez-le pour ouvrir l'assistant, faites-le glisser pour le déplacer."
+        AppLanguage.GERMAN -> "Zeigt eine verschiebbare Schaltfläche über allen Bildschirmen. Tippen zum Öffnen, ziehen zum Verschieben."
+        AppLanguage.RUSSIAN -> "Показывает перетаскиваемую кнопку поверх любого экрана. Нажмите, чтобы открыть помощника, перетащите, чтобы переместить."
+        AppLanguage.JAPANESE -> "すべての画面の上にドラッグ可能なボタンを表示します。タップで助手を開き、ドラッグで位置を移動できます。"
+        AppLanguage.KOREAN -> "모든 화면 위에 드래그 가능한 버튼을 표시합니다. 눌러서 열고 끌어서 위치를 옮기세요."
+    }
+
+    val sidekickModelTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "助手模型"
+        AppLanguage.ENGLISH -> "Assistant model"
+        AppLanguage.ARABIC -> "نموذج المساعد"
+        AppLanguage.PORTUGUESE -> "Modelo do assistente"
+        AppLanguage.SPANISH -> "Modelo del asistente"
+        AppLanguage.FRENCH -> "Modèle de l'assistant"
+        AppLanguage.GERMAN -> "Modell des Assistenten"
+        AppLanguage.RUSSIAN -> "Модель помощника"
+        AppLanguage.JAPANESE -> "アシスタントのモデル"
+        AppLanguage.KOREAN -> "어시스턴트 모델"
+    }
+
+    val sidekickModelFollow: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "与主代理相同"
+        AppLanguage.ENGLISH -> "Same as the agent"
+        AppLanguage.ARABIC -> "مثل الوكيل"
+        AppLanguage.PORTUGUESE -> "Igual ao agente"
+        AppLanguage.SPANISH -> "Igual que el agente"
+        AppLanguage.FRENCH -> "Comme l'agent"
+        AppLanguage.GERMAN -> "Wie der Agent"
+        AppLanguage.RUSSIAN -> "Как у агента"
+        AppLanguage.JAPANESE -> "エージェントと同じ"
+        AppLanguage.KOREAN -> "에이전트와 동일"
+    }
+
+    val sidekickModelPickerTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "选择助手模型"
+        AppLanguage.ENGLISH -> "Choose the assistant model"
+        AppLanguage.ARABIC -> "اختر نموذج المساعد"
+        AppLanguage.PORTUGUESE -> "Escolher o modelo do assistente"
+        AppLanguage.SPANISH -> "Elegir el modelo del asistente"
+        AppLanguage.FRENCH -> "Choisir le modèle de l'assistant"
+        AppLanguage.GERMAN -> "Modell des Assistenten wählen"
+        AppLanguage.RUSSIAN -> "Выберите модель помощника"
+        AppLanguage.JAPANESE -> "アシスタントのモデルを選択"
+        AppLanguage.KOREAN -> "어시스턴트 모델 선택"
+    }
+
+    val sidekickContextTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "附加当前代理会话"
+        AppLanguage.ENGLISH -> "Include the current agent session"
+        AppLanguage.ARABIC -> "تضمين جلسة الوكيل الحالية"
+        AppLanguage.PORTUGUESE -> "Incluir a sessão atual do agente"
+        AppLanguage.SPANISH -> "Incluir la sesión actual del agente"
+        AppLanguage.FRENCH -> "Inclure la session actuelle de l'agent"
+        AppLanguage.GERMAN -> "Aktuelle Agentensitzung mitsenden"
+        AppLanguage.RUSSIAN -> "Приложить текущую сессию агента"
+        AppLanguage.JAPANESE -> "現在のエージェントセッションを含める"
+        AppLanguage.KOREAN -> "현재 에이전트 세션 포함"
+    }
+
+    val sidekickContextDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "发送当前代理会话的最后几条消息，让它能够解释这些内容。"
+        AppLanguage.ENGLISH -> "Sends the last few messages of the current agent session so it can explain them."
+        AppLanguage.ARABIC -> "يرسل آخر رسائل جلسة الوكيل الحالية ليتمكن من شرحها."
+        AppLanguage.PORTUGUESE -> "Envia as últimas mensagens da sessão atual do agente para que as possa explicar."
+        AppLanguage.SPANISH -> "Envía los últimos mensajes de la sesión actual del agente para que pueda explicarlos."
+        AppLanguage.FRENCH -> "Envoie les derniers messages de la session actuelle de l'agent afin qu'il puisse les expliquer."
+        AppLanguage.GERMAN -> "Sendet die letzten Nachrichten der aktuellen Agentensitzung, damit er sie erklären kann."
+        AppLanguage.RUSSIAN -> "Отправляет последние сообщения текущей сессии агента, чтобы он мог их объяснить."
+        AppLanguage.JAPANESE -> "現在のエージェントセッションの直近のメッセージを送り、説明できるようにします。"
+        AppLanguage.KOREAN -> "현재 에이전트 세션의 최근 메시지를 보내 설명할 수 있게 합니다."
+    }
+
+    val sidekickManageModels: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "添加或管理模型"
+        AppLanguage.ENGLISH -> "Add or manage models"
+        AppLanguage.ARABIC -> "إضافة النماذج أو إدارتها"
+        AppLanguage.PORTUGUESE -> "Adicionar ou gerir modelos"
+        AppLanguage.SPANISH -> "Añadir o gestionar modelos"
+        AppLanguage.FRENCH -> "Ajouter ou gérer les modèles"
+        AppLanguage.GERMAN -> "Modelle hinzufügen oder verwalten"
+        AppLanguage.RUSSIAN -> "Добавить или настроить модели"
+        AppLanguage.JAPANESE -> "モデルを追加・管理"
+        AppLanguage.KOREAN -> "모델 추가 또는 관리"
+    }
+
+    val sidekickModelDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "这里选择的模型只用于助手的回答，不会改变主代理使用的模型。"
+        AppLanguage.ENGLISH -> "Only answers in this panel use it. The main agent keeps its own model."
+        AppLanguage.ARABIC -> "يُستخدم هذا النموذج لإجابات هذا الجزء فقط، ويحتفظ الوكيل الرئيسي بنموذجه."
+        AppLanguage.PORTUGUESE -> "Só as respostas deste painel o usam. O agente principal mantém o seu próprio modelo."
+        AppLanguage.SPANISH -> "Solo las respuestas de este panel lo usan. El agente principal mantiene su propio modelo."
+        AppLanguage.FRENCH -> "Seules les réponses de ce panneau l'utilisent. L'agent principal garde son propre modèle."
+        AppLanguage.GERMAN -> "Nur Antworten in diesem Panel nutzen es. Der Hauptagent behält sein eigenes Modell."
+        AppLanguage.RUSSIAN -> "Его использует только этот помощник. У основного агента остаётся своя модель."
+        AppLanguage.JAPANESE -> "このパネルの回答だけがこのモデルを使います。メインエージェントは独自のモデルを使い続けます。"
+        AppLanguage.KOREAN -> "이 패널의 답변에만 사용되며, 메인 에이전트는 자체 모델을 그대로 사용합니다."
+    }
+
 }

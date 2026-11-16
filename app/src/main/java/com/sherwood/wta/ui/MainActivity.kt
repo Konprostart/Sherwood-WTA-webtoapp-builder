@@ -40,6 +40,7 @@ import com.sherwood.wta.ui.agent.components.ChoiceBottomSheet
 import com.sherwood.wta.ui.agent.components.PermissionDialog
 import com.sherwood.wta.ui.components.FirstLaunchLanguageScreen
 import com.sherwood.wta.ui.navigation.AppNavigation
+import com.sherwood.wta.ui.sidekick.SidekickHost
 import com.sherwood.wta.ui.shell.ShellActivity
 import com.sherwood.wta.ui.theme.CircularRevealOverlay
 import com.sherwood.wta.ui.theme.LocalThemeRevealState
@@ -186,7 +187,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             } else if (hasSelectedLanguage != null) {
-                                AppNavigation()
+                                // The floating assistant sits above the navigation graph,
+                                // not inside it: it must be reachable from every screen and
+                                // survive navigating between them. Host-only — generated
+                                // APKs never see this overlay.
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    AppNavigation()
+                                    SidekickHost()
+                                }
                             }
                         }
 
