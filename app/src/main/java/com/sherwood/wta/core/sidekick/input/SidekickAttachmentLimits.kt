@@ -29,7 +29,7 @@ object SidekickAttachmentLimits {
     const val MAX_IMAGE_INPUT_BYTES = 24L * 1024 * 1024
 
     /** Text file read cap. Never trust `OpenableColumns.SIZE`; this is measured while reading. */
-    const val MAX_TEXT_FILE_BYTES = 2 * 1024 * 1024
+    const val MAX_TEXT_FILE_BYTES = 2L * 1024 * 1024
 
     /** Per-file character cap after decoding. */
     const val MAX_TEXT_CHARS_PER_FILE = 12_000

@@ -8,7 +8,6 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.util.BoundedBitmaps
-import com.sherwood.wta.util.BoundedBitmaps.downscaledToFit
 import java.io.ByteArrayOutputStream
 import java.io.File
 
@@ -63,7 +62,11 @@ object SidekickImageDecoder {
         try {
             val rotated = orient(decoded, readRotation(file))
             owned += rotated
-            val fitted = rotated.downscaledToFit(SidekickAttachmentLimits.MAX_IMAGE_SIDE)
+            // `downscaledToFit` is a member extension of the BoundedBitmaps object, so it is
+            // called inside its scope rather than imported.
+            val fitted = BoundedBitmaps.run {
+                rotated.downscaledToFit(SidekickAttachmentLimits.MAX_IMAGE_SIDE)
+            }
             if (fitted !== rotated) owned += fitted
 
             for (scale in SCALE_STEPS) {

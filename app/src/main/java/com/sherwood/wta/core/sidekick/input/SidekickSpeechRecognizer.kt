@@ -148,8 +148,8 @@ class SidekickSpeechRecognizer(private val context: Context) {
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, locale.language)
                 }
             } else if (Build.VERSION.SDK_INT >= 34) {
-                // Auto: let the service decide when it can report the language it used.
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_DETECTION_ALLOWED, true)
+                // Auto: let the service decide, and report which language it used.
+                putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true)
             }
         }
 
