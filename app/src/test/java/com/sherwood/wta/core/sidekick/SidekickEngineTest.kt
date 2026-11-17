@@ -398,4 +398,74 @@ class SidekickEngineTest {
 
         assertThat(request.messages.first().content).contains("UNTRUSTED_FILE_DATA")
     }
+
+    @Test
+    fun `a text-only model never receives an image from history either`() {
+        // Switching from a vision model to a text model used to leak the older turn's
+        // image block into the request, which the provider rejects with a 400.
+        val engine = engine(models = listOf(model("m", capability = ModelCapability.TEXT)))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val history = listOf(
+            SidekickTurn(
+                role = SidekickTurn.Role.USER,
+                text = "look at this",
+                attachments = listOf(imageAttachment("old.jpg"))
+            ),
+            SidekickTurn(SidekickTurn.Role.ASSISTANT, "looks like a crash")
+        )
+
+        val request = engine.request(
+            binding = binding,
+            history = history,
+            question = "and now?",
+            contextDigest = null
+        )
+
+        assertThat(request.messages.flatMap { it.images }).isEmpty()
+        // The text stays, and the omission is announced.
+        assertThat(request.messages[1].content).contains(SidekickPrompt.OMITTED_IMAGE_MARKER)
+    }
+
+    @Test
+    fun `a pinned model that cannot chat is ignored`() = runBlocking {
+        val result = engine(
+            models = listOf(model("img", capability = ModelCapability.IMAGE_GENERATION), model("chat")),
+            defaultModelId = "chat"
+        ).resolve("img")
+
+        val binding = (result as SidekickEngine.BindingResult.Ok).binding
+        assertThat(binding.model.id).isEqualTo("chat")
+        assertThat(binding.pinned).isFalse()
+    }
+
+    @Test
+    fun `a configuration with only non-chat models is missing, not mis-bound`() = runBlocking {
+        val result = engine(
+            models = listOf(model("img", capability = ModelCapability.IMAGE_GENERATION))
+        ).resolve(null)
+
+        assertThat(result).isEqualTo(SidekickEngine.BindingResult.MissingModel)
+    }
+
+    @Test
+    fun `a very long question is clipped instead of sent whole`() {
+        val engine = engine(models = listOf(model("m")))
+        val binding = runBlocking {
+            (engine.resolve(null) as SidekickEngine.BindingResult.Ok).binding
+        }
+
+        val request = engine.request(
+            binding = binding,
+            history = emptyList(),
+            question = "x".repeat(SidekickPrompt.MAX_QUESTION_CHARS * 3),
+            contextDigest = null
+        )
+
+        val content = request.messages.last().content
+        assertThat(content.length).isAtMost(SidekickPrompt.MAX_QUESTION_CHARS + 64)
+        assertThat(content).contains("truncated")
+    }
 }

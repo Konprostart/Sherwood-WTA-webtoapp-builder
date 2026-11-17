@@ -35,9 +35,6 @@ object TelegramBuildNotifier {
         }
     }
 
-    fun isNotified(runId: Long): Boolean = synchronized(notified) { runId in notified }
-
-    /** Test hook: forget every announcement. */
     fun resetForTest() = synchronized(notified) { notified.clear() }
 }
 
@@ -66,18 +63,11 @@ object TelegramRunWatch {
             val state = stateOf(run)
             next[run.id] = state
             val before = previous[run.id] ?: return@forEach
-            if (!isTerminal(before) && run.isTerminal) finished += run
+            if (!GitPipelineRun.isTerminalStatus(before) && run.isTerminal) finished += run
         }
         return finished to next
     }
 
     private fun stateOf(run: GitPipelineRun): String =
         (run.conclusion ?: run.status).lowercase()
-
-    private fun isTerminal(state: String): Boolean = state in TERMINAL
-
-    private val TERMINAL = setOf(
-        "completed", "success", "failure", "cancelled", "skipped", "blocked",
-        "timed_out", "action_required", "neutral", "stale", "startup_failure"
-    )
 }

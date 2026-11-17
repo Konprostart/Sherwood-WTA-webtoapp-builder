@@ -18,8 +18,14 @@ import java.nio.charset.StandardCharsets
  */
 data class GitCredentialKey(val provider: GitProviderId, val host: String) {
 
-    /** Stable storage identifier; also the AES-GCM associated data suffix. */
-    val slot: String get() = "${provider.name.lowercase()}:$host"
+    /**
+     * Stable storage identifier; also the AES-GCM associated data suffix.
+     *
+     * Derived from [GitProviderId.storageId] rather than the enum name so renaming the
+     * constant can never orphan a stored token (the value is also the AAD, so a change
+     * would make every existing token undecryptable).
+     */
+    val slot: String get() = "${provider.storageId}:$host"
 
     companion object {
         /**

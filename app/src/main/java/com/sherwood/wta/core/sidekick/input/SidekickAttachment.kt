@@ -17,10 +17,6 @@ package com.sherwood.wta.core.sidekick.input
 sealed interface SidekickAttachment {
     /** Display name: a file basename, never a full path. */
     val name: String
-
-    enum class Kind { IMAGE, TEXT }
-
-    val kind: Kind
 }
 
 /**
@@ -36,8 +32,6 @@ data class SidekickImageAttachment(
     val width: Int = 0,
     val height: Int = 0
 ) : SidekickAttachment {
-    override val kind: SidekickAttachment.Kind get() = SidekickAttachment.Kind.IMAGE
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is SidekickImageAttachment) return false
@@ -67,9 +61,7 @@ data class SidekickTextAttachment(
     override val name: String,
     val text: String,
     val truncated: Boolean = false
-) : SidekickAttachment {
-    override val kind: SidekickAttachment.Kind get() = SidekickAttachment.Kind.TEXT
-}
+) : SidekickAttachment {}
 
 /** Why a pick could not become an attachment. Mapped to UI text by the view model. */
 enum class SidekickAttachmentRejection {

@@ -87,7 +87,10 @@ class RepoImporter(
                 IllegalStateException("The provider base URL has no host")
             )
 
-        val temp = File(context.cacheDir, "import_${System.currentTimeMillis()}.zip")
+        // A unique, `studio-` prefixed name: two imports in the same millisecond must
+        // not share one file, and the storage pruner only deletes this module's scratch
+        // files by that prefix.
+        val temp = File.createTempFile("studio-import-", ".zip", context.cacheDir)
         try {
             when (val downloaded = provider.downloadArchive(ref, resolved, temp)) {
                 is GitResult.Failure -> return@withContext Result.failure(

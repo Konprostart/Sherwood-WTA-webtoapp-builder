@@ -301,6 +301,9 @@ val syncShellRuntimeSources by tasks.registering(Sync::class) {
         "**/util/FaviconFetcher.kt",
         "**/util/UrlMetadataFetcher.kt",
         "**/util/MediaStorage.kt",
+        // Only MediaStorage and the host trimmer UI read frames; a generated app has
+        // neither, so the helper would be dead weight in the template.
+        "**/util/VideoFrames.kt",
         "**/util/ZipProjectImporter.kt",
         "**/util/HtmlProjectHelper.kt",
         "**/util/OfflineManager.kt",

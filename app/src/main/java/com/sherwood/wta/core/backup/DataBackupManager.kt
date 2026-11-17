@@ -494,18 +494,27 @@ class DataBackupManager(private val context: Context) {
     /**
      * Reads a JSON entry fully, bounded by the shared zip-bomb guard and a hard
      * per-entry cap — a corrupt archive must not OOM the importer mid-read.
+     *
+     * The cap is enforced *while* reading: checking it after copying meant the whole
+     * entry (up to the guard's 2 GB total) was already buffered before being rejected.
      */
     private fun readJsonEntry(
         zipIn: ZipInputStream,
         guard: com.sherwood.wta.util.SafeZip.EntryGuard
     ): ByteArray {
         val out = ByteArrayOutputStream()
-        guard.copyTo(zipIn, out)
-        if (out.size() > MAX_JSON_ENTRY_BYTES) {
-            throw com.sherwood.wta.util.SafeZip.ZipBombException(
-                com.sherwood.wta.util.SafeZip.ZipBombException.Kind.TOTAL_SIZE,
-                "JSON entry exceeds ${MAX_JSON_ENTRY_BYTES / 1024 / 1024} MB"
-            )
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            val read = zipIn.read(buffer)
+            if (read < 0) break
+            guard.onBytes(read)
+            if (out.size().toLong() + read > MAX_JSON_ENTRY_BYTES) {
+                throw com.sherwood.wta.util.SafeZip.ZipBombException(
+                    com.sherwood.wta.util.SafeZip.ZipBombException.Kind.TOTAL_SIZE,
+                    "JSON entry exceeds ${MAX_JSON_ENTRY_BYTES / 1024 / 1024} MB"
+                )
+            }
+            out.write(buffer, 0, read)
         }
         return out.toByteArray()
     }

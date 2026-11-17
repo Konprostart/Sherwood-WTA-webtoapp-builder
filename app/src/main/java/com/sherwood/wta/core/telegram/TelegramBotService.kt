@@ -42,6 +42,9 @@ class TelegramBotService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var pollingJob: Job? = null
 
+    /** The reply uploader, the build-event collector and the run watcher. */
+    private var supportJob: Job? = null
+
     private val settings by lazy { TelegramSettings.getInstance(applicationContext) }
     private val tokenStore by lazy { TelegramBotTokenStore(applicationContext) }
 
@@ -76,6 +79,7 @@ class TelegramBotService : Service() {
     override fun onDestroy() {
         running = false
         pollingJob?.cancel()
+        supportJob?.cancel()
         scope.cancel()
         super.onDestroy()
     }
@@ -85,19 +89,24 @@ class TelegramBotService : Service() {
     // ------------------------------------------------------------------ polling
 
     private fun startPolling() {
-        if (pollingJob?.isActive == true) return
-        pollingJob = scope.launch {
-            // Build-finished and command replies share one sender so the poll loop is
-            // never blocked by an upload.
-            launch { TelegramNotifications.outbox.collect { reply -> sendToPaired(reply) } }
-            launch {
-                BuildEvents.events.collect { event -> notifyBuildFinished(event) }
+        // The poll loop is its own job so a terminal failure can stop it and a later
+        // restart (a fixed token) can start a fresh one. The collectors outlive a poll
+        // restart, so they are tracked separately.
+        if (supportJob?.isActive != true) {
+            supportJob = scope.launch {
+                // Build-finished and command replies share one sender so the poll loop is
+                // never blocked by an upload.
+                launch { TelegramNotifications.outbox.collect { reply -> sendToPaired(reply) } }
+                launch {
+                    BuildEvents.events.collect { event -> notifyBuildFinished(event) }
+                }
+                // Runs started outside the app (a push, a PR, another machine) never reach
+                // BuildEvents, so the harness watches the recent-run page as well.
+                launch { watchRuns() }
             }
-            // Runs started outside the app (a push, a PR, another machine) never reach
-            // BuildEvents, so the harness watches the recent-run page as well.
-            launch { watchRuns() }
-            pollLoop()
         }
+        if (pollingJob?.isActive == true) return
+        pollingJob = scope.launch { pollLoop() }
     }
 
     private suspend fun pollLoop() {
@@ -109,6 +118,7 @@ class TelegramBotService : Service() {
             if (token == null) {
                 AppLogger.w(TAG, "Telegram bot token is unavailable; stopping the poller")
                 publishStatus(Strings.telegramTokenMissing)
+                stopSelf()
                 break
             }
             val api = TelegramApiClient(token)
@@ -122,9 +132,12 @@ class TelegramBotService : Service() {
             } else {
                 val failure = (identity.exceptionOrNull() as? TelegramException)?.failure
                 if (failure is TelegramFailure.InvalidToken) {
-                    // Retrying cannot fix a revoked token; stop and say why.
+                    // Retrying cannot fix a revoked token; stop and say why. Without
+                    // stopSelf the service would linger with a dead poller that
+                    // startPolling() could never restart.
                     settings.enabled = false
                     publishStatus(Strings.telegramTokenInvalid)
+                    stopSelf()
                     break
                 }
                 delay(networkBackoffMs)
@@ -150,6 +163,7 @@ class TelegramBotService : Service() {
                         is TelegramFailure.InvalidToken -> {
                             settings.enabled = false
                             publishStatus(Strings.telegramTokenInvalid)
+                            stopSelf()
                             stop = true
                         }
                         is TelegramFailure.Conflict -> {
@@ -160,7 +174,6 @@ class TelegramBotService : Service() {
                         is TelegramFailure.RateLimited -> {
                             delay(failure.retryAfterSeconds.coerceIn(1, 60) * 1000L)
                         }
-                        TelegramFailure.Cancelled -> stop = true
                         else -> {
                             delay(networkBackoffMs)
                             networkBackoffMs = (networkBackoffMs * 2).coerceAtMost(MAX_BACKOFF_MS)
@@ -268,6 +281,8 @@ class TelegramBotService : Service() {
     // ------------------------------------------------------------ notifications
 
     private suspend fun notifyBuildFinished(event: BuildFinishedEvent) {
+        // A service that stopped its poller (invalid token) must not keep pushing.
+        if (!settings.enabled) return
         if (!settings.notifyBuilds) return
         val chats = settings.pairedChats
         if (chats.isEmpty()) return

@@ -278,11 +278,25 @@ class ArtifactVault private constructor(private val context: Context) {
         )
     }
 
+    /**
+     * Deletes the file and then drops its record.
+     *
+     * Never throws: the UI calls this from a coroutine, and a failed index write would
+     * otherwise take the composable's scope down. A record whose file could not be
+     * removed is kept, so the vault does not lose track of a file that is still there.
+     */
     @Synchronized
     fun delete(artifact: VaultArtifact): Boolean {
-        val removed = fileFor(artifact).delete()
-        writeIndex(list().filterNot { it.id == artifact.id })
-        return removed
+        val file = fileFor(artifact)
+        if (file.exists() && !file.delete()) {
+            AppLogger.w(TAG, "Could not delete ${artifact.fileName}")
+            return false
+        }
+        return runCatching {
+            writeIndex(list().filterNot { it.id == artifact.id })
+        }.onFailure {
+            AppLogger.w(TAG, "Could not update the vault index after deleting ${artifact.fileName}")
+        }.isSuccess
     }
 
     @Synchronized

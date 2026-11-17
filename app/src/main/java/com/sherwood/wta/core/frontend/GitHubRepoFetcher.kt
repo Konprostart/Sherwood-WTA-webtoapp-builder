@@ -306,7 +306,7 @@ class GitHubRepoFetcher(
             val body = resp.body ?: return null
             val total = body.contentLength()
             val urlHint = request.url.toString()
-            val tempFile = File(context.cacheDir, "gh_repo_${System.currentTimeMillis()}.zip")
+            val tempFile = File.createTempFile("studio-gh_repo-", ".zip", context.cacheDir)
             try {
                 body.byteStream().use { input ->
                     FileOutputStream(tempFile).use { out ->

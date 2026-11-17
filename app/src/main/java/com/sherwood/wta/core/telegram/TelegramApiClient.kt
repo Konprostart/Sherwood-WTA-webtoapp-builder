@@ -39,12 +39,6 @@ data class TelegramChat(
     @SerializedName("username") val username: String? = null
 ) {
     val isPrivate: Boolean get() = type == "private"
-
-    /** A short, non-identifying label for logs and the pairing list. */
-    val displayName: String
-        get() = title?.takeIf { it.isNotBlank() }
-            ?: username?.takeIf { it.isNotBlank() }?.let { "@$it" }
-            ?: "chat $id"
 }
 
 data class TelegramMessage(
@@ -98,9 +92,6 @@ sealed class TelegramFailure {
     /** Transport failure: DNS, TLS, timeout, no network. */
     data class Network(val message: String) : TelegramFailure()
 
-    /** The caller's coroutine was cancelled; not an error to report. */
-    data object Cancelled : TelegramFailure()
-}
 
 class TelegramException(val failure: TelegramFailure) : Exception(
     when (failure) {
@@ -109,7 +100,6 @@ class TelegramException(val failure: TelegramFailure) : Exception(
         is TelegramFailure.RateLimited -> "Telegram rate limit"
         is TelegramFailure.Api -> "Telegram API error ${failure.code}"
         is TelegramFailure.Network -> failure.message
-        TelegramFailure.Cancelled -> "Cancelled"
     }
 )
 
@@ -338,7 +328,9 @@ class TelegramApiClient(
     private fun classify(code: Int, envelope: Envelope): TelegramFailure {
         val description = envelope.description.orEmpty().ifBlank { "Telegram rejected the request" }
         return when (code) {
-            401, 404 -> TelegramFailure.InvalidToken(description)
+            // Only 401 means the token itself is bad. A 404 is usually a proxy or a
+            // wrong endpoint and must not permanently disable the bot.
+            401 -> TelegramFailure.InvalidToken(description)
             409 -> TelegramFailure.Conflict(description)
             429 -> TelegramFailure.RateLimited(envelope.parameters?.retryAfter ?: 5)
             else -> TelegramFailure.Api(code, description)

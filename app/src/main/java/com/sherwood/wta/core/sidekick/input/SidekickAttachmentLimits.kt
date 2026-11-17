@@ -76,6 +76,15 @@ object SidekickAttachmentLimits {
     fun isImageMime(mime: String?): Boolean =
         mime?.lowercase()?.startsWith("image/") == true
 
+    /**
+     * True for image formats that can carry transparency. A JPEG has no alpha channel,
+     * so the decoder can skip the flattening pass for it.
+     */
+    fun mayHaveAlpha(mime: String?): Boolean {
+        val value = mime?.lowercase()?.substringBefore(';')?.trim().orEmpty()
+        return value == "image/png" || value == "image/webp" || value == "image/gif"
+    }
+
     fun isTextExtension(name: String?): Boolean {
         val ext = name?.substringAfterLast('.', "")?.lowercase().orEmpty()
         return ext.isNotEmpty() && ext in TEXT_EXTENSIONS
@@ -92,12 +101,26 @@ object SidekickAttachmentLimits {
         val base = raw
             ?.substringAfterLast('/')
             ?.substringAfterLast('\\')
-            ?.replace("\u0000", "")
+            // Control characters would let a provider-supplied name forge a new line in
+            // the prompt header, so they are removed rather than escaped.
+            ?.filter { it.code >= 0x20 && it.code != 0x7f }
             ?.trim()
             .orEmpty()
         if (base.isEmpty() || base == "." || base == "..") return fallback
-        return if (base.length <= MAX_NAME_CHARS) base else base.take(MAX_NAME_CHARS)
+        return if (base.length <= MAX_NAME_CHARS) base else safeTake(base, MAX_NAME_CHARS)
     }
+}
+
+/**
+ * `take` that never splits a surrogate pair: a lone high surrogate cannot be encoded as
+ * UTF-8, so clipping mid-emoji would turn into a provider-side encoding error.
+ */
+internal fun safeTake(text: String, max: Int): String {
+    if (max <= 0) return ""
+    if (text.length <= max) return text
+    var end = max
+    if (end > 0 && Character.isHighSurrogate(text[end - 1])) end--
+    return text.substring(0, end)
 }
 
 /**
@@ -163,7 +186,7 @@ object SidekickAttachmentBudget {
         val remaining = remainingTextChars(existing)
         if (remaining <= 0) return null
         if (candidate.text.length <= remaining) return candidate
-        val cut = candidate.text.take(remaining).trimEnd()
+        val cut = safeTake(candidate.text, remaining).trimEnd()
         if (cut.isEmpty()) return null
         return candidate.copy(text = cut, truncated = true)
     }

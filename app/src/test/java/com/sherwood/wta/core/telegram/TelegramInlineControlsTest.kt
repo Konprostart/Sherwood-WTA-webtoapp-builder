@@ -161,7 +161,6 @@ class TelegramInlineControlsTest {
     fun `notifier announces each run id once`() {
         assertThat(TelegramBuildNotifier.markNotified(10L)).isTrue()
         assertThat(TelegramBuildNotifier.markNotified(10L)).isFalse()
-        assertThat(TelegramBuildNotifier.isNotified(10L)).isTrue()
         assertThat(TelegramBuildNotifier.markNotified(11L)).isTrue()
     }
 }

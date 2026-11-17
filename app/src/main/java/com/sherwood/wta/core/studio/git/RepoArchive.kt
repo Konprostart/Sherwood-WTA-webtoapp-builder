@@ -104,8 +104,12 @@ object RepoArchive {
 
         if (subPath.isNullOrBlank()) return unwrapped
 
+        // A sibling whose name shares the root's prefix (e.g. `<name>.backup-<ts>`) would
+        // pass a plain startsWith check, so the containment test requires the separator.
+        val rootPath = unwrapped.canonicalPath
         val sub = File(unwrapped, subPath).canonicalFile
-        if (!sub.path.startsWith(unwrapped.canonicalPath)) {
+        val inside = sub.path == rootPath || sub.path.startsWith(rootPath + File.separator)
+        if (!inside) {
             targetDir.deleteRecursively()
             throw IllegalStateException("Invalid sub-path: $subPath")
         }

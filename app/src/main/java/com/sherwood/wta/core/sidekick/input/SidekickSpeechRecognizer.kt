@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -30,8 +28,6 @@ import java.util.Locale
  * All methods must be called from the main thread; `SpeechRecognizer` requires it.
  */
 class SidekickSpeechRecognizer(private val context: Context) {
-
-    private val main = Handler(Looper.getMainLooper())
 
     private var recognizer: SpeechRecognizer? = null
     private var listener: SidekickSpeechListener? = null
@@ -58,7 +54,7 @@ class SidekickSpeechRecognizer(private val context: Context) {
         }
         // A session started while another was running simply replaces it: the user pressed
         // the button again, which is not a failure worth reporting.
-        cancelInternal(notify = false)
+        cancelInternal()
         this.listener = listener
         terminalDelivered = false
 
@@ -89,7 +85,7 @@ class SidekickSpeechRecognizer(private val context: Context) {
     }
 
     /** Abandons the session; any pending result is ignored. */
-    fun cancel() = cancelInternal(notify = false)
+    fun cancel() = cancelInternal()
 
     /** Releases the recognizer for good. Safe to call more than once. */
     fun release() {
@@ -97,13 +93,9 @@ class SidekickSpeechRecognizer(private val context: Context) {
         releaseRecognizer()
     }
 
-    private fun cancelInternal(notify: Boolean) {
-        val pending = listener
+    private fun cancelInternal() {
         listener = null
         terminalDelivered = true
-        if (notify && pending != null) {
-            main.post { pending.onFailure(SidekickSpeechFailure.NO_MATCH) }
-        }
         releaseRecognizer()
     }
 

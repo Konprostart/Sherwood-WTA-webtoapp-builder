@@ -24,7 +24,10 @@ object GitChecks {
     }
 
     fun isFailing(conclusion: String?): Boolean = when (conclusion?.lowercase()) {
-        "failure", "cancelled", "timed_out", "action_required", "startup_failure" -> true
+        // `error` and `failed` are the words Gitea's commit statuses use for a red run;
+        // without them a completed-but-broken check counted as neither passing nor failing.
+        "failure", "failed", "error", "cancelled", "timed_out", "action_required",
+        "startup_failure" -> true
         else -> false
     }
 
@@ -51,7 +54,9 @@ object GitChecks {
         if (combined == "failure" || combined == "error") return ChecksState.FAILING
         if (checks.any { !isCompleted(it.status) }) return ChecksState.PENDING
         if (combined == "pending") return ChecksState.PENDING
-        if (checks.isNotEmpty() && checks.all { isCompleted(it.status) }) {
+        // Green requires every completed check to be explicitly passing. "All completed"
+        // is not enough: a completed check with an unknown conclusion is not a pass.
+        if (checks.isNotEmpty() && checks.all { isCompleted(it.status) && isPassing(it.conclusion) }) {
             return ChecksState.PASSING
         }
         if (combined == "success") return ChecksState.PASSING

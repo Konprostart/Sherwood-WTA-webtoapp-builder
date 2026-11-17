@@ -103,27 +103,42 @@ internal class OllamaProvider(@Suppress("UNUSED_PARAMETER") context: Context) : 
                 // still carries the stream.
                 continue
             }
-            val streamError = json.get("error")?.takeIf { !it.isJsonNull }?.asString
+            val streamError = json.stringOrNull("error")
             if (!streamError.isNullOrBlank()) {
                 // Ollama reports model/loading failures mid-stream, after a 200.
                 trySend(LlmEvent.Error(streamError))
                 return
             }
-            json.getAsJsonObject("message")?.let { message ->
-                message.get("content")?.asString
-                    ?.takeIf { it.isNotEmpty() }
-                    ?.let { trySend(LlmEvent.TextDelta(it)) }
-                message.getAsJsonArray("tool_calls")?.forEach { element ->
-                    val call = parseToolCall(element) ?: return@forEach
-                    hasTools = true
-                    trySend(LlmEvent.ToolCallBegin(call.first, call.second))
-                    if (call.third.isNotEmpty()) trySend(LlmEvent.ToolCallArgsDelta(call.first, call.third))
-                    trySend(LlmEvent.ToolCallEnd(call.first, call.second, call.third))
+            // A local server is third-party code: a non-conforming reply must become an
+            // LlmEvent.Error, not an exception thrown out of the OkHttp callback (which
+            // would take the process down).
+            val parsed = runCatching {
+                json.get("message")?.takeIf { it.isJsonObject }?.asJsonObject?.let { message ->
+                    message.stringOrNull("content")
+                        ?.takeIf { it.isNotEmpty() }
+                        ?.let { trySend(LlmEvent.TextDelta(it)) }
+                    message.get("tool_calls")
+                        ?.takeIf { it.isJsonArray }
+                        ?.asJsonArray
+                        ?.forEach { element ->
+                            val call = parseToolCall(element) ?: return@forEach
+                            hasTools = true
+                            trySend(LlmEvent.ToolCallBegin(call.first, call.second))
+                            if (call.third.isNotEmpty()) {
+                                trySend(LlmEvent.ToolCallArgsDelta(call.first, call.third))
+                            }
+                            trySend(LlmEvent.ToolCallEnd(call.first, call.second, call.third))
+                        }
+                }
+                val doneValue = json.get("done")
+                if (doneValue != null && doneValue.isJsonPrimitive && doneValue.asBoolean && !done) {
+                    done = true
+                    trySend(LlmEvent.Done(if (hasTools) FinishReason.TOOL_CALLS else FinishReason.STOP))
                 }
             }
-            if (json.get("done")?.asBoolean == true && !done) {
-                done = true
-                trySend(LlmEvent.Done(if (hasTools) FinishReason.TOOL_CALLS else FinishReason.STOP))
+            if (parsed.isFailure) {
+                trySend(LlmEvent.Error("Malformed stream line from the local model server"))
+                return
             }
         }
         if (!done) {
@@ -131,11 +146,18 @@ internal class OllamaProvider(@Suppress("UNUSED_PARAMETER") context: Context) : 
         }
     }
 
+    /** A string member that tolerates a non-primitive (or absent) value. */
+    private fun com.google.gson.JsonObject.stringOrNull(key: String): String? {
+        val value = get(key) ?: return null
+        if (value.isJsonNull || !value.isJsonPrimitive) return null
+        return runCatching { value.asString }.getOrNull()
+    }
+
     /** `(id, name, argumentsJson)` for one tool call, or null when it is malformed. */
     private fun parseToolCall(element: com.google.gson.JsonElement): Triple<String, String, String>? {
         val obj = runCatching { element.asJsonObject }.getOrNull() ?: return null
-        val function = obj.getAsJsonObject("function") ?: return null
-        val name = function.get("name")?.asString ?: return null
+        val function = runCatching { obj.getAsJsonObject("function") }.getOrNull() ?: return null
+        val name = function.stringOrNull("name") ?: return null
         val arguments = function.get("arguments")
         val argumentsJson = when {
             arguments == null || arguments.isJsonNull -> "{}"

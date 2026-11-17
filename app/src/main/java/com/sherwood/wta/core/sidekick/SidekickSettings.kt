@@ -115,11 +115,6 @@ class SidekickSettings private constructor(context: Context) {
             prefs.edit().putBoolean(KEY_PREFER_ON_DEVICE, value).apply()
         }
 
-    /** A stored model id that no longer resolves must not silently pin a dead model. */
-    fun resetModel() {
-        prefs.edit().remove(KEY_MODEL).apply()
-    }
-
     companion object {
         private const val PREFS = "sherwood_sidekick"
         private const val KEY_ENABLED = "enabled"

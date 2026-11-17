@@ -57,8 +57,10 @@ import com.sherwood.wta.ui.design.WtaSectionDivider
 import com.sherwood.wta.ui.design.WtaSettingCard
 import com.sherwood.wta.ui.design.WtaSettingRow
 import com.sherwood.wta.ui.design.WtaSpacing
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** One working copy the Studio imported, with the branch a build would run on. */
 private data class ImportedBranch(
@@ -129,8 +131,10 @@ internal fun StudioBuildsTab(context: Context, snackbarHostState: SnackbarHostSt
      * repository/branch pair. The importer keeps every copy it ever wrote, so the
      * same branch can appear several times.
      */
-    fun loadImported() {
-        imported = workspace.allImportedProjects()
+    suspend fun loadImported() {
+        // The walk reads two directory trees plus one JSON document per copy; on the
+        // main thread it costs a frame per imported repository.
+        imported = withContext(Dispatchers.IO) { workspace.allImportedProjects() }
             .mapNotNull { (_, metadata) ->
                 if (!metadata.isValid()) return@mapNotNull null
                 ImportedBranch(

@@ -3,7 +3,6 @@ package com.sherwood.wta.core.floatingwindow
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Build

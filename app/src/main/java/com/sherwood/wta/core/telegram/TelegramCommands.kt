@@ -24,13 +24,6 @@ data class TelegramCommand(val name: String, val args: List<String>) {
         /** A single argument longer than this is truncated, not rejected. */
         const val MAX_ARG_LENGTH = 200
 
-        private val SUPPORTED = setOf(
-            "start", "help", "status", "repos", "runs", "build",
-            "vault", "apk", "pair", "version"
-        )
-
-        fun supports(name: String): Boolean = name.lowercase() in SUPPORTED
-
         /**
          * Parses `/name arg1 arg2` (optionally `/name@BotName`).
          *

@@ -100,15 +100,17 @@ class OllamaLocalClient(
                 OllamaProbeFailure.InvalidUrl(rawUrl.trim())
             )
 
-        val version = runCatching { getJson("${endpoint.baseUrl}/api/version") }
-            .getOrElse { return@withContext Result.failure(it) }
+        // The model list is what makes the server usable; it is the only mandatory call.
         val tags = runCatching { getJson("${endpoint.baseUrl}/api/tags") }
             .getOrElse { return@withContext Result.failure(it) }
+        // The version is cosmetic (it is only displayed), and some OpenAI-compatible
+        // servers do not implement /api/version at all.
+        val versionJson = runCatching { getJson("${endpoint.baseUrl}/api/version") }.getOrNull()
 
         val models = OllamaResponseParser.parseModels(tags)
         Result.success(
             OllamaServer(
-                version = version.get("version")?.asString?.takeIf { it.isNotBlank() },
+                version = versionJson?.let { OllamaResponseParser.parseVersion(it) },
                 models = models
             )
         )
@@ -133,8 +135,20 @@ class OllamaLocalClient(
                     body.take(300).ifBlank { res.message }
                 )
             }
-            return runCatching { JsonParser.parseString(body).asJsonObject }
+            val json = runCatching { JsonParser.parseString(body).asJsonObject }
                 .getOrElse { throw OllamaProbeFailure.Unreadable("Response was not JSON") }
+            // Ollama reports some failures inside a 200 body; treating that as "no
+            // models installed" hides the real reason from the user.
+            json.get("error")?.let { error ->
+                if (!error.isJsonNull) {
+                    // Ollama sends a string, but a non-conforming server may send an
+                    // object; reading that as a string would throw out of the probe.
+                    val detail = runCatching { error.asString }.getOrNull()
+                        ?: error.toString()
+                    throw OllamaProbeFailure.Rejected(res.code, detail.take(300))
+                }
+            }
+            return json
         }
     }
 
@@ -220,5 +234,5 @@ object OllamaResponseParser {
     }
 
     fun parseVersion(json: JsonObject): String? =
-        json.get("version")?.asString?.takeIf { it.isNotBlank() }
+        runCatching { json.get("version")?.asString }.getOrNull()?.takeIf { it.isNotBlank() }
 }

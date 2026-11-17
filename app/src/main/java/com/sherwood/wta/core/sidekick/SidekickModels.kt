@@ -19,15 +19,20 @@ import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
 data class SidekickTurn(
     val role: Role,
     val text: String,
-    /** Set when the turn carries a provider/runtime failure instead of an answer. */
-    val isError: Boolean = false,
-    val attachments: List<SidekickAttachment> = emptyList()
+    val attachments: List<SidekickAttachment> = emptyList(),
+    /**
+     * True when this turn used to carry an image whose bytes were released to keep a long
+     * conversation from holding every screenshot in memory. The prompt still tells the
+     * model that an image was left out; the panel simply stops showing the thumbnail.
+     */
+    val imagesOmitted: Boolean = false
 ) {
     enum class Role { USER, ASSISTANT }
 
     val images: List<SidekickImageAttachment>
         get() = attachments.filterIsInstance<SidekickImageAttachment>()
 
+    /** Whether this turn carries bytes an image block can be built from right now. */
     val hasImages: Boolean get() = attachments.any { it is SidekickImageAttachment }
 }
 

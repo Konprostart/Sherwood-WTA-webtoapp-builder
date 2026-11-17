@@ -225,7 +225,7 @@ data class GitPipelineRun(
      * run that had already succeeded.
      */
     val isTerminal: Boolean
-        get() = conclusion != null || status.lowercase() in TERMINAL_STATUSES
+        get() = conclusion != null || isTerminalStatus(status)
 
     /** The host's own verdict, normalised to `success` or something else. */
     val isSuccessful: Boolean
@@ -247,6 +247,16 @@ data class GitPipelineRun(
             "timed_out",
             "timedout"
         )
+
+        /**
+         * One terminal-state definition for the whole app.
+         *
+         * The notification watcher keeps the previous state as a string, so it needs the
+         * same answer without a [GitPipelineRun] instance. Two separate lists previously
+         * meant a Gitea run whose status was `error` was re-announced on every poll.
+         */
+        fun isTerminalStatus(status: String): Boolean =
+            status.lowercase() in TERMINAL_STATUSES
     }
 }
 

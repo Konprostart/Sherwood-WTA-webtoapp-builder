@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -64,8 +63,10 @@ import com.sherwood.wta.ui.design.WtaSpacing
 import com.sherwood.wta.ui.theme.LocalShowDescriptions
 import com.sherwood.wta.ui.theme.ifDescriptionsShown
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @Composable
@@ -155,7 +156,10 @@ internal fun StudioReposTab(
         studioSettings.setLastRepository(studio.id, repo.ownerRepo)
         selectedBranch = repo.defaultBranch
         branches = runCatching { workspace.branches(repo.owner, repo.name) }.getOrDefault(emptyList())
-        projects = workspace.importedProjects(repo.owner, repo.name)
+        // Same synchronous tree walk as the Builds tab; keep it off the main thread.
+        projects = withContext(Dispatchers.IO) {
+            workspace.importedProjects(repo.owner, repo.name)
+        }
         status = null
         history = emptyList()
         projects.firstOrNull()?.let { project ->
@@ -202,7 +206,8 @@ internal fun StudioReposTab(
                 delay(interval * 1000L)
                 when (val result = oauth.pollForToken(studioSettings.oauthClientId, current.deviceCode)) {
                     is DeviceFlowPollResult.Success -> {
-                        val saved = tokenStore.saveToken(result.token)
+                        // KeyStore encryption is blocking; keep it off the main thread.
+                        val saved = withContext(Dispatchers.IO) { tokenStore.saveToken(result.token) }
                         if (saved.isSuccess) {
                             challenge = null
                             loading = true
@@ -265,6 +270,8 @@ internal fun StudioReposTab(
                                             Strings.studioProviderMissingUrl
                                         GitProviderUnavailableReason.NON_HTTPS_BASE_URL ->
                                             Strings.studioProviderInsecureUrl
+                                        GitProviderUnavailableReason.HOST_MISMATCH ->
+                                            Strings.studioProviderHostMismatch
                                         else -> Strings.studioProviderNotImplemented
                                     },
                                     style = MaterialTheme.typography.bodySmall,

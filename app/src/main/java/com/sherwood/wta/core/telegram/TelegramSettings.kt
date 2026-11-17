@@ -100,18 +100,26 @@ class TelegramSettings private constructor(context: Context) {
         prefs.edit()
             .putString(KEY_PAIR_CODE, code)
             .putLong(KEY_PAIR_EXPIRES, expiresAt)
+            .putInt(KEY_PAIR_ATTEMPTS, 0)
             .apply()
         return PairingCode(code, expiresAt)
     }
 
     fun clearPairingCode() {
-        prefs.edit().remove(KEY_PAIR_CODE).remove(KEY_PAIR_EXPIRES).apply()
+        prefs.edit()
+            .remove(KEY_PAIR_CODE)
+            .remove(KEY_PAIR_EXPIRES)
+            .remove(KEY_PAIR_ATTEMPTS)
+            .apply()
     }
 
     /**
-     * Redeems a code typed into the bot chat. The code is single-use: it is consumed
-     * whether or not the redemption succeeds, so a guessed code cannot be retried in a
-     * loop inside its window.
+     * Redeems a code typed into the bot chat.
+     *
+     * The code is single-use, and a wrong guess is budgeted: after [PAIRING_MAX_ATTEMPTS]
+     * mismatches the window is closed. Consuming the code on the *first* wrong guess would
+     * let any stranger who finds the bot cancel the user's pairing, so the attempt cap is
+     * the compromise between brute-force resistance and that denial of service.
      */
     fun redeemPairingCode(
         typed: String,
@@ -130,6 +138,12 @@ class TelegramSettings private constructor(context: Context) {
                 stored.value.toByteArray(StandardCharsets.UTF_8)
             )
         ) {
+            val attempts = prefs.getInt(KEY_PAIR_ATTEMPTS, 0) + 1
+            if (attempts >= PAIRING_MAX_ATTEMPTS) {
+                clearPairingCode()
+                return PairingOutcome.Expired
+            }
+            prefs.edit().putInt(KEY_PAIR_ATTEMPTS, attempts).apply()
             return PairingOutcome.Mismatch
         }
         clearPairingCode()
@@ -164,9 +178,13 @@ class TelegramSettings private constructor(context: Context) {
         internal const val KEY_BOT_USERNAME = "bot_username"
         internal const val KEY_PAIR_CODE = "pairing_code"
         internal const val KEY_PAIR_EXPIRES = "pairing_expires_at"
+        internal const val KEY_PAIR_ATTEMPTS = "pairing_attempts"
 
         /** How long a pairing code stays valid after the user taps "Pair". */
         const val PAIRING_WINDOW_MS = 10 * 60 * 1000L
+
+        /** Wrong guesses tolerated before the pairing window is closed. */
+        const val PAIRING_MAX_ATTEMPTS = 5
 
         @Volatile
         private var INSTANCE: TelegramSettings? = null
@@ -225,16 +243,25 @@ class TelegramBotTokenStore(private val context: Context) {
             AppLogger.e(TAG, "Telegram token could not be encrypted", e)
             return Result.failure(e)
         }
-        if (!prefs.edit().putString(KEY_TOKEN, encrypted).commit()) {
+        val botId = TelegramTokenFormat.botId(token)
+        val previousBotId = prefs.getString(KEY_BOT_ID, null)
+        if (!prefs.edit().putString(KEY_TOKEN, encrypted).putString(KEY_BOT_ID, botId).commit()) {
             val failure = IllegalStateException("SharedPreferences commit returned false")
             AppLogger.e(TAG, "Telegram token could not be saved", failure)
             return Result.failure(failure)
+        }
+        // Update ids are per bot: keeping the old offset would make every update of a
+        // different bot look already-handled and the fresh bot would seem dead.
+        if (previousBotId != botId) {
+            TelegramSettings.getInstance(context).lastUpdateId = 0L
         }
         return Result.success(Unit)
     }
 
     fun clearToken() {
-        prefs.edit().remove(KEY_TOKEN).commit()
+        prefs.edit().remove(KEY_TOKEN).remove(KEY_BOT_ID).commit()
+        // A later token starts a new update stream.
+        TelegramSettings.getInstance(context).lastUpdateId = 0L
     }
 
     private fun associatedData(): ByteArray =
@@ -244,6 +271,7 @@ class TelegramBotTokenStore(private val context: Context) {
         private const val TAG = "TelegramBotTokenStore"
         internal const val PREFS = "sherwood_telegram_credentials"
         internal const val KEY_TOKEN = "bot_token"
+        internal const val KEY_BOT_ID = "bot_id"
         private const val ASSOCIATED_DATA = "sherwood-wta/telegram-bot/v1"
     }
 }

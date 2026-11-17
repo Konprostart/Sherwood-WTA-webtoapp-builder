@@ -6,7 +6,6 @@ import com.sherwood.wta.core.studio.git.GitBaseTree
 import com.sherwood.wta.core.studio.git.GitCommitWriter
 import com.sherwood.wta.core.studio.git.GitFailureKind
 import com.sherwood.wta.core.studio.git.GitFileChange
-import com.sherwood.wta.core.studio.git.GitHubCommitWriter
 import com.sherwood.wta.core.studio.git.GitCommitWriterResolver
 import com.sherwood.wta.core.studio.git.GitRepoRef
 import com.sherwood.wta.core.studio.git.GitWriterResolution
@@ -137,6 +136,17 @@ class RepoBridgeCommitUseCase(
     private val writer: GitCommitWriter?
         get() = (resolution as? GitWriterResolution.Ok)?.writer
 
+    /**
+     * Why there is no writer. Missing provenance is a different problem from a host that
+     * cannot write, and the user needs the matching message.
+     */
+    private val noWriterKind: RepoBridgeCommitFailureKind =
+        if (resolution is GitWriterResolution.MissingProvenance) {
+            RepoBridgeCommitFailureKind.NO_METADATA
+        } else {
+            RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
+        }
+
     private var cachedPlan: Plan? = null
 
     /** Serializes prepare and commit: two overlapping calls would race on cachedPlan. */
@@ -145,9 +155,7 @@ class RepoBridgeCommitUseCase(
     /** Reads the remote base tree and reports what a commit would upload. */
     suspend fun prepare(): RepoBridgePrepareResult = withContext(Dispatchers.IO) {
         if (writer == null) {
-            return@withContext RepoBridgePrepareResult.Failure(
-                RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
-            )
+            return@withContext RepoBridgePrepareResult.Failure(noWriterKind)
         }
         try {
             commitMutex.withLock { prepareInternal() }
@@ -218,9 +226,7 @@ class RepoBridgeCommitUseCase(
         decision: ReviewDecision? = null
     ): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
         if (writer == null) {
-            return@withContext RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
-            )
+            return@withContext RepoBridgeCommitResult.Failure(noWriterKind)
         }
         try {
             commitMutex.withLock { commitInternal(message, confirmedDeletions, decision) }
@@ -252,9 +258,7 @@ class RepoBridgeCommitUseCase(
         decision: ReviewDecision? = null
     ): RepoBridgeCommitResult = withContext(Dispatchers.IO) {
         if (writer == null) {
-            return@withContext RepoBridgeCommitResult.Failure(
-                RepoBridgeCommitFailureKind.PROVIDER_READ_ONLY
-            )
+            return@withContext RepoBridgeCommitResult.Failure(noWriterKind)
         }
         try {
             commitMutex.withLock { commitNewBranchInternal(message, branch, decision) }

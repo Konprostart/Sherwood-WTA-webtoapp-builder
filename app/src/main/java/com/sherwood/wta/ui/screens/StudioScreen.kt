@@ -329,14 +329,17 @@ private fun StudioSettingsScreen(
     }
 
     fun testTelegram() {
-        val token = telegramTokens.currentToken()
-        if (token == null) {
-            telegramError = true
-            telegramMessage = Strings.telegramTokenMissing
-            return
-        }
         telegramBusy = true
         scope.launch {
+            // Decrypting the token touches the Android Keystore; that is a blocking call
+            // and does not belong on the composition thread.
+            val token = withContext(Dispatchers.IO) { telegramTokens.currentToken() }
+            if (token == null) {
+                telegramBusy = false
+                telegramError = true
+                telegramMessage = Strings.telegramTokenMissing
+                return@launch
+            }
             val result = withContext(Dispatchers.IO) {
                 com.sherwood.wta.core.telegram.TelegramApiClient(token).getMe()
             }
@@ -366,13 +369,17 @@ private fun StudioSettingsScreen(
             else Strings.studioProviderInsecureUrl
             return
         }
-        credentials.saveToken(key, tokenInput).onSuccess {
-            tokenInput = ""
-            tokenError = false
-            tokenMessage = Strings.studioProviderTokenSaved
-        }.onFailure {
-            tokenError = true
-            tokenMessage = it.message ?: Strings.studioTestFailed
+        // KeyStore encryption plus a synchronous SharedPreferences commit: IO, not Main.
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { credentials.saveToken(key, tokenInput) }
+            result.onSuccess {
+                tokenInput = ""
+                tokenError = false
+                tokenMessage = Strings.studioProviderTokenSaved
+            }.onFailure {
+                tokenError = true
+                tokenMessage = it.message ?: Strings.studioTestFailed
+            }
         }
     }
 
@@ -605,6 +612,8 @@ private fun StudioSettingsScreen(
                                                             Strings.studioProviderMissingUrl
                                                         GitProviderUnavailableReason.NON_HTTPS_BASE_URL ->
                                                             Strings.studioProviderInsecureUrl
+                                                        GitProviderUnavailableReason.HOST_MISMATCH ->
+                                                            Strings.studioProviderHostMismatch
                                                         GitProviderUnavailableReason
                                                             .NOT_IMPLEMENTED_IN_THIS_BUILD ->
                                                             Strings.studioProviderNotImplemented

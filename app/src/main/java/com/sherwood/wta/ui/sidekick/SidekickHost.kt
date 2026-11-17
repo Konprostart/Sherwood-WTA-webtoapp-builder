@@ -41,6 +41,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
@@ -632,7 +633,10 @@ private fun SidekickComposer(
             Spacer(Modifier.height(WtaSpacing.Tiny))
         }
         if (state.speechListening) {
-            ListeningRow(onCancel = { vm.cancelVoiceInput() })
+            ListeningRow(
+                onDone = { vm.stopVoiceInput() },
+                onCancel = { vm.cancelVoiceInput() }
+            )
             Spacer(Modifier.height(WtaSpacing.Tiny))
         }
         Row(verticalAlignment = Alignment.Bottom) {
@@ -856,7 +860,7 @@ private fun ImageChip(attachment: SidekickImageAttachment, onRemove: (() -> Unit
 }
 
 @Composable
-private fun ListeningRow(onCancel: () -> Unit) {
+private fun ListeningRow(onDone: () -> Unit, onCancel: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -869,10 +873,21 @@ private fun ListeningRow(onCancel: () -> Unit) {
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f)
         )
+        // Finishing the dictation keeps the transcript; only the X discards it. Without
+        // this, the only way to end a long recording was to wait for the recognizer's
+        // silence timeout.
+        IconButton(onClick = onDone, modifier = Modifier.size(28.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = Strings.done,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
         IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
             Icon(
                 imageVector = Icons.Outlined.Close,
-                contentDescription = Strings.sidekickStop,
+                contentDescription = Strings.cancel,
                 modifier = Modifier.size(14.dp)
             )
         }

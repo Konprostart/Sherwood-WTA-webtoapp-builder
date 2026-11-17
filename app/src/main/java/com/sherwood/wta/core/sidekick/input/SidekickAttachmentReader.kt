@@ -8,6 +8,7 @@ import com.sherwood.wta.core.logging.AppLogger
 import java.io.File
 import java.io.InputStream
 import java.nio.charset.CodingErrorAction
+import kotlinx.coroutines.CancellationException
 
 /**
  * Reads a picked `content://` document into a [SidekickAttachment].
@@ -33,13 +34,11 @@ class SidekickAttachmentReader(private val context: Context) {
 
         var displayName: String? = null
         runCatching {
-            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)
+            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                 ?.use { cursor ->
                     if (cursor.moveToFirst()) {
                         val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                         if (nameIndex >= 0) displayName = cursor.getString(nameIndex)
-                        // Size is read only to short-circuit obviously huge images early;
-                        // the byte counter below is what actually enforces the cap.
                     }
                 }
         }
@@ -50,7 +49,8 @@ class SidekickAttachmentReader(private val context: Context) {
         )
 
         return when {
-            SidekickAttachmentLimits.isImageMime(mime) -> readImage(uri, name)
+            SidekickAttachmentLimits.isImageMime(mime) ->
+                readImage(uri, name, mayHaveAlpha = SidekickAttachmentLimits.mayHaveAlpha(mime))
             SidekickAttachmentLimits.isTextMime(mime) ||
                 SidekickAttachmentLimits.isTextExtension(name) -> readText(uri, name)
             // A provider that cannot name the type is common for downloads; if the name has
@@ -87,7 +87,7 @@ class SidekickAttachmentReader(private val context: Context) {
                 SidekickTextAttachment(
                     name = name,
                     text = if (clipped) {
-                        decoded.take(SidekickAttachmentLimits.MAX_TEXT_CHARS_PER_FILE).trimEnd()
+                        safeTake(decoded, SidekickAttachmentLimits.MAX_TEXT_CHARS_PER_FILE).trimEnd()
                     } else {
                         decoded
                     },
@@ -95,6 +95,7 @@ class SidekickAttachmentReader(private val context: Context) {
                 )
             )
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.w(TAG, "Text read failed: ${t.javaClass.simpleName}")
             return SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.UNREADABLE)
         } finally {
@@ -129,7 +130,7 @@ class SidekickAttachmentReader(private val context: Context) {
 
     // ------------------------------------------------------------------ image
 
-    private fun readImage(uri: Uri, name: String): SidekickAttachmentResult {
+    private fun readImage(uri: Uri, name: String, mayHaveAlpha: Boolean): SidekickAttachmentResult {
         val temp = File(tempDir, "image-${System.nanoTime()}.bin")
         try {
             val copied = copyBounded(uri, temp, SidekickAttachmentLimits.MAX_IMAGE_INPUT_BYTES)
@@ -140,8 +141,9 @@ class SidekickAttachmentReader(private val context: Context) {
             if (copied > SidekickAttachmentLimits.MAX_IMAGE_INPUT_BYTES) {
                 return SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.TOO_LARGE)
             }
-            return SidekickImageDecoder.fromFile(temp, name)
+            return SidekickImageDecoder.fromFile(temp, name, flattenAlpha = mayHaveAlpha)
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.w(TAG, "Image read failed: ${t.javaClass.simpleName}")
             return SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.UNREADABLE)
         } finally {
@@ -163,11 +165,20 @@ class SidekickAttachmentReader(private val context: Context) {
         return try {
             stream = resolver.openInputStream(uri) ?: return null
             var total = 0L
+            var zeroReads = 0
             target.outputStream().use { out ->
                 val buffer = ByteArray(64 * 1024)
                 while (true) {
                     val read = stream.read(buffer)
                     if (read < 0) break
+                    // A provider stream that returns 0 forever would spin here holding a
+                    // temp file; a handful of consecutive zero reads means it is stuck.
+                    if (read == 0) {
+                        zeroReads++
+                        if (zeroReads >= MAX_ZERO_READS) return null
+                        continue
+                    }
+                    zeroReads = 0
                     total += read
                     out.write(buffer, 0, read)
                     // One buffer past the cap is enough to prove it is too large.
@@ -176,6 +187,7 @@ class SidekickAttachmentReader(private val context: Context) {
             }
             total
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             AppLogger.w(TAG, "Copy failed: ${t.javaClass.simpleName}")
             null
         } finally {
@@ -203,5 +215,8 @@ class SidekickAttachmentReader(private val context: Context) {
         private const val TAG = "SidekickAttachmentReader"
         private const val TEMP_DIR_NAME = "sidekick"
         private const val TEMP_MAX_AGE_MS = 60L * 60 * 1000
+
+        /** Consecutive zero-byte reads tolerated before the stream is treated as stuck. */
+        private const val MAX_ZERO_READS = 8
     }
 }

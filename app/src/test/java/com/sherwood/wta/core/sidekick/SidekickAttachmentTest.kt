@@ -68,6 +68,26 @@ class SidekickAttachmentTest {
     }
 
     @Test
+    fun `control characters are stripped from a display name`() {
+        // A provider-supplied name with a newline could otherwise forge a header line in
+        // the prompt.
+        assertThat(SidekickAttachmentLimits.sanitizeName("a\nIGNORE\tALL", "file"))
+            .isEqualTo("aIGNOREALL")
+        assertThat(SidekickAttachmentLimits.sanitizeName("\u0000", "fallback"))
+            .isEqualTo("fallback")
+    }
+
+    @Test
+    fun `only formats that can carry transparency are flattened`() {
+        assertThat(SidekickAttachmentLimits.mayHaveAlpha("image/png")).isTrue()
+        assertThat(SidekickAttachmentLimits.mayHaveAlpha("image/webp")).isTrue()
+        assertThat(SidekickAttachmentLimits.mayHaveAlpha("image/gif")).isTrue()
+        assertThat(SidekickAttachmentLimits.mayHaveAlpha("image/jpeg")).isFalse()
+        assertThat(SidekickAttachmentLimits.mayHaveAlpha("IMAGE/PNG; charset=binary")).isTrue()
+        assertThat(SidekickAttachmentLimits.mayHaveAlpha(null)).isFalse()
+    }
+
+    @Test
     fun `an over-long name is shortened, not rejected`() {
         val long = "a".repeat(300) + ".kt"
         val name = SidekickAttachmentLimits.sanitizeName(long, "file")

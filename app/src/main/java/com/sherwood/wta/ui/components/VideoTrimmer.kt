@@ -2,6 +2,7 @@ package com.sherwood.wta.ui.components
 
 import android.graphics.Bitmap
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.util.VideoFrames
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -91,7 +92,11 @@ fun VideoTrimmer(
                 val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 val duration = durationStr?.toLongOrNull() ?: 0L
 
-                val frame = retriever.getFrameAtTime(startMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                val frame = VideoFrames.frameAt(
+                    retriever,
+                    startMs * 1000,
+                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                )
 
                 totalDuration = duration
                 thumbnail = frame
@@ -120,7 +125,8 @@ fun VideoTrimmer(
                 kotlinx.coroutines.delay(150)
                 withContext(Dispatchers.IO) {
                     try {
-                        val frame = retriever.getFrameAtTime(
+                        val frame = VideoFrames.frameAt(
+                            retriever,
                             currentPreviewMs * 1000,
                             MediaMetadataRetriever.OPTION_CLOSEST_SYNC
                         )

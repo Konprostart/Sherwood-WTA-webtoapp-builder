@@ -2,9 +2,6 @@ package com.sherwood.wta.core.apkbuilder
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.sherwood.wta.core.shell.BgmShellItem
-import com.sherwood.wta.core.shell.LrcShellTheme
 import java.io.*
 import java.util.zip.*
 

@@ -1,9 +1,5 @@
 package com.sherwood.wta.core.i18n
 
-import android.content.Context
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
-
 object StringsE {
     val communityExtStoreTitle: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "插件市场"
@@ -20001,6 +19997,19 @@ object StringsE {
         AppLanguage.KOREAN -> "서버 URL은 HTTPS여야 합니다."
     }
 
+    val studioProviderHostMismatch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "此项目来自另一台服务器。请恢复原来的服务器地址后再打开。"
+        AppLanguage.ENGLISH -> "This project came from a different server. Restore that server URL before opening it."
+        AppLanguage.ARABIC -> "هذا المشروع من خادم آخر. استعد عنوان ذلك الخادم قبل فتحه."
+        AppLanguage.PORTUGUESE -> "Este projeto veio de outro servidor. Restaure a URL desse servidor antes de abri-lo."
+        AppLanguage.SPANISH -> "Este proyecto vino de otro servidor. Restaura la URL de ese servidor antes de abrirlo."
+        AppLanguage.FRENCH -> "Ce projet vient d'un autre serveur. Restaurez l'URL de ce serveur avant de l'ouvrir."
+        AppLanguage.GERMAN -> "Dieses Projekt stammt von einem anderen Server. Stelle die damalige Server-URL wieder her, bevor du es öffnest."
+        AppLanguage.RUSSIAN -> "Проект получен с другого сервера. Восстановите адрес того сервера, прежде чем открывать его."
+        AppLanguage.JAPANESE -> "このプロジェクトは別のサーバーから取得されました。開く前にそのサーバーの URL を復元してください。"
+        AppLanguage.KOREAN -> "이 프로젝트는 다른 서버에서 가져왔습니다. 열기 전에 해당 서버 URL을 복원하세요."
+    }
+
     val studioGiteaConnectHint: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "使用个人访问令牌连接。Gitea 和 Forgejo 没有设备码登录。"
         AppLanguage.ENGLISH -> "Connect with a personal access token. Gitea and Forgejo have no device-flow login."
@@ -20327,6 +20336,19 @@ object StringsE {
         AppLanguage.RUSSIAN -> "Слишком много команд. Повторите через минуту."
         AppLanguage.JAPANESE -> "コマンドが多すぎます。1 分後に再試行してください。"
         AppLanguage.KOREAN -> "명령이 너무 많습니다. 1분 후에 다시 시도하세요."
+    }
+
+    val telegramPairPrivateOnly: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "配对只能在与机器人一对一私聊中进行。"
+        AppLanguage.ENGLISH -> "Pairing works only in a private one-to-one chat with the bot."
+        AppLanguage.ARABIC -> "الاقتران يعمل فقط في محادثة خاصة فردية مع البوت."
+        AppLanguage.PORTUGUESE -> "O pareamento só funciona em um chat privado individual com o bot."
+        AppLanguage.SPANISH -> "El emparejamiento solo funciona en un chat privado con el bot."
+        AppLanguage.FRENCH -> "L'appairage ne fonctionne que dans une discussion privée avec le bot."
+        AppLanguage.GERMAN -> "Die Kopplung funktioniert nur in einem privaten Einzelchat mit dem Bot."
+        AppLanguage.RUSSIAN -> "Сопряжение работает только в личном чате с ботом."
+        AppLanguage.JAPANESE -> "ペアリングはボットとの 1 対 1 のプライベートチャットでのみ有効です。"
+        AppLanguage.KOREAN -> "페어링은 봇과의 1:1 비공개 채팅에서만 가능합니다."
     }
 
     val telegramPairNoCode: String get() = when (Strings.lang) {
@@ -21376,18 +21398,6 @@ object StringsE {
         AppLanguage.KOREAN -> "이미지 추가"
     }
 
-    val sidekickAttachFile: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "添加文件"
-        AppLanguage.ENGLISH -> "Add file"
-        AppLanguage.ARABIC -> "إضافة ملف"
-        AppLanguage.PORTUGUESE -> "Adicionar ficheiro"
-        AppLanguage.SPANISH -> "Añadir archivo"
-        AppLanguage.FRENCH -> "Ajouter un fichier"
-        AppLanguage.GERMAN -> "Datei hinzufügen"
-        AppLanguage.RUSSIAN -> "Добавить файл"
-        AppLanguage.JAPANESE -> "ファイルを追加"
-        AppLanguage.KOREAN -> "파일 추가"
-    }
 
     val sidekickTakePhoto: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "拍照"
@@ -21402,18 +21412,6 @@ object StringsE {
         AppLanguage.KOREAN -> "사진 촬영"
     }
 
-    val sidekickFromGallery: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "从相册选择"
-        AppLanguage.ENGLISH -> "From the gallery"
-        AppLanguage.ARABIC -> "من المعرض"
-        AppLanguage.PORTUGUESE -> "Da galeria"
-        AppLanguage.SPANISH -> "Desde la galería"
-        AppLanguage.FRENCH -> "Depuis la galerie"
-        AppLanguage.GERMAN -> "Aus der Galerie"
-        AppLanguage.RUSSIAN -> "Из галереи"
-        AppLanguage.JAPANESE -> "ギャラリーから"
-        AppLanguage.KOREAN -> "갤러리에서"
-    }
 
     val sidekickFromFiles: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "选择文件"
@@ -21571,18 +21569,6 @@ object StringsE {
         AppLanguage.KOREAN -> "듣는 중…"
     }
 
-    val sidekickVoiceTitle: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "语音输入"
-        AppLanguage.ENGLISH -> "Voice input"
-        AppLanguage.ARABIC -> "الإدخال الصوتي"
-        AppLanguage.PORTUGUESE -> "Entrada de voz"
-        AppLanguage.SPANISH -> "Entrada de voz"
-        AppLanguage.FRENCH -> "Saisie vocale"
-        AppLanguage.GERMAN -> "Spracheingabe"
-        AppLanguage.RUSSIAN -> "Голосовой ввод"
-        AppLanguage.JAPANESE -> "音声入力"
-        AppLanguage.KOREAN -> "음성 입력"
-    }
 
     val sidekickVoiceDesc: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "用语音代替键盘输入。使用手机自带的语音服务。"

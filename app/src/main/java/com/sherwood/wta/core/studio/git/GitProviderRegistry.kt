@@ -9,7 +9,12 @@ enum class GitProviderUnavailableReason {
     /** A self-hosted instance needs a server URL and none is saved. */
     MISSING_BASE_URL,
     /** The saved server URL is not HTTPS, so a token would travel in clear text. */
-    NON_HTTPS_BASE_URL
+    NON_HTTPS_BASE_URL,
+    /**
+     * The working copy was imported from a different host than the one configured now.
+     * Reading or pushing would target another server with the same owner/repo.
+     */
+    HOST_MISMATCH
 }
 
 sealed class GitProviderLookup {
@@ -76,6 +81,20 @@ object GitProviderRegistry {
         host: String?
     ): GitProviderLookup {
         if (provider == GitProviderId.GITHUB) {
+            // The GitHub driver's endpoints come from EndpointConfig (which is editable).
+            // A copy imported from a mirror records that mirror's host; rebuilding the
+            // driver from a *different* configured host would read or push to the wrong
+            // server, which is exactly what this layer must not do.
+            val configuredHost = runCatching {
+                android.net.Uri.parse(
+                    com.sherwood.wta.core.studio.EndpointConfig.current(context).githubWebBaseUrl
+                ).host
+            }.getOrNull()
+            if (!host.isNullOrBlank() && !configuredHost.isNullOrBlank() &&
+                !host.equals(configuredHost, ignoreCase = true)
+            ) {
+                return GitProviderLookup.Unavailable(provider, GitProviderUnavailableReason.HOST_MISMATCH)
+            }
             return of(context, GitProviderId.GITHUB)
         }
         val configured = GitProviderSettings.getInstance(context).baseUrl(provider)

@@ -14,6 +14,7 @@ import com.sherwood.wta.data.model.AiFeature
 import com.sherwood.wta.data.model.ApiKeyConfig
 import com.sherwood.wta.data.model.ModelCapability
 import com.sherwood.wta.data.model.SavedModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -93,13 +94,25 @@ class SidekickEngine internal constructor(
      * from AI settings falls back to the agent's model instead of pinning a dead one.
      */
     suspend fun resolve(preferredModelId: String?): BindingResult {
-        val snapshot = runCatching { source.load() }
-            .getOrElse { SidekickModelSnapshot(emptyList(), emptyList(), null) }
+        // A cancelled resolve must stay cancelled: swallowing it here turned "the user
+        // pressed Stop" into a "no model configured" banner.
+        val snapshot = try {
+            source.load()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (t: Throwable) {
+            SidekickModelSnapshot(emptyList(), emptyList(), null)
+        }
         if (snapshot.models.isEmpty()) return BindingResult.MissingModel
 
+        // A pinned model must be able to answer chat. Without this check an image model
+        // could be pinned and every question would fail at the provider instead of
+        // falling back to a model that can answer.
         val pinned = preferredModelId
             ?.takeIf { it.isNotBlank() }
-            ?.let { id -> snapshot.models.firstOrNull { it.id == id } }
+            ?.let { id ->
+                snapshot.models.firstOrNull { it.id == id && it.supportsFeature(AiFeature.AGENT) }
+            }
 
         val chosen = pinned ?: followAgentModel(snapshot)
         if (chosen == null) return BindingResult.MissingModel
@@ -123,9 +136,11 @@ class SidekickEngine internal constructor(
      */
     private fun followAgentModel(snapshot: SidekickModelSnapshot): SavedModel? {
         val chatCapable = snapshot.models.filter { it.supportsFeature(AiFeature.AGENT) }
-        val pool = chatCapable.ifEmpty { snapshot.models }
+        // No chat-capable model is a real state (only an image model configured); falling
+        // back to any saved model would bind one that cannot answer.
+        if (chatCapable.isEmpty()) return null
         val defaultId = snapshot.defaultModelId
-        return pool.firstOrNull { it.id == defaultId } ?: pool.firstOrNull()
+        return chatCapable.firstOrNull { it.id == defaultId } ?: chatCapable.first()
     }
 
     /**
@@ -160,10 +175,20 @@ class SidekickEngine internal constructor(
             attachments.filterNot { it is SidekickImageAttachment }
         }
         val currentImages = usable.filterIsInstance<SidekickImageAttachment>()
-        val fileBlocks = SidekickPrompt.renderTextAttachments(usable)
+        val fileBlocks = SidekickPrompt.renderTextAttachments(
+            usable,
+            nonce = SidekickPrompt.newFenceNonce()
+        )
 
         val kept = SidekickPrompt.history(history)
-        val imageTurns = SidekickPrompt.imageTurnIndices(kept, currentHasImages = currentImages.isNotEmpty())
+        // The capability gate applies to history too: `usable` only removes the images of
+        // the current question, and a model switched from vision to text must not receive
+        // an older turn's image block (the provider answers 400 and the turn is lost).
+        val imageTurns = if (binding.supportsVision) {
+            SidekickPrompt.imageTurnIndices(kept, currentHasImages = currentImages.isNotEmpty())
+        } else {
+            emptySet()
+        }
 
         val messages = buildList {
             add(
@@ -179,7 +204,10 @@ class SidekickEngine internal constructor(
             kept.forEachIndexed { index, turn ->
                 val keepImages = index in imageTurns
                 val images = if (keepImages) turn.images else emptyList()
-                val body = if (!keepImages && turn.hasImages) {
+                // A turn that carries or carried an image tells the model one was left
+                // out; otherwise it would answer about a picture it never saw.
+                val omitted = !keepImages && (turn.images.isNotEmpty() || turn.imagesOmitted)
+                val body = if (omitted) {
                     turn.text + "\n" + SidekickPrompt.OMITTED_IMAGE_MARKER
                 } else {
                     turn.text
@@ -195,9 +223,12 @@ class SidekickEngine internal constructor(
                     )
                 )
             }
-            val asked = question.ifBlank {
-                if (usable.isEmpty()) question else SidekickPrompt.ATTACHMENT_ONLY_QUESTION
-            }
+            // Typed or pasted text is as capable of blowing the context window as a file;
+            // clip it with a visible marker instead of letting it grow without bound.
+            val asked = SidekickPrompt.clip(question, SidekickPrompt.MAX_QUESTION_CHARS)
+                .ifBlank {
+                    if (usable.isEmpty()) question else SidekickPrompt.ATTACHMENT_ONLY_QUESTION
+                }
             val questionText = if (fileBlocks.isEmpty()) asked else asked + "\n\n" + fileBlocks
             add(
                 LlmMessage(

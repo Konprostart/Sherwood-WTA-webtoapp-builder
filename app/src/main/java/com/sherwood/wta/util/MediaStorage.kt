@@ -216,8 +216,15 @@ object MediaStorage {
         return try {
             retriever.setDataSource(file.absolutePath)
 
-            val frame = retriever.getFrameAtTime(1000000)
-                ?: retriever.getFrameAtTime(0)
+            val frame = VideoFrames.frameAt(
+                retriever,
+                1_000_000L,
+                MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+            ) ?: VideoFrames.frameAt(
+                retriever,
+                0L,
+                MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+            )
             frame?.let { scaleBitmap(it) }
         } catch (e: Exception) {
             AppLogger.e(TAG, "Failed to generate video thumbnail: ${e.message}", e)

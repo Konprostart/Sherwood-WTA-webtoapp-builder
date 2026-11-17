@@ -20,7 +20,6 @@ import com.sherwood.wta.core.studio.git.GitResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -55,8 +54,15 @@ class TelegramCommandRouter(
         val paired = chatId in settings.pairedChats
 
         // Pairing must work before the chat is trusted, so it is the one command that is
-        // evaluated before the allowlist check.
+        // evaluated before the allowlist check. It is still rate-limited, and only a
+        // private chat may pair: a group would hand every member the bot's powers.
         if (command.name == "pair") {
+            if (!chat.isPrivate) {
+                return TelegramReply.Text(Strings.telegramPairPrivateOnly)
+            }
+            if (!allow(chatId)) {
+                return TelegramReply.Text(Strings.telegramRateLimited)
+            }
             return TelegramReply.Text(redeemPairingCode(command.firstArg, chatId))
         }
 
@@ -319,6 +325,9 @@ class TelegramCommandRouter(
                 Result.failure(e)
             }
             result.onSuccess { finished ->
+                // The BuildEvents collector announces the same run; mark it here so a
+                // build started from chat is reported exactly once.
+                if (!TelegramBuildNotifier.markNotified(finished.run.id)) return@onSuccess
                 val hasApk = finished.artifacts.records.any {
                     it.kindEnum == com.sherwood.wta.core.studio.ArtifactKind.APK
                 }
@@ -421,6 +430,14 @@ class TelegramCommandRouter(
 
     private fun allow(chatId: Long): Boolean {
         val now = System.currentTimeMillis()
+        // The map is keyed by chat id, so a stranger talking to the bot once would
+        // otherwise leave an entry forever.
+        if (recentCommands.size > MAX_TRACKED_CHATS) {
+            recentCommands.keys.filter { key ->
+                val stamps = recentCommands[key] ?: return@filter true
+                synchronized(stamps) { stamps.isEmpty() || now - stamps.last() > RATE_WINDOW_MS }
+            }.forEach { recentCommands.remove(it) }
+        }
         val stamps = recentCommands.getOrPut(chatId) { mutableListOf() }
         synchronized(stamps) {
             stamps.removeAll { now - it > RATE_WINDOW_MS }
@@ -472,6 +489,9 @@ class TelegramCommandRouter(
         private const val MAX_DOCUMENT_BYTES = 45L * 1024 * 1024
         private const val RATE_WINDOW_MS = 60_000L
         private const val MAX_COMMANDS_PER_WINDOW = 12
+
+        /** Tracked chats; beyond this the map is swept of idle entries. */
+        private const val MAX_TRACKED_CHATS = 64
     }
 }
 

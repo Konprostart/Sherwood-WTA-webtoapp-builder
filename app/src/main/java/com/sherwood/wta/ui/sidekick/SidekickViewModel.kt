@@ -13,6 +13,7 @@ import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.sidekick.SidekickContextSource
 import com.sherwood.wta.core.sidekick.SidekickEngine
 import com.sherwood.wta.core.sidekick.SidekickEnvironment
+import com.sherwood.wta.core.sidekick.SidekickPrompt
 import com.sherwood.wta.core.sidekick.SidekickSettings
 import com.sherwood.wta.core.sidekick.SidekickTurn
 import com.sherwood.wta.core.sidekick.input.SidekickAttachment
@@ -25,11 +26,11 @@ import com.sherwood.wta.core.sidekick.input.SidekickSpeechFailure
 import com.sherwood.wta.core.sidekick.input.SidekickSpeechListener
 import com.sherwood.wta.core.sidekick.input.SidekickSpeechRecognizer
 import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
-import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,7 +62,6 @@ data class SidekickUiState(
     val bindingError: String? = null,
     val includeContext: Boolean = true,
     val contextTitle: String? = null,
-    val modelId: String? = null,
     /** Vertical anchor of the floating button as a fraction of its travel, 0 = top. */
     val fabAnchor: Float = SidekickSettings.DEFAULT_FAB_ANCHOR,
 
@@ -74,18 +74,13 @@ data class SidekickUiState(
      */
     val visionSupported: Boolean = true,
 
-    /** Dictation state; [speechPartial] is interim text replaced on every update. */
+    /** Dictation state. The interim transcript is written straight into [draft]. */
     val speechListening: Boolean = false,
-    val speechPartial: String = "",
     /** False when no recognition service exists; the mic button then explains why. */
-    val speechAvailable: Boolean = true,
-    val voiceLanguage: SidekickVoiceLanguage = SidekickVoiceLanguage.AUTO,
-    val preferOnDeviceSpeech: Boolean = true
+    val speechAvailable: Boolean = true
 ) {
     val canSend: Boolean
         get() = !streaming && !speechListening && (draft.isNotBlank() || pendingAttachments.isNotEmpty())
-
-    val canAttachImage: Boolean get() = visionSupported
 }
 
 /**
@@ -111,16 +106,16 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         SidekickUiState(
             enabled = settings.enabled,
             includeContext = settings.includeAgentContext,
-            modelId = settings.modelId,
             fabAnchor = settings.fabAnchor,
-            voiceLanguage = settings.voiceLanguage,
-            preferOnDeviceSpeech = settings.preferOnDeviceSpeech,
             speechAvailable = speech.isAvailable()
         )
     )
     val ui: StateFlow<SidekickUiState> = _ui.asStateFlow()
 
     private var answerJob: Job? = null
+
+    /** Safety net for a recognizer that never delivers a final result after stop. */
+    private var voiceStopJob: Job? = null
     private var detachSettingsListener: (() -> Unit)? = null
 
     init {
@@ -141,20 +136,13 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         _ui.update { it.copy(open = false) }
     }
 
-    fun toggle() {
-        if (_ui.value.open) close() else open()
-    }
-
     /** Re-reads preferences after the settings screen changed them. */
     fun refreshFromSettings() {
         _ui.update {
             it.copy(
                 enabled = settings.enabled,
                 includeContext = settings.includeAgentContext,
-                modelId = settings.modelId,
-                fabAnchor = settings.fabAnchor,
-                voiceLanguage = settings.voiceLanguage,
-                preferOnDeviceSpeech = settings.preferOnDeviceSpeech
+                fabAnchor = settings.fabAnchor
             )
         }
         if (_ui.value.open) refreshBinding()
@@ -168,17 +156,6 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         val clamped = fraction.coerceIn(0f, 1f)
         settings.fabAnchor = clamped
         _ui.update { it.copy(fabAnchor = clamped) }
-    }
-
-    fun setIncludeContext(include: Boolean) {
-        settings.includeAgentContext = include
-        _ui.update { it.copy(includeContext = include) }
-    }
-
-    fun setModel(modelId: String?) {
-        settings.modelId = modelId
-        _ui.update { it.copy(modelId = modelId) }
-        refreshBinding()
     }
 
     private fun refreshBinding() {
@@ -320,30 +297,34 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun clearAttachments() {
-        _ui.update { it.copy(pendingAttachments = emptyList()) }
-    }
-
     /** Applies the per-message budget; returns the reason when the attachment was refused. */
     private fun stage(attachment: SidekickAttachment): SidekickAttachmentRejection? {
-        val state = _ui.value
-        // Text files still work with a text-only model; only images are blocked, and with
-        // their own reason so the panel explains the model, not the file type.
-        if (attachment is SidekickImageAttachment && !state.visionSupported) {
-            return SidekickAttachmentRejection.VISION_UNSUPPORTED
+        // The check and the append run inside one `update`: two picks that resolve at the
+        // same time (camera + picker, or two quick selections) would otherwise both see the
+        // old list and both pass the budget.
+        var rejection: SidekickAttachmentRejection? = null
+        _ui.update { state ->
+            if (attachment is SidekickImageAttachment && !state.visionSupported) {
+                rejection = SidekickAttachmentRejection.VISION_UNSUPPORTED
+                return@update state
+            }
+            val budget = SidekickAttachmentBudget.rejection(state.pendingAttachments, attachment)
+            if (budget != null) {
+                rejection = budget
+                return@update state
+            }
+            val fitted = if (attachment is SidekickTextAttachment) {
+                SidekickAttachmentBudget.fitText(state.pendingAttachments, attachment)
+            } else {
+                attachment
+            }
+            if (fitted == null) {
+                rejection = SidekickAttachmentRejection.BUDGET
+                return@update state
+            }
+            state.copy(pendingAttachments = state.pendingAttachments + fitted, error = null)
         }
-        val existing = state.pendingAttachments
-        val budget = SidekickAttachmentBudget.rejection(existing, attachment)
-        if (budget != null) return budget
-
-        val fitted = if (attachment is SidekickTextAttachment) {
-            SidekickAttachmentBudget.fitText(existing, attachment)
-                ?: return SidekickAttachmentRejection.BUDGET
-        } else {
-            attachment
-        }
-        _ui.update { it.copy(pendingAttachments = it.pendingAttachments + fitted, error = null) }
-        return null
+        return rejection
     }
 
     private fun rejectionMessage(reason: SidekickAttachmentRejection): String = when (reason) {
@@ -375,7 +356,7 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
             return
         }
         voiceBaseDraft = _ui.value.draft
-        _ui.update { it.copy(speechListening = true, speechPartial = "", error = null) }
+        _ui.update { it.copy(speechListening = true, error = null) }
         val started = speech.start(
             language = settings.voiceLanguage,
             preferOnDevice = settings.preferOnDeviceSpeech,
@@ -383,7 +364,7 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         )
         if (!started) {
             _ui.update {
-                it.copy(speechListening = false, speechPartial = "", speechAvailable = speech.isAvailable())
+                it.copy(speechListening = false, speechAvailable = speech.isAvailable())
             }
         }
     }
@@ -392,30 +373,37 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     fun stopVoiceInput() {
         if (!_ui.value.speechListening) return
         speech.stop()
+        // `stopListening` asks the service for a final result, but a misbehaving OEM
+        // recognizer can go quiet instead of answering. Without a ceiling the panel would
+        // stay in "Listening…" until the user reopens it, so the state is released here.
+        voiceStopJob?.cancel()
+        voiceStopJob = viewModelScope.launch {
+            delay(VOICE_STOP_TIMEOUT_MS)
+            if (_ui.value.speechListening) {
+                speech.cancel()
+                _ui.update {
+                    it.copy(
+                        speechListening = false,
+                        draft = voiceBaseDraft,
+                        error = Strings.sidekickSpeechNoMatch
+                    )
+                }
+            }
+        }
     }
 
     /** Ends dictation and discards the transcript. */
     fun cancelVoiceInput() {
         if (!_ui.value.speechListening) return
+        voiceStopJob?.cancel()
         speech.cancel()
-        _ui.update { it.copy(speechListening = false, speechPartial = "") }
-    }
-
-    fun setVoiceLanguage(language: SidekickVoiceLanguage) {
-        settings.voiceLanguage = language
-        _ui.update { it.copy(voiceLanguage = language) }
-    }
-
-    fun setPreferOnDeviceSpeech(prefer: Boolean) {
-        settings.preferOnDeviceSpeech = prefer
-        _ui.update { it.copy(preferOnDeviceSpeech = prefer) }
+        _ui.update { it.copy(speechListening = false) }
     }
 
     private inner class DictationListener : SidekickSpeechListener {
         override fun onPartial(text: String) {
             _ui.update {
                 it.copy(
-                    speechPartial = text,
                     // The interim transcript is written straight into the draft so the user
                     // reads what the recognizer heard, exactly like typing.
                     draft = composeDraft(voiceBaseDraft, text)
@@ -424,20 +412,20 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         }
 
         override fun onResult(text: String) {
+            voiceStopJob?.cancel()
             _ui.update {
                 it.copy(
                     speechListening = false,
-                    speechPartial = "",
                     draft = composeDraft(voiceBaseDraft, text)
                 )
             }
         }
 
         override fun onFailure(failure: SidekickSpeechFailure) {
+            voiceStopJob?.cancel()
             _ui.update {
                 it.copy(
                     speechListening = false,
-                    speechPartial = "",
                     // The dictation may have replaced the draft with interim text; put the
                     // user's typed text back so a failed attempt loses nothing.
                     draft = voiceBaseDraft,
@@ -480,16 +468,23 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun ask(question: String, attachments: List<SidekickAttachment>) {
-        val history = _ui.value.turns
+        val hasCurrentImages = attachments.any { it is SidekickImageAttachment }
+        // Keep the bytes of the newest questions only. The engine already sends at most
+        // MAX_IMAGE_TURNS image blocks, but without this the transcript itself would hold
+        // every screenshot of a long conversation in the view model.
+        val keepHistoricalImages = (SidekickPrompt.MAX_IMAGE_TURNS - if (hasCurrentImages) 1 else 0)
+            .coerceAtLeast(0)
+        val history = SidekickPrompt.retainRecentImages(_ui.value.turns, keepHistoricalImages)
         val includeContext = _ui.value.includeContext
 
-        _ui.update {
-            it.copy(
+        _ui.update { state ->
+            val retained = SidekickPrompt.retainRecentImages(state.turns, keepHistoricalImages)
+            state.copy(
                 draft = "",
                 pendingAttachments = emptyList(),
                 error = null,
                 streaming = true,
-                turns = it.turns +
+                turns = retained +
                     SidekickTurn(SidekickTurn.Role.USER, question, attachments = attachments) +
                     SidekickTurn(SidekickTurn.Role.ASSISTANT, "")
             )
@@ -595,6 +590,7 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         detachSettingsListener?.invoke()
         detachSettingsListener = null
         answerJob?.cancel()
+        voiceStopJob?.cancel()
         // A recognizer left alive keeps an audio session open; the microphone indicator can
         // stay lit after the panel is gone.
         speech.release()
@@ -606,6 +602,9 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
 
         /** Same idle window the agent uses: a silent provider must not hang the panel. */
         private const val STREAM_IDLE_TIMEOUT_MS = 90_000L
+
+        /** How long a stopped dictation may take to deliver its final result. */
+        private const val VOICE_STOP_TIMEOUT_MS = 8_000L
 
         fun factory(app: Application): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

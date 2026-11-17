@@ -31,12 +31,32 @@ object AabManifestInfo {
 
     private const val MANIFEST_ENTRY = "base/manifest/AndroidManifest.xml"
 
+    /**
+     * A real manifest is a few kilobytes. The cap is what stops a crafted bundle from
+     * making this read hundreds of megabytes into the heap before the protobuf parser
+     * even sees it.
+     */
+    private const val MAX_MANIFEST_BYTES = 4L * 1024 * 1024
+
     fun read(file: File): PackageInfo? {
         if (!file.isFile || file.length() == 0L) return null
         return runCatching {
             ZipFile(file).use { zip ->
                 val entry = zip.getEntry(MANIFEST_ENTRY) ?: return@use null
-                val bytes = zip.getInputStream(entry).use { it.readBytes() }
+                // Reject on the declared size first, then read with a hard cap: the
+                // declared size is untrusted too, so the read must not trust it.
+                if (entry.size > MAX_MANIFEST_BYTES) return@use null
+                val bytes = zip.getInputStream(entry).use { input ->
+                    val buffer = java.io.ByteArrayOutputStream()
+                    val chunk = ByteArray(8 * 1024)
+                    while (true) {
+                        val read = input.read(chunk)
+                        if (read < 0) break
+                        if (buffer.size() + read > MAX_MANIFEST_BYTES) return@use null
+                        buffer.write(chunk, 0, read)
+                    }
+                    buffer.toByteArray()
+                }
                 val node = Resources.XmlNode.parseFrom(bytes)
                 if (!node.hasElement()) return@use null
                 parse(node.element)

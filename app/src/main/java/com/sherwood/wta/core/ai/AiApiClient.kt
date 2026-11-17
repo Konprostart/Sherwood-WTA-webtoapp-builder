@@ -203,10 +203,9 @@ class AiApiClient(private val context: Context) {
                 val body = response.body?.string() ?: ""
                 val models = parseModelsResponse(apiKey.provider, body)
                 if (models.isEmpty()) {
-
-                    val fallbackModels = getRegistryFallbackModels(apiKey.provider)
+                    val fallbackModels = registryFallbackFor(apiKey.provider)
                     if (fallbackModels.isNotEmpty()) {
-                        AppLogger.i("AiApiClient", "API returned empty, using ${fallbackModels.size} models from LiteLLM registry")
+                        AppLogger.i("AiApiClient", "API returned empty, using ${fallbackModels.size} models from the model registry")
                         Result.success(fallbackModels)
                     } else {
                         Result.failure(Exception(Strings.aiModelListEmpty))
@@ -219,9 +218,9 @@ class AiApiClient(private val context: Context) {
             } else {
                 val errorBody = response.body?.string() ?: ""
 
-                val fallbackModels = getRegistryFallbackModels(apiKey.provider)
+                val fallbackModels = registryFallbackFor(apiKey.provider)
                 if (fallbackModels.isNotEmpty()) {
-                    AppLogger.i("AiApiClient", "API failed (${response.code}), using ${fallbackModels.size} models from LiteLLM registry")
+                    AppLogger.i("AiApiClient", "API failed (${response.code}), using ${fallbackModels.size} models from the model registry")
                     Result.success(fallbackModels)
                 } else {
                     Result.failure(Exception(Strings.aiGetModelListFailed.format(response.code, errorBody)))
@@ -229,15 +228,30 @@ class AiApiClient(private val context: Context) {
             }
         } catch (e: Exception) {
 
-            val fallbackModels = getRegistryFallbackModels(apiKey.provider)
+            val fallbackModels = registryFallbackFor(apiKey.provider)
             if (fallbackModels.isNotEmpty()) {
-                AppLogger.i("AiApiClient", "Network error, using ${fallbackModels.size} models from LiteLLM registry")
+                AppLogger.i("AiApiClient", "Network error, using ${fallbackModels.size} models from the model registry")
                 Result.success(fallbackModels)
             } else {
                 Result.failure(Exception(Strings.aiGetModelListError.format(e.message)))
             }
         }
     }
+
+    /**
+     * Registry models to show when the endpoint cannot answer.
+     *
+     * A self-hosted endpoint (Ollama, LM Studio, vLLM) has no cloud catalogue: returning
+     * models.dev entries for an unreachable local server would offer cloud model names
+     * under a "local" provider, which is the confusion offline mode exists to remove.
+     * The failure is reported instead.
+     */
+    private fun registryFallbackFor(provider: AiProvider): List<AiModel> =
+        if (provider.category == ProviderCategory.SELF_HOSTED) {
+            emptyList()
+        } else {
+            getRegistryFallbackModels(provider)
+        }
 
     private fun getRegistryFallbackModels(provider: AiProvider): List<AiModel> {
         val modelIds = registry.getRecommendedModels(provider)

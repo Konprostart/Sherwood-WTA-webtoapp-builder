@@ -34,8 +34,9 @@ enum class GitChangeRequestTerm {
  * that a particular repository has data.
  *
  * The write capabilities are separate flags rather than one "writable" switch because a
- * driver can be read-only in some respects and writable in others. Gitea in this build is
- * the read/write split's first case: everything is readable, nothing is written yet.
+ * driver can be writable in some respects and not others. Gitea/Forgejo are the current
+ * example: they write commits and open change requests, but have no branch-merge API and
+ * no per-line review comments, so those two flags stay `false` and the UI explains why.
  */
 data class GitCapabilities(
     val changeRequestTerm: GitChangeRequestTerm,

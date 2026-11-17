@@ -35,7 +35,24 @@ object SidekickImageDecoder {
     /** Scale ladder applied after the quality steps are exhausted. */
     private val SCALE_STEPS = floatArrayOf(1f, 0.75f, 0.5f)
 
-    fun fromFile(file: File, name: String): SidekickAttachmentResult {
+    /**
+     * The eight EXIF orientation values, as the transform they describe.
+     *
+     * Rotations alone are not enough: a front-camera selfie carries a mirror flag, and a
+     * transposed/transverse value swaps the axes. Mapping only 90/180/270 left those
+     * images mirrored or sideways.
+     */
+    enum class Orientation {
+        NORMAL, ROTATE_90, ROTATE_180, ROTATE_270,
+        FLIP_HORIZONTAL, FLIP_VERTICAL, TRANSPOSE, TRANSVERSE
+    }
+
+    /**
+     * @param flattenAlpha true when the source format can carry transparency (PNG/WebP/
+     *   GIF). JPEG cannot, so flattening it would allocate a second full-size bitmap for
+     *   nothing.
+     */
+    fun fromFile(file: File, name: String, flattenAlpha: Boolean = false): SidekickAttachmentResult {
         // BoundedBitmaps bounds-probes first and samples down to the cap, which is the only
         // sanctioned way to decode user content in this app (`NoUnboundedBitmapDecodeTest`
         // gates raw BitmapFactory calls because an oversized bitmap kills the process at
@@ -49,7 +66,7 @@ object SidekickImageDecoder {
         // bitmap the size of the photo held until the GC gets around to it.
         val owned = mutableListOf<Bitmap>()
         try {
-            val rotated = orient(decoded, readRotation(file))
+            val rotated = orient(decoded, readOrientation(file))
             owned += rotated
             // `downscaledToFit` is a member extension of the BoundedBitmaps object, so it is
             // called inside its scope rather than imported.
@@ -62,7 +79,7 @@ object SidekickImageDecoder {
                 val candidate = if (scale >= 1f) fitted else fitted.scaledBy(scale) ?: continue
                 if (candidate !== fitted) owned += candidate
                 for (quality in QUALITY_STEPS) {
-                    val encoded = compress(candidate, quality) ?: continue
+                    val encoded = compress(candidate, quality, flattenAlpha) ?: continue
                     if (encoded.size <= SidekickAttachmentLimits.MAX_IMAGE_BYTES) {
                         return SidekickAttachmentResult.Ok(
                             SidekickImageAttachment(
@@ -90,31 +107,59 @@ object SidekickImageDecoder {
         }
     }
 
-    private fun readRotation(file: File): Int = try {
-        when (
+    /**
+     * EXIF orientation tag → transform. Values follow the EXIF specification; they are
+     * written as literals so the mapping is testable on a plain JVM.
+     */
+    internal fun orientationFor(tag: Int): Orientation = when (tag) {
+        2 -> Orientation.FLIP_HORIZONTAL
+        3 -> Orientation.ROTATE_180
+        4 -> Orientation.FLIP_VERTICAL
+        5 -> Orientation.TRANSPOSE
+        6 -> Orientation.ROTATE_90
+        7 -> Orientation.TRANSVERSE
+        8 -> Orientation.ROTATE_270
+        else -> Orientation.NORMAL
+    }
+
+    private fun readOrientation(file: File): Orientation = try {
+        orientationFor(
             ExifInterface(file.absolutePath).getAttributeInt(
                 ExifInterface.TAG_ORIENTATION,
                 ExifInterface.ORIENTATION_NORMAL
             )
-        ) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270
-            else -> 0
-        }
+        )
     } catch (t: Throwable) {
         // A missing or malformed EXIF block is normal (screenshots have none).
-        0
+        Orientation.NORMAL
     }
 
-    /** Returns [bitmap] itself when no rotation is needed; otherwise a new bitmap. */
-    private fun orient(bitmap: Bitmap, degrees: Int): Bitmap {
-        if (degrees == 0) return bitmap
+    /** Returns [bitmap] itself when no transform is needed; otherwise a new bitmap. */
+    private fun orient(bitmap: Bitmap, orientation: Orientation): Bitmap {
+        if (orientation == Orientation.NORMAL) return bitmap
         return try {
-            val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
+            val matrix = Matrix()
+            when (orientation) {
+                Orientation.NORMAL -> Unit
+                Orientation.ROTATE_90 -> matrix.postRotate(90f)
+                Orientation.ROTATE_180 -> matrix.postRotate(180f)
+                Orientation.ROTATE_270 -> matrix.postRotate(270f)
+                Orientation.FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+                Orientation.FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+                // Transpose is "rotate 90° then mirror horizontally"; transverse is
+                // "rotate 90° then mirror vertically".
+                Orientation.TRANSPOSE -> {
+                    matrix.postRotate(90f)
+                    matrix.postScale(-1f, 1f)
+                }
+                Orientation.TRANSVERSE -> {
+                    matrix.postRotate(90f)
+                    matrix.postScale(1f, -1f)
+                }
+            }
             Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         } catch (t: Throwable) {
-            AppLogger.w(TAG, "Rotation failed, keeping original (${t.message})")
+            AppLogger.w(TAG, "Orientation failed, keeping original (${t.message})")
             bitmap
         }
     }
@@ -129,26 +174,29 @@ object SidekickImageDecoder {
     }
 
     /**
-     * JPEG has no alpha channel; a transparent PNG would otherwise come out with black
+     * JPEG has no alpha channel, so a transparent PNG would otherwise come out black
      * behind the content, which on a design mockup reads as "the screenshot is broken".
      */
-    private fun compress(bitmap: Bitmap, quality: Int): ByteArray? = try {
-        val flattened = if (bitmap.hasAlpha()) {
-            Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+    private fun compress(bitmap: Bitmap, quality: Int, flattenAlpha: Boolean): ByteArray? = try {
+        // Flattening is only needed for a source format that can carry transparency; the
+        // extra full-size bitmap is not allocated for a JPEG.
+        val flattened = if (flattenAlpha && bitmap.hasAlpha()) {
+            Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888).also { target ->
+                try {
+                    val canvas = Canvas(target)
+                    canvas.drawColor(Color.WHITE)
+                    canvas.drawBitmap(bitmap, 0f, 0f, null)
+                } catch (t: Throwable) {
+                    target.recycle()
+                    throw t
+                }
+            }
         } else {
             null
         }
-        val target = if (flattened != null) {
-            val canvas = Canvas(flattened)
-            canvas.drawColor(Color.WHITE)
-            canvas.drawBitmap(bitmap, 0f, 0f, null)
-            flattened
-        } else {
-            bitmap
-        }
         try {
             val out = ByteArrayOutputStream(bitmap.byteCount.coerceAtMost(1 shl 21))
-            target.compress(Bitmap.CompressFormat.JPEG, quality, out)
+            (flattened ?: bitmap).compress(Bitmap.CompressFormat.JPEG, quality, out)
             out.toByteArray()
         } finally {
             flattened?.recycle()

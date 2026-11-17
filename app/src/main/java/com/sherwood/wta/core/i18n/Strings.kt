@@ -5477,6 +5477,7 @@ object Strings {
     val studioProviderNotImplemented: String get() = StringsE.studioProviderNotImplemented
     val studioProviderMissingUrl: String get() = StringsE.studioProviderMissingUrl
     val studioProviderInsecureUrl: String get() = StringsE.studioProviderInsecureUrl
+    val studioProviderHostMismatch: String get() = StringsE.studioProviderHostMismatch
     val studioGiteaConnectHint: String get() = StringsE.studioGiteaConnectHint
     val studioReadOnlyAction: String get() = StringsE.studioReadOnlyAction
 
@@ -5572,6 +5573,7 @@ object Strings {
     val telegramStop: String get() = StringsE.telegramStop
     val telegramNotPaired: String get() = StringsE.telegramNotPaired
     val telegramRateLimited: String get() = StringsE.telegramRateLimited
+    val telegramPairPrivateOnly: String get() = StringsE.telegramPairPrivateOnly
     val telegramPairNoCode: String get() = StringsE.telegramPairNoCode
     val telegramPaired: String get() = StringsE.telegramPaired
     val telegramBadCode: String get() = StringsE.telegramBadCode
@@ -5653,9 +5655,7 @@ object Strings {
     val sidekickManageModels: String get() = StringsE.sidekickManageModels
     val sidekickAttach: String get() = StringsE.sidekickAttach
     val sidekickAttachImage: String get() = StringsE.sidekickAttachImage
-    val sidekickAttachFile: String get() = StringsE.sidekickAttachFile
     val sidekickTakePhoto: String get() = StringsE.sidekickTakePhoto
-    val sidekickFromGallery: String get() = StringsE.sidekickFromGallery
     val sidekickFromFiles: String get() = StringsE.sidekickFromFiles
     val sidekickRemoveAttachment: String get() = StringsE.sidekickRemoveAttachment
     val sidekickAttachmentTooLarge: String get() = StringsE.sidekickAttachmentTooLarge
@@ -5668,7 +5668,6 @@ object Strings {
     val sidekickCameraPermission: String get() = StringsE.sidekickCameraPermission
     val sidekickDictate: String get() = StringsE.sidekickDictate
     val sidekickListening: String get() = StringsE.sidekickListening
-    val sidekickVoiceTitle: String get() = StringsE.sidekickVoiceTitle
     val sidekickVoiceDesc: String get() = StringsE.sidekickVoiceDesc
     val sidekickVoiceLanguage: String get() = StringsE.sidekickVoiceLanguage
     val sidekickVoiceLanguageAuto: String get() = StringsE.sidekickVoiceLanguageAuto
