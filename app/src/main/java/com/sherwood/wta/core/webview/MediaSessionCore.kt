@@ -49,7 +49,7 @@ class MediaSessionCore(
 
     private val mediaSession = MediaSession(
         activity,
-        "WebToAppMediaSession"
+        "SherwoodStudioMediaSession"
     )
 
     private var title = ""

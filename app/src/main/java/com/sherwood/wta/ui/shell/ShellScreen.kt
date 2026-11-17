@@ -17,7 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.shell.ShellConfig
 import com.sherwood.wta.core.webview.LongPressHandler
@@ -75,9 +75,9 @@ fun ShellScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val activity = context as android.app.Activity
-    val activation = WebToAppApplication.activation
-    val announcement = WebToAppApplication.announcement
-    val adBlocker = WebToAppApplication.adBlock
+    val activation = SherwoodStudioApplication.activation
+    val announcement = SherwoodStudioApplication.announcement
+    val adBlocker = SherwoodStudioApplication.adBlock
     // Arm before the browser view is composed. LaunchedEffect runs after that
     // view, so a hold started inside the effect would miss the first load.
     remember {

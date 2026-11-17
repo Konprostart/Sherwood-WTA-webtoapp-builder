@@ -124,6 +124,11 @@ class AxmlEditor {
 
     private fun restoreComponentClassNames(data: ByteArray, newPackageName: String) {
         val suffixes = listOf(
+            "SherwoodStudioApplication",
+            // Legacy: APKs exported before the rename declare this class in their
+            // manifest. Cloning one still has to restore the fully qualified name,
+            // because the class itself lives in the template package, not in the
+            // new app package. Matching it here is a no-op for current exports.
             "WebToAppApplication",
             "ui.MainActivity",
             "ui.webview.WebViewActivity",

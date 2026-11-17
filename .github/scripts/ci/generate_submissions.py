@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate `modules/submissions.json` for the WebToApp Module Market.
+Generate `modules/submissions.json` for the Sherwood Studio Module Market.
 
 Why: the in-app market only renders modules that have a corresponding
 submission entry in this file. The repository contract is that an entry

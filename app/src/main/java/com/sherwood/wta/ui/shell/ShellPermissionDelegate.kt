@@ -48,7 +48,7 @@ class ShellPermissionDelegate(private val activity: AppCompatActivity) {
 
     private fun resolveDownloadLocationConfig(): Pair<com.sherwood.wta.data.model.DownloadLocationMode, String> {
         val config = try {
-            com.sherwood.wta.WebToAppApplication.shellMode.getConfig()
+            com.sherwood.wta.SherwoodStudioApplication.shellMode.getConfig()
         } catch (e: Exception) {
             null
         }
@@ -64,7 +64,7 @@ class ShellPermissionDelegate(private val activity: AppCompatActivity) {
 
     private fun resolveAlbumName(): String {
         val config = try {
-            com.sherwood.wta.WebToAppApplication.shellMode.getConfig()
+            com.sherwood.wta.SherwoodStudioApplication.shellMode.getConfig()
         } catch (e: Exception) {
             null
         }
@@ -215,7 +215,7 @@ class ShellPermissionDelegate(private val activity: AppCompatActivity) {
      */
     private fun tryUseSharedContent(fileChooserParams: WebChromeClient.FileChooserParams?): Boolean {
         val config = try {
-            com.sherwood.wta.WebToAppApplication.shellMode.getConfig()
+            com.sherwood.wta.SherwoodStudioApplication.shellMode.getConfig()
         } catch (e: Exception) {
             null
         }

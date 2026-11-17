@@ -11,7 +11,7 @@ object HtmlStorage {
     private const val TAG = "HtmlStorage"
     private const val HTML_DIR = "html_projects"
 
-    private const val MIRROR_PARENT = "Sherwood WTA"
+    private const val MIRROR_PARENT = "Sherwood Studio"
 
     fun saveHtmlFile(
         context: Context,

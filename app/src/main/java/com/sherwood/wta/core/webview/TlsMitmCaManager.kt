@@ -37,8 +37,8 @@ object TlsMitmCaManager {
     private const val CA_KEY_SIZE = 2048
     private const val CA_VALIDITY_DAYS = 3650L
     private const val LEAF_VALIDITY_DAYS = 365L
-    private const val CA_CN = "Sherwood WTA TLS MITM CA"
-    private const val CA_ORG = "Sherwood WTA"
+    private const val CA_CN = "Sherwood Studio TLS MITM CA"
+    private const val CA_ORG = "Sherwood Studio"
     private const val CACHE_SIZE = 256
 
     private val leafCache = LruCache<String, KeyStore.PrivateKeyEntry>(CACHE_SIZE)

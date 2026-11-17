@@ -96,7 +96,7 @@ class GeckoViewEngine(
         private val readyListeners =
             java.util.concurrent.ConcurrentHashMap<GeckoSession, Runnable>()
 
-        private const val NATIVE_BRIDGE_ID = "wta-native-bridge@webtoapp"
+        private const val NATIVE_BRIDGE_ID = "wta-native-bridge@sherwood.studio"
         private const val NATIVE_BRIDGE_LOCATION =
             "resource://android/assets/web_extensions/wta_native_bridge/"
         private const val NATIVE_BRIDGE_APP = "wta_native_bridge"

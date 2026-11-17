@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import com.sherwood.wta.ui.components.WebSwipeRefreshLayout
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.bgm.BgmMediaNotifier
 import com.sherwood.wta.core.bgm.BgmPlayer
 import com.sherwood.wta.core.bgm.BgmTransport
@@ -81,7 +81,7 @@ import com.sherwood.wta.data.model.hasAnyToolbarItem
 import com.sherwood.wta.data.model.resolveToolbarButtons
 import android.content.pm.ActivityInfo
 import com.sherwood.wta.ui.animation.HostPreviewMotion
-import com.sherwood.wta.ui.theme.WebToAppTheme
+import com.sherwood.wta.ui.theme.SherwoodStudioTheme
 import com.sherwood.wta.util.DownloadHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -111,7 +111,7 @@ import com.sherwood.wta.ui.components.announcement.toUiTemplate
 
 /** Marker prefixes used by our own injected wrappers (userscripts, modules, bridges). */
 private fun isOwnInjectionMarker(message: String): Boolean =
-    message.startsWith("[UserScript:") || message.startsWith("[WebToApp") ||
+    message.startsWith("[UserScript:") || message.startsWith("[Sherwood Studio") ||
         message.startsWith("[WTA]") || message.startsWith("[wta-")
 
 /** Bounded console buffer: page console spam must not grow state without limit. */
@@ -1007,7 +1007,7 @@ open class WebViewActivity : AppCompatActivity() {
         )
 
         setContent {
-            WebToAppTheme { isDarkTheme ->
+            SherwoodStudioTheme { isDarkTheme ->
 
                 currentIsDarkTheme = isDarkTheme
 
@@ -1637,10 +1637,10 @@ fun WebViewScreen(
 ) {
     val context = LocalContext.current
     val activity = context as android.app.Activity
-    val repository = WebToAppApplication.repository
-    val activation = WebToAppApplication.activation
-    val announcement = WebToAppApplication.announcement
-    val adBlocker = WebToAppApplication.adBlock
+    val repository = SherwoodStudioApplication.repository
+    val activation = SherwoodStudioApplication.activation
+    val announcement = SherwoodStudioApplication.announcement
+    val adBlocker = SherwoodStudioApplication.adBlock
 
     val isTestMode = !testUrl.isNullOrBlank()
 
@@ -4129,7 +4129,7 @@ fun WebViewScreen(
                                     config = webApp?.webViewConfig ?: com.sherwood.wta.data.model.WebViewConfig(),
                                     webViewManager = webViewManager,
                                     callbacks = webViewCallbacks,
-                                    adBlocker = com.sherwood.wta.WebToAppApplication.adBlock,
+                                    adBlocker = com.sherwood.wta.SherwoodStudioApplication.adBlock,
                                     pluginsEnabled = pluginsEnabled,
                                     pluginEntryStyle = previewPluginEntryStyle,
                                     pluginPanelStyle = previewPluginPanelStyle,
@@ -4559,7 +4559,7 @@ fun WebViewScreen(
                                 contextLines = listOf("url=${webApp?.url ?: directUrl ?: testUrl ?: "-"}")
                             )
                             val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                            cm?.setPrimaryClip(android.content.ClipData.newPlainText("Sherwood WTA Error", report))
+                            cm?.setPrimaryClip(android.content.ClipData.newPlainText("Sherwood Studio Error", report))
                             android.widget.Toast.makeText(context, Strings.errorCopied, android.widget.Toast.LENGTH_SHORT).show()
                         }) {
                             Text(Strings.errorCopyDetails)

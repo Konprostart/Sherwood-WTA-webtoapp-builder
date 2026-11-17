@@ -757,7 +757,7 @@ class NotificationWebSocketService : Service() {
         synchronized(this) {
             if (wakeLock?.isHeld == true) return
             // Null when WAKE_LOCK is missing/revoked — degrade, never crash (#1034).
-            wakeLock = WakeLockCompat.acquire(this, "WebToApp:WebSocketWakeLock", 15_000L)
+            wakeLock = WakeLockCompat.acquire(this, "Sherwood Studio:WebSocketWakeLock", 15_000L)
         }
     }
 

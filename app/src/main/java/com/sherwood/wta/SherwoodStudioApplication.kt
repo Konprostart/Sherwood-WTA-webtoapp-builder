@@ -35,7 +35,7 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 
-class WebToAppApplication : Application(), ImageLoaderFactory {
+class SherwoodStudioApplication : Application(), ImageLoaderFactory {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var appStartupManager: AppStartupManager? = null
@@ -77,7 +77,7 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
                 AppLogger.init(this)
                 AppLogger.system("Application", ":nodejs 子进程 onCreate (跳过宿主重型 init)")
             } catch (e: Exception) {
-                android.util.Log.e("WebToAppApplication", ":nodejs 子进程 logger init 失败", e)
+                android.util.Log.e("SherwoodStudioApplication", ":nodejs 子进程 logger init 失败", e)
             }
             return
         }
@@ -93,7 +93,7 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
         if (GlobalContext.getOrNull() == null) {
             startKoin {
                 androidLogger(Level.ERROR)
-                androidContext(this@WebToAppApplication)
+                androidContext(this@SherwoodStudioApplication)
                 modules(appModules)
             }
         }
@@ -123,7 +123,7 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
         ).also { it.initialize(appScope) }
 
         appScope.launch {
-            runCatching { HostMcpController.restore(this@WebToAppApplication) }
+            runCatching { HostMcpController.restore(this@SherwoodStudioApplication) }
                 .onFailure { AppLogger.w("Application", "local MCP restore failed: ${it.message}") }
         }
 
@@ -132,7 +132,7 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
         appScope.launch {
             runCatching {
                 com.sherwood.wta.core.telegram.TelegramBotService
-                    .restoreIfEnabled(this@WebToAppApplication)
+                    .restoreIfEnabled(this@SherwoodStudioApplication)
             }.onFailure {
                 AppLogger.w("Application", "Telegram bot restore failed: ${it.message}")
             }
@@ -145,7 +145,7 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
             // screen, and a short-lived process (a test harness) never reaches it.
             kotlinx.coroutines.delay(MAINTENANCE_DELAY_MS)
             runCatching {
-                com.sherwood.wta.core.studio.StudioStorageMaintenance(this@WebToAppApplication)
+                com.sherwood.wta.core.studio.StudioStorageMaintenance(this@SherwoodStudioApplication)
                     .runIfDue()
             }.onFailure {
                 AppLogger.w("Application", "Studio storage maintenance failed: ${it.message}")
@@ -165,7 +165,7 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
 
     override fun onLowMemory() {
         super.onLowMemory()
-        AppLogger.w("WebToAppApplication", "onLowMemory triggered")
+        AppLogger.w("SherwoodStudioApplication", "onLowMemory triggered")
         clearAppCaches()
     }
 
@@ -181,7 +181,7 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
             ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> "COMPLETE"
             else -> "UNKNOWN($level)"
         }
-        AppLogger.d("WebToAppApplication", "onTrimMemory: $levelName")
+        AppLogger.d("SherwoodStudioApplication", "onTrimMemory: $levelName")
         if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             clearAppCaches()
         }
@@ -192,9 +192,9 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
             try {
                 com.sherwood.wta.core.crypto.AesCryptoEngine.clearKeyCache()
                 com.sherwood.wta.util.HtmlProjectProcessor.clearEncodingCache()
-                AppLogger.i("WebToAppApplication", "App caches cleared")
+                AppLogger.i("SherwoodStudioApplication", "App caches cleared")
             } catch (e: Exception) {
-                AppLogger.e("WebToAppApplication", "Failed to clear app caches", e)
+                AppLogger.e("SherwoodStudioApplication", "Failed to clear app caches", e)
             }
             return
         }
@@ -204,18 +204,18 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
 
     private fun cleanupSingletons() {
         try {
-            AppLogger.d("WebToAppApplication", "Cleaning up singleton resources...")
+            AppLogger.d("SherwoodStudioApplication", "Cleaning up singleton resources...")
 
             if (BuildConfig.SHELL_RUNTIME_ONLY) {
                 shellActivationManager = null
                 shellAnnouncementManager = null
                 shellAdBlocker = null
                 shellModeManagerLocal = null
-                AppLogger.i("WebToAppApplication", "Shell runtime resources cleaned up")
+                AppLogger.i("SherwoodStudioApplication", "Shell runtime resources cleaned up")
                 return
             }
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Failed to cleanup singleton resources", e)
+            AppLogger.e("SherwoodStudioApplication", "Failed to cleanup singleton resources", e)
         }
     }
 
@@ -227,9 +227,9 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
 
         try {
             val isShell = shellModeManagerLocal?.isShellMode() == true
-            AppLogger.i("WebToAppApplication", "Dedicated shell runtime initialized: shellMode=$isShell")
+            AppLogger.i("SherwoodStudioApplication", "Dedicated shell runtime initialized: shellMode=$isShell")
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Shell runtime initialization failed", e)
+            AppLogger.e("SherwoodStudioApplication", "Shell runtime initialization failed", e)
         }
     }
 
@@ -256,9 +256,9 @@ class WebToAppApplication : Application(), ImageLoaderFactory {
     companion object {
         private const val MAINTENANCE_DELAY_MS = 60_000L
 
-        private lateinit var instance: WebToAppApplication
+        private lateinit var instance: SherwoodStudioApplication
 
-        fun getInstance(): WebToAppApplication = instance
+        fun getInstance(): SherwoodStudioApplication = instance
 
         @Deprecated("编辑器侧请使用 Koin 注入: val repo: WebAppRepository by inject()", ReplaceWith("org.koin.java.KoinJavaComponent.get(WebAppRepository::class.java)"))
         val repository: WebAppRepository

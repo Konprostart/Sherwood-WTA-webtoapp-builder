@@ -310,7 +310,7 @@ class ExportSecurityRegressionTest {
         val components = method.invoke(builder, config) as Set<String>
 
         assertThat(components).containsExactly(
-            "com.sherwood.wta.WebToAppApplication",
+            "com.sherwood.wta.SherwoodStudioApplication",
             "com.sherwood.wta.ui.MainActivity",
             "com.sherwood.wta.ui.shell.ShellActivity",
             // NativeBridge defaults ON and its scheduled-notification capability
@@ -439,7 +439,7 @@ class ExportSecurityRegressionTest {
                 "android.permission.ACCESS_NETWORK_STATE"
             ),
             requiredComponents = setOf(
-                "com.sherwood.wta.WebToAppApplication",
+                "com.sherwood.wta.SherwoodStudioApplication",
                 "com.sherwood.wta.ui.MainActivity",
                 "com.sherwood.wta.ui.shell.ShellActivity",
                 "androidx.core.content.FileProvider"

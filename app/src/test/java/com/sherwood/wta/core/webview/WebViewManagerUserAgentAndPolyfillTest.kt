@@ -70,8 +70,8 @@ class WebViewManagerUserAgentAndPolyfillTest {
     fun `notification polyfill defines Notification API on window`() {
         val script = WebViewManager.NotificationPolyfillHolder.SCRIPT
 
-        assertThat(script).contains("window.Notification = WebToAppNotification")
-        assertThat(script).contains("WebToAppNotification.requestPermission = requestPermission")
+        assertThat(script).contains("window.Notification = SherwoodStudioNotification")
+        assertThat(script).contains("SherwoodStudioNotification.requestPermission = requestPermission")
         assertThat(script).contains("'permission'")
     }
 
@@ -80,10 +80,10 @@ class WebViewManagerUserAgentAndPolyfillTest {
         val script = WebViewManager.NotificationPolyfillHolder.SCRIPT
 
         assertThat(script).contains("typeof window.PushManager === 'undefined'")
-        assertThat(script).contains("window.PushManager = WebToAppPushManager")
-        assertThat(script).contains("WebToAppPushManager.prototype.subscribe")
-        assertThat(script).contains("WebToAppPushManager.prototype.getSubscription")
-        assertThat(script).contains("WebToAppPushManager.prototype.permissionState")
+        assertThat(script).contains("window.PushManager = SherwoodStudioPushManager")
+        assertThat(script).contains("SherwoodStudioPushManager.prototype.subscribe")
+        assertThat(script).contains("SherwoodStudioPushManager.prototype.getSubscription")
+        assertThat(script).contains("SherwoodStudioPushManager.prototype.permissionState")
     }
 
     @Test
@@ -99,8 +99,8 @@ class WebViewManagerUserAgentAndPolyfillTest {
         val script = WebViewManager.NotificationPolyfillHolder.SCRIPT
 
         assertThat(script).contains("typeof window.PushSubscription === 'undefined'")
-        assertThat(script).contains("window.PushSubscription = WebToAppPushSubscription")
-        assertThat(script).contains("WebToAppPushSubscription.prototype.unsubscribe")
+        assertThat(script).contains("window.PushSubscription = SherwoodStudioPushSubscription")
+        assertThat(script).contains("SherwoodStudioPushSubscription.prototype.unsubscribe")
     }
 
     @Test

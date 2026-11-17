@@ -10,7 +10,7 @@ class LoggingStartup(private val context: Context) {
             AppLogger.init(context)
             AppLogger.system("Application", "onCreate started")
         } catch (e: Exception) {
-            android.util.Log.e("WebToAppApplication", "AppLogger initialization failed", e)
+            android.util.Log.e("SherwoodStudioApplication", "AppLogger initialization failed", e)
         }
     }
 

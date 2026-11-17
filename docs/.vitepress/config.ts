@@ -382,13 +382,13 @@ function themeConfig(lang: Lang, prefix: string) {
     },
     footer: {
       message: 'Released under the Unlicense.',
-      copyright: 'Built by Sherwood WTA · <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/privacy">Privacy Policy</a>'
+      copyright: 'Built by Sherwood Studio · <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/privacy">Privacy Policy</a>'
     }
   }
 }
 
 export default defineConfig({
-  title: 'Sherwood WTA',
+  title: 'Sherwood Studio',
   description:
     'Build Android APKs from web projects, directly on your phone — on-device runtimes, hardened networking, and Play-ready export.',
   lang: 'en',
@@ -399,7 +399,7 @@ export default defineConfig({
     ['link', { rel: 'icon', type: 'image/png', href: `${base}logo.png` }],
     ['meta', { name: 'theme-color', content: '#3b82f6' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'Sherwood WTA' }],
+    ['meta', { property: 'og:title', content: 'Sherwood Studio' }],
     [
       'meta',
       {
@@ -418,7 +418,7 @@ export default defineConfig({
   },
   themeConfig: {
     logo: '/logo.png',
-    siteTitle: 'Sherwood WTA',
+    siteTitle: 'Sherwood Studio',
     search: {
       provider: 'local',
       options: {}

@@ -1,4 +1,4 @@
-# WebToApp UI design-system historical debt baseline.
+# Sherwood Studio UI design-system historical debt baseline.
 # Format: relative/path.kt|rule_key|allowed_count
 # Regenerate only after intentionally accepting a new migration checkpoint.
 app/src/main/java/com/sherwood/wta/ui/components/ActivationCodeCard.kt|raw_corner_shape|12

@@ -35,7 +35,7 @@ import com.sherwood.wta.core.host.HostRuntimePrefs
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.data.model.WebApp
 import com.sherwood.wta.ui.shared.AspectRatioSurface
-import com.sherwood.wta.ui.theme.WebToAppTheme
+import com.sherwood.wta.ui.theme.SherwoodStudioTheme
 
 class MediaAppActivity : AppCompatActivity() {
 
@@ -99,7 +99,7 @@ class MediaAppActivity : AppCompatActivity() {
         }
 
         setContent {
-            WebToAppTheme { _ ->
+            SherwoodStudioTheme { _ ->
                 MediaAppScreen(
                     config = config,
                     onExit = { finish() }

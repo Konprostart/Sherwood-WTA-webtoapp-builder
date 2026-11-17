@@ -3,7 +3,7 @@
   "name": "Web Analyzer",
   "version": "1.0.0",
   "description": "Inspect page info, load performance and element statistics.",
-  "author": "Sherwood WTA",
+  "author": "Sherwood Studio",
   "icon": "search",
   "matches": [
     "*"

@@ -1,8 +1,8 @@
-# CMakeLists.txt for Sherwood WTA native components
+# CMakeLists.txt for Sherwood Studio native components
 
 cmake_minimum_required(VERSION 3.22.1)
 
-project("webtoapp_native" C CXX)
+project("sherwood_studio_native" C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

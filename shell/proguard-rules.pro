@@ -1,4 +1,4 @@
-# Sherwood WTA ProGuard Rules
+# Sherwood Studio ProGuard Rules
 #
 # Strategy: enable code shrinking (remove unused code) + resource shrinking (remove unused resources),
 # + obfuscation renaming (~8% dex savings), while aggressive optimization stays off.

@@ -9,7 +9,7 @@ import com.sherwood.wta.core.announcement.AnnouncementManager
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.shell.ShellModeManager
 
-class WebToAppApplication : Application() {
+class SherwoodStudioApplication : Application() {
 
     private var shellActivationManager: ActivationManager? = null
     private var shellAnnouncementManager: AnnouncementManager? = null
@@ -31,7 +31,7 @@ class WebToAppApplication : Application() {
                 AppLogger.init(this)
                 AppLogger.system("Application", ":nodejs 子进程 onCreate (跳过 shell 重型 init)")
             } catch (e: Exception) {
-                android.util.Log.e("WebToAppApplication", ":nodejs 子进程 logger init 失败", e)
+                android.util.Log.e("SherwoodStudioApplication", ":nodejs 子进程 logger init 失败", e)
             }
             return
         }
@@ -49,7 +49,7 @@ class WebToAppApplication : Application() {
             AppLogger.init(this, fileLoggingEnabled = fileLoggingEnabled)
             AppLogger.system("Application", "onCreate started (shell)")
         } catch (e: Exception) {
-            android.util.Log.e("WebToAppApplication", "AppLogger initialization failed", e)
+            android.util.Log.e("SherwoodStudioApplication", "AppLogger initialization failed", e)
         }
 
         initShellRuntime()
@@ -87,7 +87,7 @@ class WebToAppApplication : Application() {
 
     override fun onLowMemory() {
         super.onLowMemory()
-        AppLogger.w("WebToAppApplication", "onLowMemory triggered")
+        AppLogger.w("SherwoodStudioApplication", "onLowMemory triggered")
         clearAppCaches()
     }
 
@@ -103,7 +103,7 @@ class WebToAppApplication : Application() {
             ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> "COMPLETE"
             else -> "UNKNOWN($level)"
         }
-        AppLogger.d("WebToAppApplication", "onTrimMemory: $levelName")
+        AppLogger.d("SherwoodStudioApplication", "onTrimMemory: $levelName")
 
         if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             clearAppCaches()
@@ -114,15 +114,15 @@ class WebToAppApplication : Application() {
         try {
             com.sherwood.wta.core.crypto.AesCryptoEngine.clearKeyCache()
             com.sherwood.wta.util.HtmlProjectProcessor.clearEncodingCache()
-            AppLogger.i("WebToAppApplication", "App caches cleared")
+            AppLogger.i("SherwoodStudioApplication", "App caches cleared")
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Failed to clear app caches", e)
+            AppLogger.e("SherwoodStudioApplication", "Failed to clear app caches", e)
         }
     }
 
     private fun cleanupSingletons() {
         try {
-            AppLogger.d("WebToAppApplication", "Cleaning up singleton resources...")
+            AppLogger.d("SherwoodStudioApplication", "Cleaning up singleton resources...")
             shellActivationManager = null
             shellAnnouncementManager = null
             shellAdBlocker = null
@@ -134,9 +134,9 @@ class WebToAppApplication : Application() {
             com.sherwood.wta.core.port.PortManager.releaseAll()
             com.sherwood.wta.util.DownloadNotificationManager.release()
 
-            AppLogger.i("WebToAppApplication", "Shell runtime resources cleaned up")
+            AppLogger.i("SherwoodStudioApplication", "Shell runtime resources cleaned up")
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Failed to cleanup singleton resources", e)
+            AppLogger.e("SherwoodStudioApplication", "Failed to cleanup singleton resources", e)
         }
     }
 
@@ -150,16 +150,16 @@ class WebToAppApplication : Application() {
 
         try {
             val isShell = shellModeManagerLocal?.isShellMode() == true
-            AppLogger.i("WebToAppApplication", "Dedicated shell runtime initialized: shellMode=$isShell")
+            AppLogger.i("SherwoodStudioApplication", "Dedicated shell runtime initialized: shellMode=$isShell")
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Shell runtime initialization failed", e)
+            AppLogger.e("SherwoodStudioApplication", "Shell runtime initialization failed", e)
         }
     }
 
     companion object {
-        private lateinit var instance: WebToAppApplication
+        private lateinit var instance: SherwoodStudioApplication
 
-        fun getInstance(): WebToAppApplication = instance
+        fun getInstance(): SherwoodStudioApplication = instance
 
         val activation: ActivationManager
             get() = instance.shellActivationManager ?: error("Shell ActivationManager unavailable")

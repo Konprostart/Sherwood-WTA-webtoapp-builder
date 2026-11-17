@@ -42,7 +42,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebViewAssetLoader
 import com.sherwood.wta.core.i18n.Strings
-import com.sherwood.wta.ui.theme.WebToAppTheme
+import com.sherwood.wta.ui.theme.SherwoodStudioTheme
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -66,7 +66,7 @@ class HtmlPreviewActivity : ComponentActivity() {
         val title = intent.getStringExtra(EXTRA_TITLE) ?: Strings.preview
 
         setContent {
-            WebToAppTheme { _ ->
+            SherwoodStudioTheme { _ ->
                 HtmlPreviewScreen(
                     filePath = filePath,
                     htmlContent = htmlContent,

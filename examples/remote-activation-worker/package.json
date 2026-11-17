@@ -1,8 +1,8 @@
 {
-  "name": "webtoapp-activation-worker",
+  "name": "sherwood-studio-activation-worker",
   "version": "1.0.0",
   "private": true,
-  "description": "Reference remote-activation verification server for Sherwood WTA (Cloudflare Worker)",
+  "description": "Reference remote-activation verification server for Sherwood Studio (Cloudflare Worker)",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

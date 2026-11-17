@@ -1006,7 +1006,7 @@ private fun buildFrontendErrorReport(
     summary: String
 ): String {
     return buildString {
-        appendLine("Sherwood WTA Frontend Build Failure")
+        appendLine("Sherwood Studio Frontend Build Failure")
         appendLine("mode: ${mode.name}")
         appendLine("projectPath: ${projectPath ?: "null"}")
         appendLine("framework: ${detectionResult?.framework ?: "unknown"}")

@@ -5,7 +5,7 @@ package com.sherwood.wta.util
  * One path segment. Empty and illegal names fall back to [DEFAULT].
  */
 object AlbumFolderName {
-    const val DEFAULT = "Sherwood WTA"
+    const val DEFAULT = "Sherwood Studio"
 
     fun sanitize(raw: String?): String {
         val cleaned = raw.orEmpty()

@@ -8,7 +8,7 @@ import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
 
 /**
- * Update manifest for an app built with Sherwood WTA (auto-update).
+ * Update manifest for an app built with Sherwood Studio (auto-update).
  *
  * The manifest is a JSON object served over HTTPS by the app owner:
  *

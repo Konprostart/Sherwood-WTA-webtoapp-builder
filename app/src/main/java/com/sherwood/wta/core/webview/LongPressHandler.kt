@@ -231,7 +231,7 @@ class LongPressHandler(
                                 return canvas.toDataURL('image/png');
                             }
                         } catch (e) {
-                            console.log('WebToApp: Canvas extraction failed (CORS)', e);
+                            console.log('Sherwood Studio: Canvas extraction failed (CORS)', e);
                         }
                         return null;
                     }
@@ -329,7 +329,7 @@ class LongPressHandler(
 
                     return JSON.stringify(result);
                 } catch (e) {
-                    console.error('WebToApp: Error in getLongPressDetails', e);
+                    console.error('Sherwood Studio: Error in getLongPressDetails', e);
                     return JSON.stringify({type: 'none', error: e.message});
                 }
             })();
@@ -368,7 +368,7 @@ class LongPressHandler(
         }
     }
 
-    fun copyToClipboard(text: String, label: String = "Sherwood WTA") {
+    fun copyToClipboard(text: String, label: String = "Sherwood Studio") {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
         clipboard.setPrimaryClip(clip)
@@ -444,7 +444,7 @@ class LongPressHandler(
             val contentValues = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Sherwood WTA")
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Sherwood Studio")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
 
@@ -465,7 +465,7 @@ class LongPressHandler(
         } else {
 
             val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            val appDir = File(picturesDir, "Sherwood WTA")
+            val appDir = File(picturesDir, "Sherwood Studio")
             if (!appDir.exists()) appDir.mkdirs()
 
             val file = File(appDir, fileName)

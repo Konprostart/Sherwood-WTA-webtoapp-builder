@@ -11,7 +11,7 @@ import android.os.Build
 import com.sherwood.wta.core.host.AdvancedAppTypes
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.crypto.AssetEncryptor
 import com.sherwood.wta.core.crypto.EncryptedApkBuilder
 import com.sherwood.wta.core.crypto.EncryptionConfig
@@ -316,7 +316,6 @@ class ApkBuilder(private val context: Context) {
     private fun pkgWorkDir(packageName: String): File =
         File(tempDir, "pkg_" + packageName.replace(Regex("[^A-Za-z0-9_.-]"), "_")).apply { mkdirs() }
 
-    private val originalAppName = "Sherwood WTA"
     private val originalPackageName = "com.sherwood.wta"
 
     fun clearIncrementalCache(webApp: WebApp, packageName: String) {
@@ -1762,7 +1761,7 @@ class ApkBuilder(private val context: Context) {
                 }
 
                 if (config.adBlock.enabled) {
-                    val globalAdBlock = WebToAppApplication.adBlock
+                    val globalAdBlock = SherwoodStudioApplication.adBlock
                     try {
                         // The zip loop above already reported 100, which the caller
                         // maps to overall 70% "Repacking base template...". Name this
@@ -2553,7 +2552,7 @@ class ApkBuilder(private val context: Context) {
         if (phpBinary == null || !phpBinary.canRead()) {
             throw IllegalStateException(
                 "WordPress export needs the PHP runtime, but the PHP binary is missing or unreadable. " +
-                    "Download the PHP runtime in Sherwood WTA (Linux Environment) and rebuild."
+                    "Download the PHP runtime in Sherwood Studio (Linux Environment) and rebuild."
             )
         }
         try {
@@ -2843,7 +2842,7 @@ class ApkBuilder(private val context: Context) {
         if (phpBinary == null || !phpBinary.canRead()) {
             throw IllegalStateException(
                 "PHP app export needs the PHP runtime, but the PHP binary is missing or unreadable. " +
-                    "Download the PHP runtime in Sherwood WTA (Linux Environment) and rebuild."
+                    "Download the PHP runtime in Sherwood Studio (Linux Environment) and rebuild."
             )
         }
         try {
@@ -3020,7 +3019,7 @@ builtins.__import__ = _w2a_import
             throw IllegalStateException(
                 "Python app export needs the Python runtime, but the interpreter is missing or unreadable " +
                     "(looked for $versionedPythonBinaryName / python3 under $pythonHome). " +
-                    "Download the Python runtime in Sherwood WTA (Linux Environment) and rebuild."
+                    "Download the Python runtime in Sherwood Studio (Linux Environment) and rebuild."
             )
         }
         try {
@@ -3132,7 +3131,7 @@ builtins.__import__ = _w2a_import
         }
 
         throw IllegalStateException(
-            "Go project has no runnable binary for export. Sherwood WTA no longer compiles Go source during APK build. Build the binary first and retry export."
+            "Go project has no runnable binary for export. Sherwood Studio no longer compiles Go source during APK build. Build the binary first and retry export."
         )
     }
 
@@ -3928,7 +3927,7 @@ builtins.__import__ = _w2a_import
 
     private fun buildRequiredComponents(config: ApkConfig): Set<String> {
         val components = linkedSetOf(
-            "com.sherwood.wta.WebToAppApplication",
+            "com.sherwood.wta.SherwoodStudioApplication",
             "com.sherwood.wta.ui.MainActivity",
             "com.sherwood.wta.ui.shell.ShellActivity",
             "androidx.core.content.FileProvider"

@@ -23,6 +23,9 @@ class ActivationManager(private val context: Context) {
 
     companion object {
         private const val TAG = "ActivationManager"
+        // Compatibility constant: activation codes are derived from this exact
+        // value. Renaming it during the Sherwood Studio rebrand would invalidate
+        // every code already issued, so it keeps the original bytes on purpose.
         private const val SALT = "WebToApp_Salt_2024"
         private const val MAX_FAILED_ATTEMPTS = 5
         private const val LOCKOUT_DURATION_MS = 2 * 60 * 1000L

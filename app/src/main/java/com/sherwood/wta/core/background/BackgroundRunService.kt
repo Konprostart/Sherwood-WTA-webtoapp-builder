@@ -387,7 +387,7 @@ class BackgroundRunService : Service() {
         // instead of crashing (#1034).
         wakeLock = WakeLockCompat.acquire(
             this,
-            "WebToApp:BackgroundRunWakeLock",
+            "Sherwood Studio:BackgroundRunWakeLock",
             WAKELOCK_TIMEOUT_MS
         )
         if (wakeLock?.isHeld == true) {

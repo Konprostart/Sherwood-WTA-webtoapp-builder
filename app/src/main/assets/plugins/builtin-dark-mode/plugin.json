@@ -3,7 +3,7 @@
   "name": "Dark Mode",
   "version": "1.0.0",
   "description": "Smart inversion dark mode for any page. Toggle from the toolbar or the panel.",
-  "author": "Sherwood WTA",
+  "author": "Sherwood Studio",
   "icon": "dark_mode",
   "matches": ["*"],
   "runAt": "document_start",

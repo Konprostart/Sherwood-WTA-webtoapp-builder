@@ -21,7 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.*
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.theme.ShellTheme
 import com.sherwood.wta.core.webview.BackgroundMediaRuntime
@@ -234,7 +234,7 @@ class ShellActivity : AppCompatActivity() {
      * cancelled first so re-applying (e.g. after a forced-run state change) doesn't stack timers.
      */
     private fun applyScreenAwakeMode() {
-        val webViewConfig = WebToAppApplication.shellMode.getConfig()?.webViewConfig ?: return
+        val webViewConfig = SherwoodStudioApplication.shellMode.getConfig()?.webViewConfig ?: return
         screenAwakeClearRunnable?.let { screenAwakeHandler.removeCallbacks(it) }
         screenAwakeClearRunnable = null
         when (webViewConfig.screenAwakeMode.uppercase()) {
@@ -501,7 +501,7 @@ class ShellActivity : AppCompatActivity() {
         // (FORCE_DARK / algorithmic darkening, static flags) must be re-derived from the new uiMode
         // explicitly — see WebViewManager.refreshSystemDarkMode (#301 / #341 / #485).
         try {
-            val config = WebToAppApplication.shellMode.getConfig()
+            val config = SherwoodStudioApplication.shellMode.getConfig()
             val wv = webView
             if (wv != null && config?.webViewConfig != null) {
                 com.sherwood.wta.core.webview.WebViewManager.refreshSystemDarkMode(
@@ -551,12 +551,12 @@ class ShellActivity : AppCompatActivity() {
         savedInstanceState?.let { webViewStateBundle = it }
         permissionDelegate.onRestoreInstanceState(savedInstanceState)
 
-        if (WebToAppApplication.shellMode.requiresCustomPassword()) {
+        if (SherwoodStudioApplication.shellMode.requiresCustomPassword()) {
             showPasswordDialog()
             return
         }
 
-        val config = WebToAppApplication.shellMode.getConfig()
+        val config = SherwoodStudioApplication.shellMode.getConfig()
         if (config == null) {
             AppLogger.e("ShellActivity", "配置加载失败，无法启动应用")
             com.sherwood.wta.core.shell.ShellLogger.e("ShellActivity", "配置加载失败，无法启动应用")
@@ -995,7 +995,7 @@ class ShellActivity : AppCompatActivity() {
     private fun showCustomView(view: View) {
 
         val orientationStrategy = run {
-            val raw = WebToAppApplication.shellMode.getConfig()?.webViewConfig?.fullscreenVideoOrientation
+            val raw = SherwoodStudioApplication.shellMode.getConfig()?.webViewConfig?.fullscreenVideoOrientation
             try {
                 if (!raw.isNullOrBlank()) com.sherwood.wta.data.model.FullscreenVideoOrientation.valueOf(raw)
                 else com.sherwood.wta.data.model.FullscreenVideoOrientation.AUTO_SENSOR_LANDSCAPE
@@ -1142,7 +1142,7 @@ class ShellActivity : AppCompatActivity() {
             if (clearBrowsingDataOnLaunch) {
                 resetFreshBrowsingSession()
             }
-            val baseUrl = WebToAppApplication.shellMode.getConfig()?.targetUrl ?: ""
+            val baseUrl = SherwoodStudioApplication.shellMode.getConfig()?.targetUrl ?: ""
             val fullUrl = if (notificationClickUrl.startsWith("http://") || notificationClickUrl.startsWith("https://")) notificationClickUrl
                           else baseUrl.trimEnd('/') + "/" + notificationClickUrl.trimStart('/')
 
@@ -1163,7 +1163,7 @@ class ShellActivity : AppCompatActivity() {
             if (clearBrowsingDataOnLaunch) {
                 resetFreshBrowsingSession()
             }
-            val config = WebToAppApplication.shellMode.getConfig()
+            val config = SherwoodStudioApplication.shellMode.getConfig()
             val validatedUrl = if (config != null) resolveShellDeepLinkUrl(url, config) else normalizeShellTargetUrlForSecurity(url)
             if (!validatedUrl.startsWith("http://") && !validatedUrl.startsWith("https://")) return
             deepLinkUrl.value = validatedUrl
@@ -1331,7 +1331,7 @@ class ShellActivity : AppCompatActivity() {
         com.sherwood.wta.core.shell.ShellAutoUpdate.checkIfDue(this, lifecycleScope)
 
         if (pendingFloatingWindowLaunch) {
-            val config = WebToAppApplication.shellMode.getConfig()
+            val config = SherwoodStudioApplication.shellMode.getConfig()
             if (config != null && FloatingWindowService.canDrawOverlays(this)) {
                 pendingFloatingWindowLaunch = false
                 launchFloatingWindowAndFinish(config)
@@ -1496,9 +1496,9 @@ class ShellActivity : AppCompatActivity() {
             .setPositiveButton(Strings.btnConfirm) { _, _ ->
                 val password = editText.text.toString()
                 if (password.isNotBlank()) {
-                    WebToAppApplication.shellMode.setCustomPassword(password)
+                    SherwoodStudioApplication.shellMode.setCustomPassword(password)
 
-                    val config = WebToAppApplication.shellMode.getConfig()
+                    val config = SherwoodStudioApplication.shellMode.getConfig()
                     if (config == null) {
                         Toast.makeText(this, Strings.wrongPasswordCannotDecrypt, Toast.LENGTH_LONG).show()
                         finish()

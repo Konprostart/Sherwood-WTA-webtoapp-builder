@@ -65,7 +65,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.apkbuilder.ApkBuilder
 import com.sherwood.wta.core.apkbuilder.ApkExportPreflight
 import com.sherwood.wta.core.apkbuilder.BuildResult
@@ -110,7 +110,7 @@ fun BuildApkScreen(
     onBack: () -> Unit,
     onExportAab: (Long) -> Unit = {}
 ) {
-    val repository = remember { WebToAppApplication.repository }
+    val repository = remember { SherwoodStudioApplication.repository }
     val webApp by repository.getWebAppById(appId).collectAsState(initial = null)
 
     val app = webApp
@@ -140,7 +140,7 @@ private fun BuildApkContent(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val repository = remember { WebToAppApplication.repository }
+    val repository = remember { SherwoodStudioApplication.repository }
 
     // Two-phase rendering: show a lightweight skeleton first, and initialize the heavy work only after the navigation transition ends (220ms),
     // to avoid ApkBuilder construction (mkdirs), package lookup, engine checks, preflight, etc. competing with the transition animation for the main thread and causing dropped frames.

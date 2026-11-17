@@ -1,6 +1,6 @@
 # Plugin Market
 
-This directory **is** the Sherwood WTA Plugin Market. Every plugin the
+This directory **is** the Sherwood Studio Plugin Market. Every plugin the
 in-app market shows is fetched directly from this folder over
 `raw.githubusercontent.com`, with `cdn.jsdelivr.net/gh/` as a CDN fallback.
 There is no other backend. A merged PR is published the moment it lands on

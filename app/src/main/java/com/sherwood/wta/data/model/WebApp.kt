@@ -607,7 +607,7 @@ data class WebViewConfig(
     val consumeVolumeKeys: Boolean = false,
     /**
      * Gallery subdirectory for system-download media (`Pictures/<name>`, and the
-     * matching movie/music folders). One path segment. Blank becomes Sherwood WTA.
+     * matching movie/music folders). One path segment. Blank becomes Sherwood Studio.
      */
     val mediaAlbumName: String = "",
     val floatingWindowConfig: FloatingWindowConfig = FloatingWindowConfig(),

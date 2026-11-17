@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SherwoodWTA"
+rootProject.name = "SherwoodStudio"
 include(":app")
 include(":shell")
 include(":clone-host")

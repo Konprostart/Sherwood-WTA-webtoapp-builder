@@ -16,9 +16,9 @@ class BackgroundServicesStartup(
         appScope.launch {
             try {
                 healthMonitor.startMonitoring(webAppRepository.httpWebApps)
-                AppLogger.i("WebToAppApplication", "Health monitor started")
+                AppLogger.i("SherwoodStudioApplication", "Health monitor started")
             } catch (e: Exception) {
-                AppLogger.e("WebToAppApplication", "Background services start failed", e)
+                AppLogger.e("SherwoodStudioApplication", "Background services start failed", e)
             }
         }
     }

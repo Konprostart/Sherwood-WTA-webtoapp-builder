@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.WebToApp" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SherwoodStudio" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>
         <item name="colorOnPrimary">@color/on_primary</item>
@@ -24,14 +24,14 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
-    <style name="Theme.WebToApp.NoActionBar" parent="Theme.WebToApp">
+    <style name="Theme.SherwoodStudio.NoActionBar" parent="Theme.SherwoodStudio">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
 
     
     
-    <style name="Theme.WebToApp.Fullscreen" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SherwoodStudio.Fullscreen" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
@@ -50,7 +50,7 @@
     
     
     
-    <style name="Theme.WebToApp.Shell" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SherwoodStudio.Shell" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
@@ -64,12 +64,12 @@
         <item name="android:windowTranslucentNavigation">false</item>
     </style>
 
-    <style name="Theme.WebToApp.Splash" parent="Theme.SplashScreen">
-        <item name="postSplashScreenTheme">@style/Theme.WebToApp</item>
+    <style name="Theme.SherwoodStudio.Splash" parent="Theme.SplashScreen">
+        <item name="postSplashScreenTheme">@style/Theme.SherwoodStudio</item>
     </style>
 
     
-    <style name="Theme.WebToApp.Transparent" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SherwoodStudio.Transparent" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowContentOverlay">@null</item>

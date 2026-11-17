@@ -3,7 +3,7 @@ package com.sherwood.wta.core.autostart
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.util.WakeLockCompat
 
@@ -11,7 +11,7 @@ class BootReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "BootReceiver"
-        private const val WAKELOCK_TAG = "WebToApp:BootReceiver"
+        private const val WAKELOCK_TAG = "Sherwood Studio:BootReceiver"
         private const val WAKELOCK_TIMEOUT_MS = 60_000L
     }
 
@@ -43,7 +43,7 @@ class BootReceiver : BroadcastReceiver() {
 
         try {
             val config = try {
-                WebToAppApplication.shellMode.getConfig()
+                SherwoodStudioApplication.shellMode.getConfig()
             } catch (e: Exception) { null }
 
             if (config?.autoStartConfig?.bootStartEnabled == true) {
@@ -101,7 +101,7 @@ class BootReceiver : BroadcastReceiver() {
     private fun restoreNotificationChannels(context: Context) {
         try {
             val config = try {
-                WebToAppApplication.shellMode.getConfig()
+                SherwoodStudioApplication.shellMode.getConfig()
             } catch (_: Exception) {
                 null
             } ?: return

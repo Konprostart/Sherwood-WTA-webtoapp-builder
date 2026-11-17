@@ -497,6 +497,9 @@ class CloneLauncherActivity : Activity() {
     }
 
     private fun sha256(input: String): String {
+        // Compatibility constant: the digest of already-generated clone
+        // identities depends on it. Renaming the salt would change every
+        // derived identity, so the original bytes stay on purpose.
         val bytes = MessageDigest.getInstance("SHA-256")
             .digest((input + "WebToApp_Salt_2024").toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }

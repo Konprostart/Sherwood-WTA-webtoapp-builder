@@ -209,13 +209,13 @@ class AppExporter(private val context: Context) {
 
         val message = when {
             manufacturer.contains("xiaomi") || manufacturer.contains("redmi") -> {
-                "请在 设置 > 应用设置 > 应用管理 > Sherwood WTA > 权限管理 中开启「桌面快捷方式」权限"
+                "请在 设置 > 应用设置 > 应用管理 > Sherwood Studio > 权限管理 中开启「桌面快捷方式」权限"
             }
             manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
-                "请在 设置 > 应用 > 应用管理 > Sherwood WTA > 权限 中开启「创建桌面快捷方式」权限"
+                "请在 设置 > 应用 > 应用管理 > Sherwood Studio > 权限 中开启「创建桌面快捷方式」权限"
             }
             manufacturer.contains("oppo") -> {
-                "请在 设置 > 应用管理 > Sherwood WTA > 权限 中开启「桌面快捷方式」权限"
+                "请在 设置 > 应用管理 > Sherwood Studio > 权限 中开启「桌面快捷方式」权限"
             }
             manufacturer.contains("vivo") -> {
                 "请在 i管家 > 应用管理 > 权限管理 中开启「桌面快捷方式」权限"
@@ -289,9 +289,9 @@ class AppExporter(private val context: Context) {
 
     private fun getExportDirectory(): File {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Sherwood WTA")
+            File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Sherwood Studio")
         } else {
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Sherwood WTA")
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Sherwood Studio")
         }
     }
 

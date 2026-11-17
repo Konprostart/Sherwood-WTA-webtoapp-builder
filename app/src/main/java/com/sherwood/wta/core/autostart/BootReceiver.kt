@@ -5,13 +5,13 @@ import android.content.Context
 import android.content.Intent
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.util.WakeLockCompat
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 
 class BootReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "BootReceiver"
-        private const val WAKELOCK_TAG = "WebToApp:BootReceiver"
+        private const val WAKELOCK_TAG = "Sherwood Studio:BootReceiver"
         private const val WAKELOCK_TIMEOUT_MS = 60_000L
     }
 
@@ -46,14 +46,14 @@ class BootReceiver : BroadcastReceiver() {
         try {
 
             val isShellMode = try {
-                WebToAppApplication.shellMode.isShellMode()
+                SherwoodStudioApplication.shellMode.isShellMode()
             } catch (e: Exception) {
                 false
             }
 
             if (isShellMode) {
                 val config = try {
-                    WebToAppApplication.shellMode.getConfig()
+                    SherwoodStudioApplication.shellMode.getConfig()
                 } catch (e: Exception) {
                     null
                 }
@@ -124,7 +124,7 @@ class BootReceiver : BroadcastReceiver() {
     private fun restoreNotificationChannels(context: Context) {
         try {
             val isShellMode = try {
-                WebToAppApplication.shellMode.isShellMode()
+                SherwoodStudioApplication.shellMode.isShellMode()
             } catch (_: Exception) {
                 false
             }
@@ -135,7 +135,7 @@ class BootReceiver : BroadcastReceiver() {
                 return
             }
             val config = try {
-                WebToAppApplication.shellMode.getConfig()
+                SherwoodStudioApplication.shellMode.getConfig()
             } catch (_: Exception) {
                 null
             } ?: return

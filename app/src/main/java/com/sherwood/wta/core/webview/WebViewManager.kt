@@ -5448,7 +5448,7 @@ class WebViewManager(
                                 configurable: true
                             });
                         } catch(e) {
-                            console.warn('[WebToApp] Failed to override zoom setter:', e);
+                            console.warn('[Sherwood Studio] Failed to override zoom setter:', e);
                         }
                     })();
                 """.trimIndent())
@@ -5524,7 +5524,7 @@ class WebViewManager(
                                         NativeBridge.copyToClipboard(String(text));
                                         resolve();
                                     } catch(e) {
-                                        console.error('[WebToApp] Clipboard writeText error:', e);
+                                        console.error('[Sherwood Studio] Clipboard writeText error:', e);
                                         reject(e);
                                     }
                                 });
@@ -5535,7 +5535,7 @@ class WebViewManager(
                                         var text = NativeBridge.getClipboardText();
                                         resolve(text || '');
                                     } catch(e) {
-                                        console.error('[WebToApp] Clipboard readText error:', e);
+                                        console.error('[Sherwood Studio] Clipboard readText error:', e);
                                         reject(e);
                                     }
                                 });
@@ -5593,7 +5593,7 @@ class WebViewManager(
                             try {
                                 navigator.clipboard = clipboardPolyfill;
                             } catch(e2) {
-                                console.warn('[WebToApp] Cannot override navigator.clipboard:', e2);
+                                console.warn('[Sherwood Studio] Cannot override navigator.clipboard:', e2);
                             }
                         }
 
@@ -5793,7 +5793,7 @@ class WebViewManager(
 
                             if (shouldBlock) {
                                 blockedCount++;
-                                console.log('[WebToApp PopupBlocker] Blocked popup #' + blockedCount + ':', url || '(empty)');
+                                console.log('[Sherwood Studio PopupBlocker] Blocked popup #' + blockedCount + ':', url || '(empty)');
                                 return {
                                     closed: true,
                                     close: function() {},
@@ -5824,7 +5824,7 @@ class WebViewManager(
 
                         window.setTimeout = function(fn, delay) {
                             if (delay === 0 && typeof fn === 'string' && fn.indexOf('window.open(') !== -1) {
-                                console.log('[WebToApp PopupBlocker] Blocked setTimeout popup trigger');
+                                console.log('[Sherwood Studio PopupBlocker] Blocked setTimeout popup trigger');
                                 return 0;
                             }
                             return originalSetTimeout.apply(window, arguments);
@@ -5833,7 +5833,7 @@ class WebViewManager(
                         window.__webtoapp_toggle_popup_blocker__ = function(enabled) {
                             window.__webtoapp_popup_blocker_enabled__ = enabled;
                             window.__sherwood_wta_popup_blocker_enabled__ = enabled;
-                            console.log('[WebToApp PopupBlocker] ' + (enabled ? 'Enabled' : 'Disabled'));
+                            console.log('[Sherwood Studio PopupBlocker] ' + (enabled ? 'Enabled' : 'Disabled'));
                         };
                         window.__sherwood_wta_toggle_popup_blocker__ = window.__webtoapp_toggle_popup_blocker__;
 
@@ -6246,7 +6246,7 @@ class WebViewManager(
                         style.textContent = `$escapedCss`;
                         (document.head || document.documentElement).appendChild(style);
                     } catch(e) {
-                        console.error('[WebToApp Chrome Ext CSS] ${module.name}:', e);
+                        console.error('[Sherwood Studio Chrome Ext CSS] ${module.name}:', e);
                     }
                 })();
             """.trimIndent())
@@ -6274,7 +6274,7 @@ class WebViewManager(
                     try {
                         ${module.code}
                     } catch(__extError__) {
-                        console.error('[WebToApp Chrome Ext Error] ${module.name} (MAIN):', __extError__);
+                        console.error('[Sherwood Studio Chrome Ext Error] ${module.name} (MAIN):', __extError__);
                     }
                 """.trimIndent())
             } else {
@@ -6289,7 +6289,7 @@ class WebViewManager(
                         try {
                             ${module.code}
                         } catch(__extError__) {
-                            console.error('[WebToApp Chrome Ext Error] ${module.name}:', __extError__);
+                            console.error('[Sherwood Studio Chrome Ext Error] ${module.name}:', __extError__);
                         }
                     })();
                 """.trimIndent())
@@ -6413,7 +6413,7 @@ class WebViewManager(
                 try {
                     eval($encoded);
                 } catch(__wtaPolyfillError__) {
-                    console.error('[WebToApp Userscript Polyfill Error] ${escapeForJsSingleQuoted(scriptId)}:', __wtaPolyfillError__);
+                    console.error('[Sherwood Studio Userscript Polyfill Error] ${escapeForJsSingleQuoted(scriptId)}:', __wtaPolyfillError__);
                 }
             })();
         """.trimIndent()
@@ -6436,7 +6436,7 @@ class WebViewManager(
                 try {
                     eval($encodedCode);
                 } catch(__wtaRequireError__) {
-                    console.error('[WebToApp Userscript Require Error] ${escapeForJsSingleQuoted(moduleName)} (${escapeForJsSingleQuoted(scriptId)}):', __wtaRequireError__);
+                    console.error('[Sherwood Studio Userscript Require Error] ${escapeForJsSingleQuoted(moduleName)} (${escapeForJsSingleQuoted(scriptId)}):', __wtaRequireError__);
                     delete window.__WTA_USERSCRIPT_REQUIRE_CACHE__[$requireKey];
                 }
             })();
@@ -6454,7 +6454,7 @@ class WebViewManager(
                 try {
                     eval($encodedCode);
                 } catch(__usError__) {
-                    console.error('[WebToApp Userscript Error] ${escapeForJsSingleQuoted(moduleName)} (${escapeForJsSingleQuoted(scriptId)}):', __usError__);
+                    console.error('[Sherwood Studio Userscript Error] ${escapeForJsSingleQuoted(moduleName)} (${escapeForJsSingleQuoted(scriptId)}):', __usError__);
                 }
             })();
         """.trimIndent()
@@ -6629,7 +6629,7 @@ class WebViewManager(
                     }
                 }
 
-                function WebToAppNotification(title, options) {
+                function SherwoodStudioNotification(title, options) {
                     showNativeNotification(title, options);
                     this.title = String(title || '');
                     this.body = String((options && options.body) || '');
@@ -6638,13 +6638,13 @@ class WebViewManager(
                     this.close = function() {};
                 }
 
-                Object.defineProperty(WebToAppNotification, 'permission', {
+                Object.defineProperty(SherwoodStudioNotification, 'permission', {
                     get: getPermission,
                     configurable: true
                 });
-                WebToAppNotification.requestPermission = requestPermission;
-                WebToAppNotification.maxActions = 0;
-                window.Notification = WebToAppNotification;
+                SherwoodStudioNotification.requestPermission = requestPermission;
+                SherwoodStudioNotification.maxActions = 0;
+                window.Notification = SherwoodStudioNotification;
 
                 if (navigator.permissions && navigator.permissions.query) {
                     var originalQuery = navigator.permissions.query.bind(navigator.permissions);
@@ -6663,32 +6663,32 @@ class WebViewManager(
                 }
 
                 if (typeof window.PushManager === 'undefined') {
-                    function WebToAppPushManager() {}
-                    WebToAppPushManager.supportedContentEncodings = ['aes128gcm'];
-                    WebToAppPushManager.prototype.subscribe = function(opts) {
+                    function SherwoodStudioPushManager() {}
+                    SherwoodStudioPushManager.supportedContentEncodings = ['aes128gcm'];
+                    SherwoodStudioPushManager.prototype.subscribe = function(opts) {
                         return Promise.reject(new DOMException(
                             'Push subscription is not available in this WebView; falling back to local notifications.',
                             'NotAllowedError'
                         ));
                     };
-                    WebToAppPushManager.prototype.getSubscription = function() {
+                    SherwoodStudioPushManager.prototype.getSubscription = function() {
                         return Promise.resolve(null);
                     };
-                    WebToAppPushManager.prototype.permissionState = function(opts) {
+                    SherwoodStudioPushManager.prototype.permissionState = function(opts) {
                         return Promise.resolve(getPermission());
                     };
-                    window.PushManager = WebToAppPushManager;
+                    window.PushManager = SherwoodStudioPushManager;
                 }
 
                 if (typeof window.PushSubscription === 'undefined') {
-                    function WebToAppPushSubscription() {}
-                    WebToAppPushSubscription.prototype.unsubscribe = function() {
+                    function SherwoodStudioPushSubscription() {}
+                    SherwoodStudioPushSubscription.prototype.unsubscribe = function() {
                         return Promise.resolve(true);
                     };
-                    WebToAppPushSubscription.prototype.toJSON = function() {
+                    SherwoodStudioPushSubscription.prototype.toJSON = function() {
                         return { endpoint: '', expirationTime: null, keys: {} };
                     };
-                    window.PushSubscription = WebToAppPushSubscription;
+                    window.PushSubscription = SherwoodStudioPushSubscription;
                 }
 
                 function showFromPage(title, options) {
@@ -6940,7 +6940,7 @@ class WebViewManager(
                         // bridge; kept actionable in case interface removal races injection.
                         return Promise.reject(new TypeError(
                             'Native private network bridge is unavailable. ' +
-                            'Enable "Private network bridge" (or CORS bypass) for this app in the Sherwood WTA editor and rebuild.'
+                            'Enable "Private network bridge" (or CORS bypass) for this app in the Sherwood Studio editor and rebuild.'
                         ));
                     }
                     return bodyToBase64(payload.body).then(function(bodyBase64) {

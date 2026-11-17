@@ -131,7 +131,7 @@ class FloatingWindowService : Service() {
                     // Koin is not started inside exported APKs (the shell Application registers
                     // runtime services directly), so resolve via the Application accessor that
                     // works in both host and shell runtimes.
-                    com.sherwood.wta.WebToAppApplication.shellMode.getConfig()
+                    com.sherwood.wta.SherwoodStudioApplication.shellMode.getConfig()
                 } catch (e: Exception) {
                     AppLogger.w(TAG, "Shell config unavailable, falling back to raw URL", e)
                     null
@@ -265,7 +265,7 @@ class FloatingWindowService : Service() {
         val customDownloadDirUri = shellConfig.webViewConfig.customDownloadDirUri
         val mediaAlbumName = shellConfig.webViewConfig.mediaAlbumName
         val adBlocker = try {
-            com.sherwood.wta.WebToAppApplication.adBlock
+            com.sherwood.wta.SherwoodStudioApplication.adBlock
         } catch (e: Exception) {
             AppLogger.w(TAG, "AdBlocker unavailable, falling back to default", e)
             com.sherwood.wta.core.adblock.AdBlocker()

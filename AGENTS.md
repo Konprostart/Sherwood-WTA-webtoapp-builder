@@ -38,7 +38,7 @@ app/ sources
   → syncShellRuntimeSources  →  shell DEX  →  webview_shell.apk (template)
 
 Generated APK runtime
-  WebToAppApplication → ShellModeManager → load assets JSON config
+  SherwoodStudioApplication → ShellModeManager → load assets JSON config
   → WebViewManager / runtime servers (Node/PHP/Python/Go/WordPress)
 ```
 

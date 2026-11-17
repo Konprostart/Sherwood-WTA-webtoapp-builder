@@ -5,7 +5,7 @@ import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.shell.ShellConfig
@@ -27,7 +27,7 @@ object ShellActivityInit {
 
     fun initLogger(activity: AppCompatActivity) {
         try {
-            val tempConfig = WebToAppApplication.shellMode.getConfig()
+            val tempConfig = SherwoodStudioApplication.shellMode.getConfig()
             val versionName = try {
                 activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "1.0.0"
             } catch (e: Exception) { "1.0.0" }

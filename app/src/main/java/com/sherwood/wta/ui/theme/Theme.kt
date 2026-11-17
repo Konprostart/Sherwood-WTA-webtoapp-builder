@@ -82,7 +82,7 @@ val LocalIsDarkTheme = staticCompositionLocalOf { false }
 
 /**
  * Whether descriptive subtitles (the small hint text under feature titles) are
- * shown. Provided by [WebToAppTheme] from the user's display preference —
+ * shown. Provided by [SherwoodStudioTheme] from the user's display preference —
  * defaults to `true` so contexts that do not provide it (shell UI, previews)
  * keep rendering as before.
  */
@@ -98,18 +98,18 @@ fun String?.ifDescriptionsShown(): String? =
     if (LocalShowDescriptions.current) this else null
 
 @Composable
-fun WebToAppTheme(
+fun SherwoodStudioTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    WebToAppTheme(darkTheme, dynamicColor) { _ ->
+    SherwoodStudioTheme(darkTheme, dynamicColor) { _ ->
         content()
     }
 }
 
 @Composable
-fun WebToAppTheme(
+fun SherwoodStudioTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable (isDarkTheme: Boolean) -> Unit
@@ -203,7 +203,7 @@ fun WebToAppTheme(
 }
 
 @Composable
-fun WebToAppThemeSimple(
+fun SherwoodStudioThemeSimple(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

@@ -505,7 +505,7 @@ private fun AuthorHeroCard(
             Spacer(Modifier.height(18.dp))
 
             Text(
-                text = "Sherwood WTA",
+                text = "Sherwood Studio",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
@@ -552,8 +552,8 @@ private fun AuthorHeroCard(
                     }
                 },
                 onCopy = {
-                    val label = "Sherwood WTA version"
-                    val text = "Sherwood WTA v$versionName ($versionCode)"
+                    val label = "Sherwood Studio version"
+                    val text = "Sherwood Studio v$versionName ($versionCode)"
                     context.copyToClipboard(label, text)
                     Toast.makeText(
                         context,
@@ -1603,16 +1603,16 @@ private fun Context.openUrl(url: String) {
 
 @Composable
 private fun aboutAuthorByLine(): String = when (Strings.currentLanguage.value) {
-    AppLanguage.CHINESE -> "Sherwood WTA"
-    AppLanguage.ENGLISH -> "Sherwood WTA"
-    AppLanguage.ARABIC -> "Sherwood WTA"
-    AppLanguage.PORTUGUESE -> "Sherwood WTA"
-    AppLanguage.SPANISH -> "Sherwood WTA"
-    AppLanguage.FRENCH -> "Sherwood WTA"
-    AppLanguage.GERMAN -> "Sherwood WTA"
-    AppLanguage.RUSSIAN -> "Sherwood WTA"
-    AppLanguage.JAPANESE -> "Sherwood WTA"
-    AppLanguage.KOREAN -> "Sherwood WTA"
+    AppLanguage.CHINESE -> "Sherwood Studio"
+    AppLanguage.ENGLISH -> "Sherwood Studio"
+    AppLanguage.ARABIC -> "Sherwood Studio"
+    AppLanguage.PORTUGUESE -> "Sherwood Studio"
+    AppLanguage.SPANISH -> "Sherwood Studio"
+    AppLanguage.FRENCH -> "Sherwood Studio"
+    AppLanguage.GERMAN -> "Sherwood Studio"
+    AppLanguage.RUSSIAN -> "Sherwood Studio"
+    AppLanguage.JAPANESE -> "Sherwood Studio"
+    AppLanguage.KOREAN -> "Sherwood Studio"
 }
 
 @Composable

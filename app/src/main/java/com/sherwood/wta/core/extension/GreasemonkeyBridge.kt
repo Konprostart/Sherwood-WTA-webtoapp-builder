@@ -60,7 +60,7 @@ class GreasemonkeyBridge(
             grants: ${JSONArray(grants)},
             resources: _resources
         },
-        scriptHandler: 'Sherwood WTA',
+        scriptHandler: 'Sherwood Studio',
         version: '1.0'
     };
 
@@ -151,7 +151,7 @@ class GreasemonkeyBridge(
         if (_bridge.menuCommand) _bridge.menuCommand(_sid, name, true);
     }
 
-    // ===== Script Window API (Sherwood WTA extension) =====
+    // ===== Script Window API (Sherwood Studio extension) =====
     function GM_openScriptWindow(html, options) {
         if (!window.__WTA_SCRIPT_WINDOWS__) return null;
         options = options || {};

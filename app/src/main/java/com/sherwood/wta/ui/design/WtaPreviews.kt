@@ -21,7 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.sherwood.wta.ui.theme.WebToAppThemeSimple
+import com.sherwood.wta.ui.theme.SherwoodStudioThemeSimple
 
 @Preview(name = "WTA Settings Light", showBackground = true, widthDp = 390)
 @Preview(
@@ -38,7 +38,7 @@ import com.sherwood.wta.ui.theme.WebToAppThemeSimple
 )
 @Composable
 private fun WtaSettingsPreview() {
-    WebToAppThemeSimple {
+    SherwoodStudioThemeSimple {
         WtaSettingsPreviewContent()
     }
 }

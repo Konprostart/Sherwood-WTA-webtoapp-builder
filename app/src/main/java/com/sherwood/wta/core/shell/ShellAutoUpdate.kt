@@ -8,7 +8,7 @@ import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.sherwood.wta.BuildConfig
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.update.AppUpdateController
@@ -33,7 +33,7 @@ object ShellAutoUpdate {
 
     fun checkIfDue(activity: Activity, scope: LifecycleCoroutineScope) {
         if (!BuildConfig.SHELL_RUNTIME_ONLY) return
-        val config = WebToAppApplication.shellMode.getConfig() ?: return
+        val config = SherwoodStudioApplication.shellMode.getConfig() ?: return
         val cfg = AppUpdateConfig(
             enabled = config.autoUpdateEnabled,
             manifestUrl = config.autoUpdateManifestUrl,

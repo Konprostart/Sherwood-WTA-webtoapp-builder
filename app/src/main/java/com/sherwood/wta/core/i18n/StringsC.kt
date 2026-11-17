@@ -813,16 +813,16 @@ object StringsC {
         AppLanguage.KOREAN -> "출력 스트림을 열 수 없습니다"
     }
     val shareModuleTitle: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "Sherwood WTA 扩展模块分享"
-        AppLanguage.ENGLISH -> "Sherwood WTA Extension Module Share"
-        AppLanguage.ARABIC -> "مشاركة وحدة إضافية Sherwood WTA"
-        AppLanguage.PORTUGUESE -> "Compartilhamento de Módulo de Extensão Sherwood WTA"
-        AppLanguage.SPANISH -> "Compartir Módulo de Extensión Sherwood WTA"
-        AppLanguage.FRENCH -> "Partage de Module d'Extension Sherwood WTA"
-        AppLanguage.GERMAN -> "Sherwood WTA Erweiterungsmodul Teilen"
-        AppLanguage.RUSSIAN -> "Поделиться модулем расширения Sherwood WTA"
-        AppLanguage.JAPANESE -> "Sherwood WTA 拡張モジュールの共有"
-        AppLanguage.KOREAN -> "Sherwood WTA 확장 모듈 공유"
+        AppLanguage.CHINESE -> "Sherwood Studio 扩展模块分享"
+        AppLanguage.ENGLISH -> "Sherwood Studio Extension Module Share"
+        AppLanguage.ARABIC -> "مشاركة وحدة إضافية Sherwood Studio"
+        AppLanguage.PORTUGUESE -> "Compartilhamento de Módulo de Extensão Sherwood Studio"
+        AppLanguage.SPANISH -> "Compartir Módulo de Extensión Sherwood Studio"
+        AppLanguage.FRENCH -> "Partage de Module d'Extension Sherwood Studio"
+        AppLanguage.GERMAN -> "Sherwood Studio Erweiterungsmodul Teilen"
+        AppLanguage.RUSSIAN -> "Поделиться модулем расширения Sherwood Studio"
+        AppLanguage.JAPANESE -> "Sherwood Studio 拡張モジュールの共有"
+        AppLanguage.KOREAN -> "Sherwood Studio 확장 모듈 공유"
     }
     val shareModuleName: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "模块名称"
@@ -885,28 +885,28 @@ object StringsC {
         AppLanguage.KOREAN -> "공유 코드"
     }
     val shareModuleHowTo: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "使用方法：复制分享码，在 Sherwood WTA 扩展模块页面点击\"导入\" -> \"从分享码导入\""
-        AppLanguage.ENGLISH -> "How to use: Copy the share code, go to Sherwood WTA extension modules page and click \"Import\" -> \"Import from share code\""
-        AppLanguage.ARABIC -> "طريقة الاستخدام: انسخ رمز المشاركة، انتقل إلى صفحة وحدات Sherwood WTA الإضافية وانقر على \"استيراد\" -> \"استيراد من رمز المشاركة\""
-        AppLanguage.PORTUGUESE -> "Como usar: Copie o código de compartilhamento, vá para a página de módulos de extensão do Sherwood WTA e clique em \"Importar\" -> \"Importar do código de compartilhamento\""
-        AppLanguage.SPANISH -> "Cómo usar: Copie el código de compartir, vaya a la página de módulos de extensión de Sherwood WTA y haga clic en \"Importar\" -> \"Importar del código de compartir\""
-        AppLanguage.FRENCH -> "Comment utiliser: Copiez le code de partage, allez sur la page des modules d'extension Sherwood WTA et cliquez sur \"Importer\" -> \"Importer depuis le code de partage\""
-        AppLanguage.GERMAN -> "Verwendung: Kopieren Sie den Freigabecode, gehen Sie zur Sherwood WTA-Erweiterungsmodule-Seite und klicken Sie auf \"Importieren\" -> \"Aus Freigabecode importieren\""
-        AppLanguage.RUSSIAN -> "Как использовать: Скопируйте код доступа, перейдите на страницу модулей расширения Sherwood WTA и нажмите \"Импорт\" -> \"Импорт из кода доступа\""
-        AppLanguage.JAPANESE -> "使い方: 共有コードをコピーし、Sherwood WTA拡張モジュールページで \"インポート\" -> \"共有コードからインポート\" をクリックします"
-        AppLanguage.KOREAN -> "사용 방법: 공유 코드를 복사하고, Sherwood WTA 확장 모듈 페이지에서 \"가져오기\" -> \"공유 코드에서 가져오기\"를 클릭하세요"
+        AppLanguage.CHINESE -> "使用方法：复制分享码，在 Sherwood Studio 扩展模块页面点击\"导入\" -> \"从分享码导入\""
+        AppLanguage.ENGLISH -> "How to use: Copy the share code, go to Sherwood Studio extension modules page and click \"Import\" -> \"Import from share code\""
+        AppLanguage.ARABIC -> "طريقة الاستخدام: انسخ رمز المشاركة، انتقل إلى صفحة وحدات Sherwood Studio الإضافية وانقر على \"استيراد\" -> \"استيراد من رمز المشاركة\""
+        AppLanguage.PORTUGUESE -> "Como usar: Copie o código de compartilhamento, vá para a página de módulos de extensão do Sherwood Studio e clique em \"Importar\" -> \"Importar do código de compartilhamento\""
+        AppLanguage.SPANISH -> "Cómo usar: Copie el código de compartir, vaya a la página de módulos de extensión de Sherwood Studio y haga clic en \"Importar\" -> \"Importar del código de compartir\""
+        AppLanguage.FRENCH -> "Comment utiliser: Copiez le code de partage, allez sur la page des modules d'extension Sherwood Studio et cliquez sur \"Importer\" -> \"Importer depuis le code de partage\""
+        AppLanguage.GERMAN -> "Verwendung: Kopieren Sie den Freigabecode, gehen Sie zur Sherwood-Studio-Erweiterungsmodule-Seite und klicken Sie auf \"Importieren\" -> \"Aus Freigabecode importieren\""
+        AppLanguage.RUSSIAN -> "Как использовать: Скопируйте код доступа, перейдите на страницу модулей расширения Sherwood Studio и нажмите \"Импорт\" -> \"Импорт из кода доступа\""
+        AppLanguage.JAPANESE -> "使い方: 共有コードをコピーし、Sherwood Studio拡張モジュールページで \"インポート\" -> \"共有コードからインポート\" をクリックします"
+        AppLanguage.KOREAN -> "사용 방법: 공유 코드를 복사하고, Sherwood Studio 확장 모듈 페이지에서 \"가져오기\" -> \"공유 코드에서 가져오기\"를 클릭하세요"
     }
     val shareModuleSubject: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "Sherwood WTA 扩展模块"
-        AppLanguage.ENGLISH -> "Sherwood WTA Extension Module"
-        AppLanguage.ARABIC -> "وحدة إضافية Sherwood WTA"
-        AppLanguage.PORTUGUESE -> "Módulo de Extensão Sherwood WTA"
-        AppLanguage.SPANISH -> "Módulo de Extensión Sherwood WTA"
-        AppLanguage.FRENCH -> "Module d'Extension Sherwood WTA"
-        AppLanguage.GERMAN -> "Sherwood WTA Erweiterungsmodul"
-        AppLanguage.RUSSIAN -> "Модуль расширения Sherwood WTA"
-        AppLanguage.JAPANESE -> "Sherwood WTA 拡張モジュール"
-        AppLanguage.KOREAN -> "Sherwood WTA 확장 모듈"
+        AppLanguage.CHINESE -> "Sherwood Studio 扩展模块"
+        AppLanguage.ENGLISH -> "Sherwood Studio Extension Module"
+        AppLanguage.ARABIC -> "وحدة إضافية Sherwood Studio"
+        AppLanguage.PORTUGUESE -> "Módulo de Extensão Sherwood Studio"
+        AppLanguage.SPANISH -> "Módulo de Extensión Sherwood Studio"
+        AppLanguage.FRENCH -> "Module d'Extension Sherwood Studio"
+        AppLanguage.GERMAN -> "Sherwood Studio Erweiterungsmodul"
+        AppLanguage.RUSSIAN -> "Модуль расширения Sherwood Studio"
+        AppLanguage.JAPANESE -> "Sherwood Studio 拡張モジュール"
+        AppLanguage.KOREAN -> "Sherwood Studio 확장 모듈"
     }
     val moduleCopySuffix: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "副本"
@@ -7410,16 +7410,16 @@ object StringsC {
     }
 
     val shareModuleText: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "分享扩展模块「%s」- Sherwood WTA"
-        AppLanguage.ENGLISH -> "Share extension module \"%s\" - Sherwood WTA"
-        AppLanguage.ARABIC -> "مشاركة وحدة \"%s\" - Sherwood WTA"
-        AppLanguage.PORTUGUESE -> "Compartilhar módulo de extensão \"%s\" - Sherwood WTA"
-        AppLanguage.SPANISH -> "Compartir módulo de extensión \"%s\" - Sherwood WTA"
-        AppLanguage.FRENCH -> "Partager le module d'extension \"%s\" - Sherwood WTA"
-        AppLanguage.GERMAN -> "Erweiterungsmodul \"%s\" teilen - Sherwood WTA"
-        AppLanguage.RUSSIAN -> "Поделиться модулем расширения \"%s\" - Sherwood WTA"
-        AppLanguage.JAPANESE -> "拡張モジュール「%s」を共有 - Sherwood WTA"
-        AppLanguage.KOREAN -> "확장 모듈 \"%s\" 공유 - Sherwood WTA"
+        AppLanguage.CHINESE -> "分享扩展模块「%s」- Sherwood Studio"
+        AppLanguage.ENGLISH -> "Share extension module \"%s\" - Sherwood Studio"
+        AppLanguage.ARABIC -> "مشاركة وحدة \"%s\" - Sherwood Studio"
+        AppLanguage.PORTUGUESE -> "Compartilhar módulo de extensão \"%s\" - Sherwood Studio"
+        AppLanguage.SPANISH -> "Compartir módulo de extensión \"%s\" - Sherwood Studio"
+        AppLanguage.FRENCH -> "Partager le module d'extension \"%s\" - Sherwood Studio"
+        AppLanguage.GERMAN -> "Erweiterungsmodul \"%s\" teilen - Sherwood Studio"
+        AppLanguage.RUSSIAN -> "Поделиться модулем расширения \"%s\" - Sherwood Studio"
+        AppLanguage.JAPANESE -> "拡張モジュール「%s」を共有 - Sherwood Studio"
+        AppLanguage.KOREAN -> "확장 모듈 \"%s\" 공유 - Sherwood Studio"
     }
 
     val shareModuleFileSubject: String get() = when (Strings.lang) {
@@ -7436,16 +7436,16 @@ object StringsC {
     }
 
     val shareModuleFileText: String get() = when (Strings.lang) {
-        AppLanguage.CHINESE -> "扩展模块「%s」- Sherwood WTA\n\n在 Sherwood WTA 中导入该文件即可使用"
-        AppLanguage.ENGLISH -> "Extension module \"%s\" - Sherwood WTA\n\nImport this file in Sherwood WTA to use"
-        AppLanguage.ARABIC -> "وحدة \"%s\" - Sherwood WTA\n\nاستورد هذا الملف في Sherwood WTA للاستخدام"
-        AppLanguage.PORTUGUESE -> "Módulo de extensão \"%s\" - Sherwood WTA\n\nImporte este arquivo no Sherwood WTA para usar"
-        AppLanguage.SPANISH -> "Módulo de extensión \"%s\" - Sherwood WTA\n\nImporte este archivo en Sherwood WTA para usar"
-        AppLanguage.FRENCH -> "Module d'extension \"%s\" - Sherwood WTA\n\nImportez ce fichier dans Sherwood WTA pour l'utiliser"
-        AppLanguage.GERMAN -> "Erweiterungsmodul \"%s\" - Sherwood WTA\n\nDiese Datei in Sherwood WTA importieren, um zu verwenden"
-        AppLanguage.RUSSIAN -> "Модуль расширения \"%s\" - Sherwood WTA\n\nИмпортируйте этот файл в Sherwood WTA для использования"
-        AppLanguage.JAPANESE -> "拡張モジュール「%s」- Sherwood WTA\n\nSherwood WTAでこのファイルをインポートして使用"
-        AppLanguage.KOREAN -> "확장 모듈 \"%s\" - Sherwood WTA\n\nSherwood WTA에서 이 파일을 가져와 사용"
+        AppLanguage.CHINESE -> "扩展模块「%s」- Sherwood Studio\n\n在 Sherwood Studio 中导入该文件即可使用"
+        AppLanguage.ENGLISH -> "Extension module \"%s\" - Sherwood Studio\n\nImport this file in Sherwood Studio to use"
+        AppLanguage.ARABIC -> "وحدة \"%s\" - Sherwood Studio\n\nاستورد هذا الملف في Sherwood Studio للاستخدام"
+        AppLanguage.PORTUGUESE -> "Módulo de extensão \"%s\" - Sherwood Studio\n\nImporte este arquivo no Sherwood Studio para usar"
+        AppLanguage.SPANISH -> "Módulo de extensión \"%s\" - Sherwood Studio\n\nImporte este archivo en Sherwood Studio para usar"
+        AppLanguage.FRENCH -> "Module d'extension \"%s\" - Sherwood Studio\n\nImportez ce fichier dans Sherwood Studio pour l'utiliser"
+        AppLanguage.GERMAN -> "Erweiterungsmodul \"%s\" - Sherwood Studio\n\nDiese Datei in Sherwood Studio importieren, um zu verwenden"
+        AppLanguage.RUSSIAN -> "Модуль расширения \"%s\" - Sherwood Studio\n\nИмпортируйте этот файл в Sherwood Studio для использования"
+        AppLanguage.JAPANESE -> "拡張モジュール「%s」- Sherwood Studio\n\nSherwood Studioでこのファイルをインポートして使用"
+        AppLanguage.KOREAN -> "확장 모듈 \"%s\" - Sherwood Studio\n\nSherwood Studio에서 이 파일을 가져와 사용"
     }
 
     val extensionModuleSubtitle: String get() = when (Strings.lang) {

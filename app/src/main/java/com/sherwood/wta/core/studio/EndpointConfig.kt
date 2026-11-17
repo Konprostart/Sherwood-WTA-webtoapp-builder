@@ -148,7 +148,7 @@ data class EndpointConfig(
         const val DEFAULT_GITHUB_ACCESS_TOKEN = "https://github.com/login/oauth/access_token"
 
         /**
-         * Identity of this project. Not the upstream WebToApp project and not the
+         * Identity of this project. Not the upstream Sherwood Studio project and not the
          * author's private infrastructure: this is the repository the app is built
          * from, and any fork can replace it from the Studio settings screen.
          */

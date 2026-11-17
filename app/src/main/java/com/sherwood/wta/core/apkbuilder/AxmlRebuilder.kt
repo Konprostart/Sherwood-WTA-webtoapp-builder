@@ -141,8 +141,8 @@ class AxmlRebuilder {
             "android.permission.ACCESS_NETWORK_STATE"
         )
 
-        private val WEBTOAPP_RUNTIME_COMPONENTS = setOf(
-            "com.sherwood.wta.WebToAppApplication",
+        private val SHERWOOD_STUDIO_RUNTIME_COMPONENTS = setOf(
+            "com.sherwood.wta.SherwoodStudioApplication",
             "com.sherwood.wta.ui.MainActivity",
             "com.sherwood.wta.ui.shell.ShellActivity",
             "com.sherwood.wta.core.background.BackgroundRunService",
@@ -171,7 +171,7 @@ class AxmlRebuilder {
             "org.mozilla.gecko.process.GeckoChildProcessServices\$ipdlunittest"
         )
 
-        private val DEFAULT_RUNTIME_COMPONENTS = WEBTOAPP_RUNTIME_COMPONENTS + GECKOVIEW_RUNTIME_COMPONENTS
+        private val DEFAULT_RUNTIME_COMPONENTS = SHERWOOD_STUDIO_RUNTIME_COMPONENTS + GECKOVIEW_RUNTIME_COMPONENTS
     }
 
     private fun ensureUsesPermissions(parsed: ParsedAxml, permissions: List<String>) {

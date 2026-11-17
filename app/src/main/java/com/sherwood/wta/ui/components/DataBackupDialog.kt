@@ -33,7 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.backup.DataBackupManager
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.design.WtaAlertDialog
@@ -81,7 +81,7 @@ private fun ColumnScope.DataBackupControls() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val backupManager = remember { DataBackupManager(context) }
-    val repository = remember { WebToAppApplication.repository }
+    val repository = remember { SherwoodStudioApplication.repository }
 
     var isExporting by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }

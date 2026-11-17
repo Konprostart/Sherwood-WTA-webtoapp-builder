@@ -1,9 +1,9 @@
 {
-  "name": "webtoapp-docs",
+  "name": "sherwood-studio-docs",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Official documentation site for Sherwood WTA",
+  "description": "Official documentation site for Sherwood Studio",
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",

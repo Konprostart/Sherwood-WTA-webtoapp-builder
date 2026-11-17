@@ -86,7 +86,7 @@ object IsolationScriptInjector {
                 try {
                     ${scripts.joinToString("\n\n")}
                 } catch(e) {
-                    console.error('[WebToApp] isolation script error:', e);
+                    console.error('[Sherwood Studio] isolation script error:', e);
                 }
             })();
         """.trimIndent()

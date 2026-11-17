@@ -10,15 +10,15 @@ class SecurityStartup(private val context: Context) {
         try {
             val initialized = SecurityInitializer.initialize(context) { result ->
                 AppLogger.w(
-                    "WebToAppApplication",
+                    "SherwoodStudioApplication",
                     "Security threat detected: level=${result.threatLevel}, block=${result.shouldBlock}, threats=${result.threats}"
                 )
             }
-            AppLogger.i("WebToAppApplication", "Security initializer status: $initialized")
+            AppLogger.i("SherwoodStudioApplication", "Security initializer status: $initialized")
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Security initialization failed", e)
+            AppLogger.e("SherwoodStudioApplication", "Security initialization failed", e)
         } catch (e: Error) {
-            AppLogger.e("WebToAppApplication", "Security initialization critical error", Error(e))
+            AppLogger.e("SherwoodStudioApplication", "Security initialization critical error", Error(e))
         }
     }
 

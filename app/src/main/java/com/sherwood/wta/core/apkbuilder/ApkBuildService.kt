@@ -108,7 +108,7 @@ class ApkBuildService : Service() {
         if (wakeLock?.isHeld == true) return
         try {
             val pm = getSystemService(POWER_SERVICE) as PowerManager
-            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WebToApp:ApkBuild").apply {
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Sherwood Studio:ApkBuild").apply {
                 setReferenceCounted(false)
                 acquire(WAKE_LOCK_TIMEOUT_MS)
             }

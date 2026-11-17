@@ -289,7 +289,7 @@ val syncShellRuntimeSources by tasks.registering(Sync::class) {
 
     exclude(
 
-        "**/WebToAppApplication.kt",
+        "**/SherwoodStudioApplication.kt",
 
         "**/core/crypto/EncryptedApkBuilder.kt",
         "**/core/crypto/SecurityInitializer.kt",

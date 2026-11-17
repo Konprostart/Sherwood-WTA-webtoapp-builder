@@ -1326,7 +1326,7 @@ private fun AddActivationCodeDialog(
                             expiresAt = expiresAt
                         )
                     } else {
-                        val activationManager = com.sherwood.wta.WebToAppApplication.getInstance()
+                        val activationManager = com.sherwood.wta.SherwoodStudioApplication.getInstance()
                             .activationManager
                         activationManager.generateActivationCode(
                             type = codeType,
@@ -1510,7 +1510,7 @@ private fun BatchGenerateDialog(
                         ?.takeIf { it > 0 }
                         ?.let { System.currentTimeMillis() + TimeUnit.DAYS.toMillis(it) }
 
-                    val activationManager = com.sherwood.wta.WebToAppApplication.getInstance()
+                    val activationManager = com.sherwood.wta.SherwoodStudioApplication.getInstance()
                         .activationManager
                     val codes = activationManager.generateActivationCodes(
                         count = count,

@@ -64,6 +64,35 @@ redirects to `github.com/shiaho777/web-to-app`). GitHub's repository metadata do
 not record the fork relation (`fork: false`, no parent), so provenance is
 established from the commit history rather than from the API.
 
+The upstream project is credited here by name because that is what attribution
+means. The product shipped from this repository is Sherwood Studio: the branding,
+package identity, and feature set below are its own, while the public-domain
+lineage stays acknowledged.
+
+### Changes made by Sherwood Studio
+
+This fork is not a copy of the upstream product. The work layered on top of it
+includes, in addition to the rebrand (`com.sherwood.wta`, product name, icons, and
+documentation):
+
+- **Studio**: a git-provider abstraction over GitHub, Gitea, and Forgejo;
+  repository/branch management; pull-request inbox; CI pipeline runs; artifact
+  import; and a local APK/AAB vault with SHA-256 verification and atomic writes.
+- **Agent platform**: agent profiles, a runner seam, an offline Ollama driver, and a
+  tool-permission layer.
+- **Sidekick**: a non-modal floating assistant with image, camera, file, and
+  dictation input, backed by a strict Whisper-endpoint driver.
+- **Telegram command centre**: a paired-chat bot with inline controls and CI
+  notifications.
+- **Multi-Web**: drawer and card navigation, per-site sessions, and renderer-death
+  recovery.
+- **Hardening**: streaming encryption, bounded decodes, URL/redirect policy, and a
+  host-only export boundary.
+
+No upstream licence obligation is altered by these changes: the upstream code is
+public domain under the `LICENSE` file, and every added third-party component keeps
+the licence recorded in the tables above.
+
 Licensing state of the upstream code, as recorded in this history:
 
 - `LICENSE` in the root commit is **The Unlicense** (public-domain dedication), and

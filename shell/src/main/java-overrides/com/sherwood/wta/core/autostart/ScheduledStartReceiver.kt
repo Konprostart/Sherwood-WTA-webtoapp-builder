@@ -3,7 +3,7 @@ package com.sherwood.wta.core.autostart
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.util.WakeLockCompat
 import java.util.Calendar
@@ -12,7 +12,7 @@ class ScheduledStartReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "ScheduledStartReceiver"
-        private const val WAKELOCK_TAG = "WebToApp:ScheduledStart"
+        private const val WAKELOCK_TAG = "Sherwood Studio:ScheduledStart"
         private const val WAKELOCK_TIMEOUT_MS = 30_000L
     }
 
@@ -32,7 +32,7 @@ class ScheduledStartReceiver : BroadcastReceiver() {
             val dayOfWeek = if (today == Calendar.SUNDAY) 7 else today - 1
 
             val config = try {
-                WebToAppApplication.shellMode.getConfig()
+                SherwoodStudioApplication.shellMode.getConfig()
             } catch (e: Exception) { null }
 
             val autoStartConfig = config?.autoStartConfig

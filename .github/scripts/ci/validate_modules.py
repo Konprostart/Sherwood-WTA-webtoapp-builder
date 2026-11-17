@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate the WebToApp Module Market catalog at `modules/`.
+Validate the Sherwood Studio Module Market catalog at `modules/`.
 
 This is the source of truth for what `modules/README.md` claims gets
 checked at CI time. Every rule here corresponds to a real failure mode

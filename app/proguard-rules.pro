@@ -1,4 +1,4 @@
-# Sherwood WTA ProGuard Rules
+# Sherwood Studio ProGuard Rules
 #
 # Strategy: enable code shrinking (remove unused code) + resource shrinking (remove unused resources),
 # obfuscation and aggressive optimization are disabled. This "stability first" configuration has been repeatedly validated after production incidents,

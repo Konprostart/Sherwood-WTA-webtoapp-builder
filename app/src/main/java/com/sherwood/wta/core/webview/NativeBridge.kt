@@ -482,7 +482,7 @@ if (NativeBridge.isFullscreen()) {
 ```
 
 #### googleSignIn(requestId)
-Sign in with an existing Google account on the device (requires enabling the "Google native sign-in" capability in the Sherwood WTA editor and configuring a Web Client ID)
+Sign in with an existing Google account on the device (requires enabling the "Google native sign-in" capability in the Sherwood Studio editor and configuring a Web Client ID)
 - `requestId`: string - Page-defined request identifier
 - Async result callback: `window.NativeBridgeGoogleSignInResult(requestId, payload)`
 - payload: `{ ok: true, idToken, displayName, profilePictureUri, googleUserId }` or `{ ok: false, error, message }`
@@ -1337,7 +1337,7 @@ await WtaDirectory.write('exports/image.png', pngBytes);
         return try {
             context.applicationInfo.loadLabel(context.packageManager).toString()
         } catch (_: Exception) {
-            "Sherwood WTA"
+            "Sherwood Studio"
         }
     }
 
@@ -1404,7 +1404,7 @@ await WtaDirectory.write('exports/image.png', pngBytes);
             return privateNetworkBridgeError(
                 "disabled",
                 "Native private network capability disabled. " +
-                    "Enable the private network (or CORS bypass) capability for the native bridge in the Sherwood WTA editor and rebuild."
+                    "Enable the private network (or CORS bypass) capability for the native bridge in the Sherwood Studio editor and rebuild."
             )
         }
         return try {
@@ -1513,6 +1513,10 @@ await WtaDirectory.write('exports/image.png', pngBytes);
                     if (value.isNotBlank()) builder.header(key, value)
                 }
             }
+            // Dual marker, both required. The first name is a server-visible
+            // contract: self-hosted endpoints may already filter on those exact
+            // bytes, so it is not renamed by the rebrand. The second is the
+            // current name. Sent together so either form can be accepted.
             builder.header("X-WebToApp-Private-Network-Bridge", "1")
             builder.header("X-Sherwood-WTA-Private-Network-Bridge", "1")
             builder.method(method, requestBody)
@@ -1636,7 +1640,7 @@ await WtaDirectory.write('exports/image.png', pngBytes);
             return
         }
         if (capabilities.googleSignInClientId.isBlank()) {
-            dispatchGoogleSignInResult(requestId, googleSignInError("NO_CLIENT_ID", "No Google Web client ID configured in Sherwood WTA"))
+            dispatchGoogleSignInResult(requestId, googleSignInError("NO_CLIENT_ID", "No Google Web client ID configured in Sherwood Studio"))
             return
         }
         val activity = context as? Activity

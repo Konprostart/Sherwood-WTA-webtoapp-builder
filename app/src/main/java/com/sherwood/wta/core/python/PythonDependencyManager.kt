@@ -620,7 +620,7 @@ object PythonDependencyManager {
 import os
 import sys
 
-# WebToApp: route python subprocesses through the on-device musl dynamic linker.
+# Sherwood Studio: route python subprocesses through the on-device musl dynamic linker.
 # The stock python ELF interpreter (/lib/ld-musl-*.so.1) does not exist on
 # Android, so direct kernel execs of the binary fail. This module is imported
 # by every python process via the site machinery and rewrites subprocess/exec

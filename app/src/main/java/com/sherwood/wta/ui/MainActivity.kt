@@ -29,7 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.view.WindowCompat
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.agent.mcp.HostMcpController
 import com.sherwood.wta.core.agent.permission.ChoiceRequest
 import com.sherwood.wta.core.agent.permission.PermissionRequest
@@ -44,7 +44,7 @@ import com.sherwood.wta.ui.sidekick.SidekickHost
 import com.sherwood.wta.ui.shell.ShellActivity
 import com.sherwood.wta.ui.theme.CircularRevealOverlay
 import com.sherwood.wta.ui.theme.LocalThemeRevealState
-import com.sherwood.wta.ui.theme.WebToAppTheme
+import com.sherwood.wta.ui.theme.SherwoodStudioTheme
 import com.sherwood.wta.ui.theme.rememberThemeRevealState
 import com.sherwood.wta.ui.webview.WebViewActivity
 import kotlinx.coroutines.flow.map
@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val isShell = try {
-            val shellManager = WebToAppApplication.shellMode
+            val shellManager = SherwoodStudioApplication.shellMode
             val result = shellManager.isShellMode()
             AppLogger.d("MainActivity", "Shell mode check: isShellMode=$result")
             result
@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
 
             val themeRevealState = rememberThemeRevealState()
 
-            WebToAppTheme { isDarkTheme ->
+            SherwoodStudioTheme { isDarkTheme ->
 
                 val themeColors = MaterialTheme.colorScheme
                 LaunchedEffect(isDarkTheme, themeColors.background) {
@@ -359,7 +359,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
 
         val isShell = try {
-            WebToAppApplication.shellMode.isShellMode()
+            SherwoodStudioApplication.shellMode.isShellMode()
         } catch (e: Exception) {
             AppLogger.e("MainActivity", "Shell mode re-check failed in onNewIntent", e)
             false

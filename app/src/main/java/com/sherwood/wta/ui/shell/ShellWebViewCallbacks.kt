@@ -25,7 +25,7 @@ private fun isLocalRuntimeShellUrl(url: String?): Boolean {
 
 /** Marker prefixes used by our own injected wrappers (userscripts, modules, bridges). */
 private fun isOwnInjectionMarker(message: String): Boolean =
-    message.startsWith("[UserScript:") || message.startsWith("[WebToApp") ||
+    message.startsWith("[UserScript:") || message.startsWith("[Sherwood Studio") ||
         message.startsWith("[WTA]") || message.startsWith("[wta-")
 
 fun createShellWebViewCallbacks(

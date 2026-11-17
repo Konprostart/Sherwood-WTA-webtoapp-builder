@@ -48,7 +48,7 @@ class OpenWithIntentFilterTest {
                 "android.permission.ACCESS_NETWORK_STATE"
             ),
             requiredComponents = setOf(
-                "com.sherwood.wta.WebToAppApplication",
+                "com.sherwood.wta.SherwoodStudioApplication",
                 "com.sherwood.wta.ui.MainActivity",
                 shellActivity,
                 "androidx.core.content.FileProvider"
@@ -170,7 +170,7 @@ class OpenWithIntentFilterTest {
             versionName = "1.0",
             permissions = listOf("android.permission.INTERNET"),
             requiredComponents = setOf(
-                "com.sherwood.wta.WebToAppApplication",
+                "com.sherwood.wta.SherwoodStudioApplication",
                 "com.sherwood.wta.ui.MainActivity",
                 shellActivity,
                 "androidx.core.content.FileProvider"

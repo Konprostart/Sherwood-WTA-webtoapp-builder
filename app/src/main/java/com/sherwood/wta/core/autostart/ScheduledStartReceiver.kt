@@ -5,14 +5,14 @@ import android.content.Context
 import android.content.Intent
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.util.WakeLockCompat
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import java.util.Calendar
 
 class ScheduledStartReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "ScheduledStartReceiver"
-        private const val WAKELOCK_TAG = "WebToApp:ScheduledStart"
+        private const val WAKELOCK_TAG = "Sherwood Studio:ScheduledStart"
         private const val WAKELOCK_TIMEOUT_MS = 30_000L
     }
 
@@ -30,7 +30,7 @@ class ScheduledStartReceiver : BroadcastReceiver() {
             val autoStartManager = AutoStartManager(context)
 
             val isShellMode = try {
-                WebToAppApplication.shellMode.isShellMode()
+                SherwoodStudioApplication.shellMode.isShellMode()
             } catch (e: Exception) {
                 false
             }
@@ -57,7 +57,7 @@ class ScheduledStartReceiver : BroadcastReceiver() {
 
     private fun handleShellMode(context: Context, dayOfWeek: Int) {
         val config = try {
-            WebToAppApplication.shellMode.getConfig()
+            SherwoodStudioApplication.shellMode.getConfig()
         } catch (e: Exception) {
             AppLogger.e(TAG, "获取 Shell 配置失败", e)
             return

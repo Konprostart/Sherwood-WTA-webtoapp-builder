@@ -375,7 +375,7 @@ object HtmlProjectProcessor {
         try {
 $trimmed
         } catch (e) {
-            console.error('[WebToApp] JS execution error:', e);
+            console.error('[Sherwood Studio] JS execution error:', e);
         }
     }
 

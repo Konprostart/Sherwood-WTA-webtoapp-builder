@@ -435,7 +435,7 @@ object DownloadHelper {
 
     /** Generated shells carry a shell config in assets; the host app does not. */
     private fun runsAsGeneratedApp(context: Context): Boolean = try {
-        com.sherwood.wta.WebToAppApplication.shellMode.isShellMode()
+        com.sherwood.wta.SherwoodStudioApplication.shellMode.isShellMode()
     } catch (_: Exception) {
         false
     }

@@ -52,7 +52,7 @@ class ShareReceiveIntentFilterTest {
             "android.permission.ACCESS_NETWORK_STATE"
         ),
         requiredComponents = setOf(
-            "com.sherwood.wta.WebToAppApplication",
+            "com.sherwood.wta.SherwoodStudioApplication",
             "com.sherwood.wta.ui.MainActivity",
             shellActivity,
             "androidx.core.content.FileProvider"

@@ -24,11 +24,11 @@ class ShellRuntimeStartup(
 
         try {
             val isShell = shellModeManager.isShellMode()
-            AppLogger.i("WebToAppApplication", "Shell mode pre-check: $isShell")
+            AppLogger.i("SherwoodStudioApplication", "Shell mode pre-check: $isShell")
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Shell mode pre-check failed", e)
+            AppLogger.e("SherwoodStudioApplication", "Shell mode pre-check failed", e)
         } catch (e: Error) {
-            AppLogger.e("WebToAppApplication", "Shell mode pre-check critical error", Error(e))
+            AppLogger.e("SherwoodStudioApplication", "Shell mode pre-check critical error", Error(e))
         }
     }
 

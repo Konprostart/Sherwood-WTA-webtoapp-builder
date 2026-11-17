@@ -35,7 +35,7 @@ import com.sherwood.wta.data.model.SplashConfig
 import com.sherwood.wta.data.model.SplashOrientation
 import com.sherwood.wta.data.model.SplashType
 import com.sherwood.wta.ui.components.announcement.toUiTemplate
-import com.sherwood.wta.ui.theme.WebToAppTheme
+import com.sherwood.wta.ui.theme.SherwoodStudioTheme
 import com.sherwood.wta.util.normalizeExternalIntentUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -82,7 +82,7 @@ class SplashLauncherActivity : AppCompatActivity() {
         }
 
         setContent {
-            WebToAppTheme { _ ->
+            SherwoodStudioTheme { _ ->
                 SplashLauncherScreen(
                     payload = payload,
                     hasValidSplash = hasValidSplash,
@@ -113,7 +113,7 @@ fun SplashLauncherScreen(
     onLaunchTarget: () -> Unit
 ) {
     val context = LocalContext.current
-    val activation = com.sherwood.wta.WebToAppApplication.activation
+    val activation = com.sherwood.wta.SherwoodStudioApplication.activation
 
     val splashConfig = payload.splashConfig
     val splashPath = splashConfig.mediaPath
@@ -183,7 +183,7 @@ fun SplashLauncherScreen(
             // Respect showOnce/version pinning like the in-app announcement paths; without
             // this gate the dialog re-appeared on every clone launch.
             val announceNow = announcementEnabled && announcement.title.isNotEmpty() &&
-                com.sherwood.wta.WebToAppApplication.announcement.shouldShowAnnouncement(activationAppId, announcement)
+                com.sherwood.wta.SherwoodStudioApplication.announcement.shouldShowAnnouncement(activationAppId, announcement)
             if (announceNow) {
                 showAnnouncementDialog = true
             } else {
@@ -200,7 +200,7 @@ fun SplashLauncherScreen(
     fun onAnnouncementDismiss() {
         showAnnouncementDialog = false
         scope.launch {
-            com.sherwood.wta.WebToAppApplication.announcement.markAnnouncementShown(activationAppId, announcement.version)
+            com.sherwood.wta.SherwoodStudioApplication.announcement.markAnnouncementShown(activationAppId, announcement.version)
         }
         if (hasValidSplash && splashPath != null) {
             showSplash = true

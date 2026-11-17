@@ -36,9 +36,9 @@ class AppStartupManager(
         try {
             com.sherwood.wta.core.crypto.AesCryptoEngine.clearKeyCache()
             com.sherwood.wta.util.HtmlProjectProcessor.clearEncodingCache()
-            AppLogger.i("WebToAppApplication", "App caches cleared")
+            AppLogger.i("SherwoodStudioApplication", "App caches cleared")
         } catch (e: Exception) {
-            AppLogger.e("WebToAppApplication", "Failed to clear app caches", e)
+            AppLogger.e("SherwoodStudioApplication", "Failed to clear app caches", e)
         }
     }
 

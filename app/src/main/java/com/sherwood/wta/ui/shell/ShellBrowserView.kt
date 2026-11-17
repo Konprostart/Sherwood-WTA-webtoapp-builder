@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.engine.BrowserSurface
 import com.sherwood.wta.core.engine.EngineViewFactory
 import com.sherwood.wta.core.shell.ShellConfig
@@ -95,7 +95,7 @@ fun ShellBrowserAndroidView(
                         config = webViewConfig,
                         webViewManager = webViewManager,
                         callbacks = webViewCallbacks,
-                        adBlocker = WebToAppApplication.adBlock,
+                        adBlocker = SherwoodStudioApplication.adBlock,
                         pluginPayloads = config.embeddedPlugins
                             .map { it.toResolved() },
                         pluginsEnabled = config.pluginsEnabled,

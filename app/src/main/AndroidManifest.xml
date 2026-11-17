@@ -237,7 +237,7 @@
     ==========================================================================
     -->
     <application
-        android:name=".WebToAppApplication"
+        android:name=".SherwoodStudioApplication"
         android:allowBackup="false"
         android:largeHeap="true"
         android:icon="@mipmap/ic_launcher"
@@ -245,7 +245,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.WebToApp"
+        android:theme="@style/Theme.SherwoodStudio"
         android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true"
         android:pageSizeCompat="enabled"
@@ -268,7 +268,7 @@
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.WebToApp">
+            android:theme="@style/Theme.SherwoodStudio">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -284,7 +284,7 @@
                     android:host="oauth2callback" />
             </intent-filter>
 
-            <!-- Browser intent: handle http/https URLs so Android offers Sherwood WTA as a browser -->
+            <!-- Browser intent: handle http/https URLs so Android offers Sherwood Studio as a browser -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -310,7 +310,7 @@
             android:hardwareAccelerated="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.WebToApp.Shell" />
+            android:theme="@style/Theme.SherwoodStudio.Shell" />
 
         <!-- Separate recents task. Home preview uses it when that switch is on. The preview tool always does. -->
         <activity
@@ -322,7 +322,7 @@
             android:documentLaunchMode="intoExisting"
             android:maxRecents="15"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.WebToApp.Shell" />
+            android:theme="@style/Theme.SherwoodStudio.Shell" />
 
         
         
@@ -333,13 +333,13 @@
             android:hardwareAccelerated="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.WebToApp.Shell" />
+            android:theme="@style/Theme.SherwoodStudio.Shell" />
 
         <activity
             android:name=".ui.shell.DownloadSaveActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:theme="@style/Theme.WebToApp.Transparent" />
+            android:theme="@style/Theme.SherwoodStudio.Transparent" />
         
         
         
@@ -348,7 +348,7 @@
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
             android:exported="false"
             android:hardwareAccelerated="true"
-            android:theme="@style/Theme.WebToApp.Fullscreen" />
+            android:theme="@style/Theme.SherwoodStudio.Fullscreen" />
         
         
         <activity
@@ -356,7 +356,7 @@
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
             android:exported="false"
             android:hardwareAccelerated="true"
-            android:theme="@style/Theme.WebToApp.Fullscreen" />
+            android:theme="@style/Theme.SherwoodStudio.Fullscreen" />
         
         
         <activity
@@ -365,7 +365,7 @@
             android:exported="false"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.WebToApp" />
+            android:theme="@style/Theme.SherwoodStudio" />
 
         
         
@@ -377,7 +377,7 @@
             android:noHistory="true"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.WebToApp.Transparent" />
+            android:theme="@style/Theme.SherwoodStudio.Transparent" />
 
         
         <provider
@@ -432,7 +432,7 @@
               To restart V8, the main process makes the child kill itself and the Android Framework recreates it — invisible to the user.
             
             android:process=":nodejs"  → separate OS process within the same APK (leading colon means
-                                          private process; shares UID with webtoapp
+                                          private process; shares the host UID
                                           but is a separate process forked from zygote)
             isolatedProcess=false      → we need access to filesDir / nativeLibraryDir,
                                           which isolatedProcess mode would not allow
@@ -476,7 +476,7 @@
         <!--
             Port query / release receivers
             Host use: cross-webapp port coordination (when Node/PHP/Python/Go runtimes coexist).
-            exported=true because multiple APKs packaged by Sherwood WTA need to broadcast port queries to each other.
+            exported=true because multiple APKs packaged by Sherwood Studio need to broadcast port queries to each other.
         -->
         <receiver
             android:name=".core.port.PortQueryReceiver"

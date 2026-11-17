@@ -18,6 +18,6 @@ object CryptoConstants {
     const val CONFIG_FILE = "app_config.json"
     const val ENCRYPTION_META_FILE = "encryption_meta.json"
 
-    val HKDF_SALT = "WebToApp:KeyDerivation:v2".toByteArray()
+    val HKDF_SALT = "Sherwood Studio:KeyDerivation:v2".toByteArray()
     val HKDF_INFO_OBFUSCATION = "XOR:StringObfuscation".toByteArray()
 }

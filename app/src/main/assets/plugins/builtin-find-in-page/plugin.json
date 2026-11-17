@@ -3,7 +3,7 @@
   "name": "Find in Page",
   "version": "1.0.0",
   "description": "Search the current page with native highlighting and match navigation.",
-  "author": "Sherwood WTA",
+  "author": "Sherwood Studio",
   "icon": "search",
   "matches": [
     "*"

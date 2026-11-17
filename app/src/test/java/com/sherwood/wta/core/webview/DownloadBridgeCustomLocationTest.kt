@@ -20,7 +20,7 @@ import java.io.File
 /**
  * Regression coverage for issue #1091: blob/data-url downloads whose payload is a
  * media file (canvas.toBlob -> image/png etc.) must honor the configured download
- * location instead of always landing in the public gallery folder Pictures/WebToApp.
+ * location instead of always landing in the public gallery folder Pictures/Sherwood Studio.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])

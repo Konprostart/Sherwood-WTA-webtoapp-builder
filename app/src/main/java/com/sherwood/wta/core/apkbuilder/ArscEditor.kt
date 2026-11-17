@@ -13,8 +13,17 @@ class ArscEditor {
     fun modifyAppName(arscData: ByteArray, oldAppName: String, newAppName: String): ByteArray {
         AppLogger.d(TAG, "modifyAppName: old length=${oldAppName.length}chars, new='$newAppName'")
 
+        // `oldAppName` is the label read from the APK being cloned. The hardcoded
+        // variants are legacy match targets only: APKs exported by earlier builds
+        // still carry those labels and the clone path must be able to rewrite them.
+        // Nothing in this list is ever written to an output artifact.
         val oldNameVariants = listOf(
             oldAppName,
+            "Sherwood Studio - Convert Any Website to Android App",
+            "Sherwood Studio" + "\u00A0".repeat(88),
+            "Sherwood Studio" + "\u00AD".repeat(88),
+            "Sherwood Studio" + "\u200B".repeat(57),
+            "Sherwood Studio",
             "Sherwood WTA - Convert Any Website to Android App",
             "Sherwood WTA" + "\u00A0".repeat(88),
             "Sherwood WTA" + "\u00AD".repeat(88),

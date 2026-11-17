@@ -19,6 +19,9 @@ import javax.crypto.spec.SecretKeySpec
 object EnhancedCrypto {
 
     private const val TAG = "EnhancedCrypto"
+    // Compatibility constant: the master key already lives under this alias in
+    // the Android Keystore. Renaming it would make every existing encrypted
+    // file and encrypted token unreadable, so the original alias stays.
     private const val KEYSTORE_ALIAS = "WebToApp_MasterKey"
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
 
@@ -165,7 +168,7 @@ object EnhancedCrypto {
             additionalEntropy?.let { write(it) }
         }.toByteArray()
 
-        val salt = "WebToApp:KeyDerivation:v2".toByteArray()
+        val salt = "Sherwood Studio:KeyDerivation:v2".toByteArray()
 
         val info = "AES-256-GCM:AppEncryption".toByteArray()
 

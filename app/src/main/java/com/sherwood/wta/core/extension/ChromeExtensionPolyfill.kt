@@ -1952,7 +1952,7 @@ object ChromeExtensionPolyfill {
                 }, 10);
             }, 0);
 
-            console.log('[WebToApp ChromePolyfill] Service Worker shim initialized');
+            console.log('[Sherwood Studio ChromePolyfill] Service Worker shim initialized');
         })();
     }
 
@@ -2004,11 +2004,11 @@ object ChromeExtensionPolyfill {
                     return Promise.reject(e);
                 }
             };
-            console.log('[WebToApp ChromePolyfill] fetch() overridden with native bridge');
+            console.log('[Sherwood Studio ChromePolyfill] fetch() overridden with native bridge');
         })();
     }
 
-    console.log('[WebToApp ChromePolyfill] Initialized for extension: ' + EXT_ID + (IS_BACKGROUND ? ' (BACKGROUND)' : ' (CONTENT)'));
+    console.log('[Sherwood Studio ChromePolyfill] Initialized for extension: ' + EXT_ID + (IS_BACKGROUND ? ' (BACKGROUND)' : ' (CONTENT)'));
 })();
 """.trimIndent()
     }

@@ -1,10 +1,10 @@
 # Introduction
 
-Sherwood WTA is an Android application that turns web projects into installable APKs **on the device**. This page describes what it actually is, in terms of the code, so you know what to expect before you start.
+Sherwood Studio is an Android application that turns web projects into installable APKs **on the device**. This page describes what it actually is, in terms of the code, so you know what to expect before you start.
 
 ## What the app is, concretely
 
-At its core, Sherwood WTA manages a list of **app definitions**. Each definition is a `WebApp` record stored in a local Room database (the `web_apps` table). A `WebApp` holds:
+At its core, Sherwood Studio manages a list of **app definitions**. Each definition is a `WebApp` record stored in a local Room database (the `web_apps` table). A `WebApp` holds:
 
 - **Identity** — `name`, `url`, `iconPath`, `packageName`, and an `appType`.
 - **A type-specific config** — one of `mediaConfig`, `galleryConfig`, `htmlConfig`, `wordpressConfig`, `nodejsConfig`, `phpAppConfig`, `pythonAppConfig`, `goAppConfig`, or `multiWebConfig`, depending on the type.
@@ -24,7 +24,7 @@ PHP, WordPress, Node.js, Python, Go, image, and video are gated by [About → Ad
 
 ## One codebase, two ways to run
 
-The same `WebToAppApplication` runs in two modes, selected by a build flag:
+The same `SherwoodStudioApplication` runs in two modes, selected by a build flag:
 
 - **Builder (host)** — `SHELL_RUNTIME_ONLY = false`. This is the app you install from the store: the editor, the app list, and the export pipeline, with everything on the main classpath.
 - **Generated app (shell runtime)** — `SHELL_RUNTIME_ONLY = true`. The exported APK runs the synced shell runtime and reads *your* embedded config from `app_config.json` via `ShellModeManager`. Node.js even runs in a separate `:nodejs` OS process.

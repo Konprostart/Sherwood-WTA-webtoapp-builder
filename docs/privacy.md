@@ -2,13 +2,13 @@
 
 **Effective date:** October 24, 2026
 
-This policy describes the **Sherwood WTA** Android app, an on-device builder. Sherwood WTA is an independent fork maintained by **Konprostart**. It covers the app you install from Google Play or from GitHub. It does not cover a website, server, or APK that you create with Sherwood WTA. If you publish one of those, it needs its own privacy policy.
+This policy describes the **Sherwood Studio** Android app, an on-device builder. Sherwood Studio is an independent fork maintained by **Konprostart**. It covers the app you install from Google Play or from GitHub. It does not cover a website, server, or APK that you create with Sherwood Studio. If you publish one of those, it needs its own privacy policy.
 
 Contact: [GitHub Issues](https://github.com/Konprostart/Sherwood-WTA-webtoapp-builder/issues)
 
 ## What we do not do
 
-Sherwood WTA has no account system. We do not run a server that stores your projects, and we do not ship an analytics or advertising SDK that reports how you use the builder back to us. We do not sell personal information.
+Sherwood Studio has no account system. We do not run a server that stores your projects, and we do not ship an analytics or advertising SDK that reports how you use the builder back to us. We do not sell personal information.
 
 ## What stays on your device
 
@@ -19,7 +19,7 @@ The following stays in the app's private storage unless you export, share, or ba
 - AI provider API keys you enter
 - Local backups you create inside the app
 
-Delete a project in the app, or uninstall Sherwood WTA, to remove that copy from the device. Uninstalling does not delete files you already exported or shared.
+Delete a project in the app, or uninstall Sherwood Studio, to remove that copy from the device. Uninstalling does not delete files you already exported or shared.
 
 ## When data leaves the device
 
@@ -46,11 +46,11 @@ Any network request also carries the usual connection data, such as an IP addres
 
 ## Permissions
 
-Sherwood WTA asks for a permission when a feature needs it, such as network access, notifications, or access to photos and files for icons and projects. Denying a permission turns that feature off. Permissions are not used to profile you for ads.
+Sherwood Studio asks for a permission when a feature needs it, such as network access, notifications, or access to photos and files for icons and projects. Denying a permission turns that feature off. Permissions are not used to profile you for ads.
 
 ## Children
 
-Sherwood WTA is a tool for building apps. It is not directed at children under 13.
+Sherwood Studio is a tool for building apps. It is not directed at children under 13.
 
 ## Changes
 

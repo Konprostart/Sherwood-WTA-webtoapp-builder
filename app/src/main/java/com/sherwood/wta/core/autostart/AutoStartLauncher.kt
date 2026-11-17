@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.ui.shell.ShellActivity
 import com.sherwood.wta.ui.webview.DocumentUris
@@ -22,7 +22,7 @@ object AutoStartLauncher {
     ) {
         val action = Runnable {
             val isShellMode = try {
-                WebToAppApplication.shellMode.isShellMode()
+                SherwoodStudioApplication.shellMode.isShellMode()
             } catch (e: Exception) {
                 false
             }

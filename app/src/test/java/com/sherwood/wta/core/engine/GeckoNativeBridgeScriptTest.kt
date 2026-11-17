@@ -58,7 +58,7 @@ class GeckoNativeBridgeScriptTest {
     @Test
     fun `persisted gecko bridge keeps content-script native messaging`() {
         val manifest = repoFile("app/src/main/assets/web_extensions/wta_native_bridge/manifest.json").readText()
-        assertThat(manifest).contains("\"id\": \"wta-native-bridge@webtoapp\"")
+        assertThat(manifest).contains("\"id\": \"wta-native-bridge@sherwood.studio\"")
         assertThat(manifest).contains("\"nativeMessaging\"")
         assertThat(manifest).contains("\"nativeMessagingFromContent\"")
         assertThat(manifest).contains("\"geckoViewAddons\"")
@@ -66,7 +66,7 @@ class GeckoNativeBridgeScriptTest {
             .that(manifest).contains("\"version\": \"1.2\"")
 
         val engine = repoFile("app/src/main/java/com/sherwood/wta/core/engine/GeckoViewEngine.kt").readText()
-        assertThat(engine).contains("wta-native-bridge@webtoapp")
+        assertThat(engine).contains("wta-native-bridge@sherwood.studio")
         assertThat(engine).contains("webExtensionController.setMessageDelegate")
         assertThat(engine).doesNotContain("ext?.setMessageDelegate")
         assertThat(engine).contains("pendingLoadUrl")

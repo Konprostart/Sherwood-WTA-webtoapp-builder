@@ -20,7 +20,7 @@ class GsonProviderTest {
 
     @Test
     fun `gson provider serializes and deserializes data classes`() {
-        val payload = SamplePayload(id = 7, name = "WebToApp")
+        val payload = SamplePayload(id = 7, name = "Sherwood Studio")
 
         val json = GsonProvider.gson.toJson(payload)
         val parsed = GsonProvider.gson.fromJson(json, SamplePayload::class.java)

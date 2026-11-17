@@ -1234,7 +1234,7 @@ class DataBackupManager(private val context: Context) {
     }
 
     fun generateBackupFileName(): String {
-        return "Sherwood_WTA_Backup_${backupDateFormat.get()!!.format(Date())}.zip"
+        return "Sherwood_Studio_Backup_${backupDateFormat.get()!!.format(Date())}.zip"
     }
 
     /**

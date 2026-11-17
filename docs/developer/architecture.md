@@ -1,6 +1,6 @@
 # Architecture
 
-The single most important mental model in Sherwood WTA: **preview and export are two different execution paths that share the same runtime code.** Most bugs of the form *"works in preview, broken after export"* come from breaking this contract.
+The single most important mental model in Sherwood Studio: **preview and export are two different execution paths that share the same runtime code.** Most bugs of the form *"works in preview, broken after export"* come from breaking this contract.
 
 ## The two paths
 
@@ -14,7 +14,7 @@ app/ sources
   → syncShellRuntimeSources  →  shell DEX  →  webview_shell.apk (template)
 
 Generated APK runtime
-  WebToAppApplication → ShellModeManager → load assets JSON config
+  SherwoodStudioApplication → ShellModeManager → load assets JSON config
   → WebViewManager / runtime servers (Node/PHP/Python/Go/WordPress)
 ```
 

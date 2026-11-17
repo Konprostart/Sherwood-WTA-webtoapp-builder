@@ -794,7 +794,7 @@ ${errorDetailsHtml(report, strings)}
         diagnostic: NetworkErrorDiagnostics.Diagnostic?
     ): String {
         val sb = StringBuilder()
-        sb.appendLine("===== Sherwood WTA Page Error =====")
+        sb.appendLine("===== Sherwood Studio Page Error =====")
         sb.appendLine("url: ${failedUrl ?: "-"}")
         sb.appendLine("errorCode: $errorCode (${formatErrorCode(errorCode)})")
         sb.appendLine("description: $description")

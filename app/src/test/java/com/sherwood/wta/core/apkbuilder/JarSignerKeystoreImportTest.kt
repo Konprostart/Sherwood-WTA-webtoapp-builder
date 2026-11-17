@@ -46,7 +46,7 @@ class JarSignerKeystoreImportTest {
         }.generateKeyPair()
 
     private fun selfSignedCertificate(keyPair: KeyPair): X509Certificate {
-        val subject = X500Principal("CN=WebToApp Keystore Import Test")
+        val subject = X500Principal("CN=Sherwood Studio Keystore Import Test")
         val now = System.currentTimeMillis()
         val holder = JcaX509v3CertificateBuilder(
             subject,

@@ -409,7 +409,7 @@ class FloatingWindowManager(private val context: Context) {
         titleBar.addView(dragIndicator)
 
         val titleText = TextView(context).apply {
-            text = appName.ifBlank { "Sherwood WTA" }
+            text = appName.ifBlank { "Sherwood Studio" }
             setTextColor(0xFFD0D0E0.toInt())
             textSize = 13f
             setSingleLine(true)

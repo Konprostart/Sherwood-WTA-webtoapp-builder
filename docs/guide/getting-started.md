@@ -4,7 +4,7 @@ This walkthrough takes you from a fresh install to your first signed APK. At eac
 
 ## 1. Install and launch
 
-Install the Sherwood WTA builder on a device running **Android 6.0 (API 23) or newer**.
+Install the Sherwood Studio builder on a device running **Android 6.0 (API 23) or newer**.
 
 <div class="wta-install">
 
@@ -16,7 +16,7 @@ Get the APK from [GitHub Releases](https://github.com/Konprostart/Sherwood-WTA-w
 
 </div>
 
-On launch, `WebToAppApplication` starts in **builder mode** (`SHELL_RUNTIME_ONLY = false`): it initializes the i18n strings, the Room database, and the dependency graph, then shows **My Apps** — the home screen that lists every app you create. See [Main Screen](/guide/main-screen/my-apps).
+On launch, `SherwoodStudioApplication` starts in **builder mode** (`SHELL_RUNTIME_ONLY = false`): it initializes the i18n strings, the Room database, and the dependency graph, then shows **My Apps** — the home screen that lists every app you create. See [Main Screen](/guide/main-screen/my-apps).
 
 ## 2. Create an app definition
 

@@ -439,7 +439,7 @@ fun AdBlockCard(
     val rules = editState.adBlockRules
     val subscriptions = editState.adBlockSubscriptions
     val context = LocalContext.current
-    val adBlocker = remember { com.sherwood.wta.WebToAppApplication.adBlock }
+    val adBlocker = remember { com.sherwood.wta.SherwoodStudioApplication.adBlock }
     var hostsEpoch by remember { mutableStateOf(0) }
     // Preset sources plus the user's custom imports (file picks / custom URLs) so the
     // per-app subscription selector can reference anything loaded in Hosts Blocking (#623).
@@ -4108,7 +4108,7 @@ fun SpecialSettingsCard(
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     label = { Text(Strings.mediaAlbumNameLabel) },
-                                    placeholder = { Text("Sherwood WTA") },
+                                    placeholder = { Text("Sherwood Studio") },
                                     supportingText = if (LocalShowDescriptions.current) {
                                         { Text(Strings.mediaAlbumNameHint) }
                                     } else {

@@ -136,7 +136,7 @@ def load_allowlist(path: Path) -> dict[str, Counter[str]]:
 
 def write_allowlist(path: Path, current_counts: dict[str, Counter[str]]) -> None:
     lines = [
-        "# WebToApp UI design-system historical debt baseline.",
+        "# Sherwood Studio UI design-system historical debt baseline.",
         "# Format: relative/path.kt|rule_key|allowed_count",
         "# Regenerate only after intentionally accepting a new migration checkpoint.",
     ]
@@ -217,7 +217,7 @@ def main() -> int:
             per_file.append((file_path, counts, findings))
             current_counts[relative_repo_path(file_path)] = counts
 
-    print("WebToApp UI design-system audit")
+    print("Sherwood Studio UI design-system audit")
     print(f"Targets: {display_targets(targets)}")
     print(f"Files scanned: {len(files)}")
     print()

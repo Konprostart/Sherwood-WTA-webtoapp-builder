@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
-import com.sherwood.wta.WebToAppApplication
+import com.sherwood.wta.SherwoodStudioApplication
 import com.sherwood.wta.core.activation.ActivationResult
 import com.sherwood.wta.core.activation.ActivationStatus
 import com.sherwood.wta.core.i18n.Strings
@@ -23,7 +23,7 @@ fun ShellActivationDialog(
     onDismiss: () -> Unit,
     onActivated: (String?) -> Unit
 ) {
-    val activation = WebToAppApplication.activation
+    val activation = SherwoodStudioApplication.activation
 
     val activationStatus by produceState<ActivationStatus?>(initialValue = null) {
         value = try {
@@ -90,7 +90,7 @@ fun ShellAnnouncementDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val announcement = WebToAppApplication.announcement
+    val announcement = SherwoodStudioApplication.announcement
 
     val shellAnnouncement = Announcement(
         title = config.announcementTitle,
