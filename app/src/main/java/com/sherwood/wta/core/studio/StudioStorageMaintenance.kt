@@ -6,6 +6,7 @@ import com.sherwood.wta.core.agent.session.SessionStore
 import com.sherwood.wta.core.frontend.RepoBridgeMetadata
 import com.sherwood.wta.core.frontend.RepoBridgeMetadataStore
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.core.sidekick.input.SidekickWavRecorder
 import com.sherwood.wta.core.studio.git.GitProviderId
 import com.sherwood.wta.core.studio.git.RepoImportStorage
 import kotlinx.coroutines.Dispatchers
@@ -313,6 +314,13 @@ class StudioStorageMaintenance(private val context: Context) {
                 metadataStore = metadataStore,
                 now = now,
                 protectedKeys = protectedKeys
+            ) +
+            // Voice takes are deleted by the upload path; one orphaned by a process death
+            // is provably disposable after the same window.
+            StudioStoragePruner.pruneTempFiles(
+                dir = File(context.cacheDir, SidekickWavRecorder.CACHE_DIR),
+                now = now,
+                suffixes = listOf(".wav")
             ) +
             StudioStoragePruner.pruneOrphanSessions(
                 sessionsRoot = File(filesDir, SESSIONS_DIR),

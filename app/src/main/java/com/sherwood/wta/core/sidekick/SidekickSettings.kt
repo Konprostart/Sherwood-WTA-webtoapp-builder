@@ -1,6 +1,7 @@
 package com.sherwood.wta.core.sidekick
 
 import android.content.Context
+import com.sherwood.wta.core.sidekick.input.SidekickSpeechEngine
 import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 
 /**
@@ -115,6 +116,19 @@ class SidekickSettings private constructor(context: Context) {
             prefs.edit().putBoolean(KEY_PREFER_ON_DEVICE, value).apply()
         }
 
+    /**
+     * Which engine dictates: the platform recognizer or a Whisper-compatible server.
+     *
+     * Default is the platform recognizer — it needs no setup and works out of the box.
+     * The server is the option for languages the phone does not support (Serbian in
+     * particular) and for keeping the audio on a local network.
+     */
+    var speechEngine: SidekickSpeechEngine
+        get() = SidekickSpeechEngine.fromId(prefs.getString(KEY_SPEECH_ENGINE, null))
+        set(value) {
+            prefs.edit().putString(KEY_SPEECH_ENGINE, value.id).apply()
+        }
+
     companion object {
         private const val PREFS = "sherwood_sidekick"
         private const val KEY_ENABLED = "enabled"
@@ -123,6 +137,7 @@ class SidekickSettings private constructor(context: Context) {
         private const val KEY_FAB_ANCHOR = "fab_anchor"
         private const val KEY_VOICE_LANGUAGE = "voice_language"
         private const val KEY_PREFER_ON_DEVICE = "prefer_on_device_speech"
+        private const val KEY_SPEECH_ENGINE = "speech_engine"
 
         /** Slightly above the bottom edge: clear of a navigation bar, still thumb-reachable. */
         const val DEFAULT_FAB_ANCHOR = 0.92f

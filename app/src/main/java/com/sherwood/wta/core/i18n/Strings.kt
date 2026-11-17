@@ -5685,6 +5685,38 @@ object Strings {
     val sidekickSpeechAudio: String get() = StringsE.sidekickSpeechAudio
     val sidekickSpeechThrottled: String get() = StringsE.sidekickSpeechThrottled
     val sidekickSpeechFailed: String get() = StringsE.sidekickSpeechFailed
+    val sidekickSpeechEngine: String get() = StringsE.sidekickSpeechEngine
+    val sidekickSpeechEngineDesc: String get() = StringsE.sidekickSpeechEngineDesc
+    val sidekickSpeechEngineSystem: String get() = StringsE.sidekickSpeechEngineSystem
+    val sidekickSpeechEngineWhisper: String get() = StringsE.sidekickSpeechEngineWhisper
+    val sidekickSpeechServer: String get() = StringsE.sidekickSpeechServer
+    val sidekickSpeechServerUnset: String get() = StringsE.sidekickSpeechServerUnset
+    val sidekickSpeechServerInvalid: String get() = StringsE.sidekickSpeechServerInvalid
+    val sidekickSpeechServerDialogTitle: String get() = StringsE.sidekickSpeechServerDialogTitle
+    val sidekickSpeechProtocol: String get() = StringsE.sidekickSpeechProtocol
+    val sidekickSpeechProtocolOpenAi: String get() = StringsE.sidekickSpeechProtocolOpenAi
+    val sidekickSpeechProtocolWhisperCpp: String get() = StringsE.sidekickSpeechProtocolWhisperCpp
+    val sidekickSpeechUrl: String get() = StringsE.sidekickSpeechUrl
+    val sidekickSpeechUrlHint: String get() = StringsE.sidekickSpeechUrlHint
+    val sidekickSpeechModel: String get() = StringsE.sidekickSpeechModel
+    val sidekickSpeechModelHint: String get() = StringsE.sidekickSpeechModelHint
+    val sidekickSpeechToken: String get() = StringsE.sidekickSpeechToken
+    val sidekickSpeechTokenHint: String get() = StringsE.sidekickSpeechTokenHint
+    val sidekickSpeechTokenStored: String get() = StringsE.sidekickSpeechTokenStored
+    val sidekickSpeechTest: String get() = StringsE.sidekickSpeechTest
+    val sidekickSpeechTesting: String get() = StringsE.sidekickSpeechTesting
+    val sidekickSpeechTestOk: String get() = StringsE.sidekickSpeechTestOk
+    val sidekickSpeechTranscribing: String get() = StringsE.sidekickSpeechTranscribing
+    val sidekickSpeechNotConfigured: String get() = StringsE.sidekickSpeechNotConfigured
+    val sidekickSpeechAuth: String get() = StringsE.sidekickSpeechAuth
+    val sidekickSpeechEndpoint: String get() = StringsE.sidekickSpeechEndpoint
+    val sidekickSpeechUrlEmpty: String get() = StringsE.sidekickSpeechUrlEmpty
+    val sidekickSpeechUrlMalformed: String get() = StringsE.sidekickSpeechUrlMalformed
+    val sidekickSpeechUrlScheme: String get() = StringsE.sidekickSpeechUrlScheme
+    val sidekickSpeechUrlPublicHttp: String get() = StringsE.sidekickSpeechUrlPublicHttp
+    val sidekickSpeechUrlTokenHttp: String get() = StringsE.sidekickSpeechUrlTokenHttp
+    val sidekickSpeechUrlCredentials: String get() = StringsE.sidekickSpeechUrlCredentials
+    val sidekickSpeechUrlQuery: String get() = StringsE.sidekickSpeechUrlQuery
 }
 
 

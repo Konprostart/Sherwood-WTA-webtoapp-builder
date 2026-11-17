@@ -639,7 +639,18 @@ private fun SidekickComposer(
         }
         if (state.speechListening) {
             ListeningRow(
+                label = Strings.sidekickListening,
                 onDone = { vm.stopVoiceInput() },
+                onCancel = { vm.cancelVoiceInput() }
+            )
+            Spacer(Modifier.height(WtaSpacing.Tiny))
+        }
+        if (state.speechTranscribing) {
+            // No "done" affordance: the take is already uploading, and pretending the
+            // user can still approve it would be a lie. X discards it.
+            ListeningRow(
+                label = Strings.sidekickSpeechTranscribing,
+                onDone = null,
                 onCancel = { vm.cancelVoiceInput() }
             )
             Spacer(Modifier.height(WtaSpacing.Tiny))
@@ -648,13 +659,13 @@ private fun SidekickComposer(
             WtaTextField(
                 value = state.draft,
                 onValueChange = { vm.setDraft(it) },
-                placeholder = if (state.speechListening) {
-                    Strings.sidekickListening
-                } else {
-                    Strings.sidekickInputHint
+                placeholder = when {
+                    state.speechListening -> Strings.sidekickListening
+                    state.speechTranscribing -> Strings.sidekickSpeechTranscribing
+                    else -> Strings.sidekickInputHint
                 },
                 maxLines = 4,
-                enabled = !state.speechListening,
+                enabled = !state.speechListening && !state.speechTranscribing,
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(WtaSpacing.Small))
@@ -686,12 +697,24 @@ private fun SidekickComposer(
             )
             IconButton(
                 onClick = { pickers.dictate() },
-                enabled = !state.streaming && !state.speechListening && state.speechAvailable
+                enabled = !state.streaming && !state.speechListening &&
+                    !state.speechTranscribing && state.speechAvailable
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Mic,
                     contentDescription = Strings.sidekickDictate,
                     modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        // Same rule for the microphone: a disabled action carries its reason.
+        if (!state.speechAvailable) {
+            state.speechHint?.let { hint ->
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
         }
@@ -713,7 +736,7 @@ private fun AttachMenuButton(state: SidekickUiState, pickers: SidekickPickers) {
     Box {
         IconButton(
             onClick = { expanded = true },
-            enabled = !state.streaming && !state.speechListening
+            enabled = !state.streaming && !state.speechListening && !state.speechTranscribing
         ) {
             Icon(
                 imageVector = Icons.Outlined.AttachFile,
@@ -865,7 +888,7 @@ private fun ImageChip(attachment: SidekickImageAttachment, onRemove: (() -> Unit
 }
 
 @Composable
-private fun ListeningRow(onDone: () -> Unit, onCancel: () -> Unit) {
+private fun ListeningRow(label: String, onDone: (() -> Unit)?, onCancel: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -873,7 +896,7 @@ private fun ListeningRow(onDone: () -> Unit, onCancel: () -> Unit) {
         CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
         Spacer(Modifier.width(WtaSpacing.Small))
         Text(
-            text = Strings.sidekickListening,
+            text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f)
@@ -881,13 +904,15 @@ private fun ListeningRow(onDone: () -> Unit, onCancel: () -> Unit) {
         // Finishing the dictation keeps the transcript; only the X discards it. Without
         // this, the only way to end a long recording was to wait for the recognizer's
         // silence timeout.
-        IconButton(onClick = onDone, modifier = Modifier.size(28.dp)) {
-            Icon(
-                imageVector = Icons.Outlined.Check,
-                contentDescription = Strings.done,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
+        if (onDone != null) {
+            IconButton(onClick = onDone, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = Strings.done,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
         IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
             Icon(

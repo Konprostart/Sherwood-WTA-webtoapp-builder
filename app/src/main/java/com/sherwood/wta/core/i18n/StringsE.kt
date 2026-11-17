@@ -21790,4 +21790,419 @@ object StringsE {
         AppLanguage.JAPANESE -> "音声入力に失敗しました。"
         AppLanguage.KOREAN -> "받아쓰기에 실패했습니다."
     }
+    val sidekickSpeechEngine: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "听写引擎"
+        AppLanguage.ENGLISH -> "Dictation engine"
+        AppLanguage.ARABIC -> "محرك الإملاء"
+        AppLanguage.PORTUGUESE -> "Motor do ditado"
+        AppLanguage.SPANISH -> "Motor del dictado"
+        AppLanguage.FRENCH -> "Moteur de dictée"
+        AppLanguage.GERMAN -> "Diktier-Engine"
+        AppLanguage.RUSSIAN -> "Движок диктовки"
+        AppLanguage.JAPANESE -> "音声入力エンジン"
+        AppLanguage.KOREAN -> "받아쓰기 엔진"
+    }
+
+    val sidekickSpeechEngineDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "使用手机自带的语音服务，或用 Whisper 服务器获得塞尔维亚语、瑞典语和英语支持。"
+        AppLanguage.ENGLISH -> "Use the phone's own speech service, or a Whisper server for Serbian, Swedish and English."
+        AppLanguage.ARABIC -> "استخدم خدمة الكلام في الهاتف، أو خادم Whisper للصربية والسويدية والإنجليزية."
+        AppLanguage.PORTUGUESE -> "Use o serviço de voz do telefone ou um servidor Whisper para sérvio, sueco e inglês."
+        AppLanguage.SPANISH -> "Usa el servicio de voz del teléfono o un servidor Whisper para serbio, sueco e inglés."
+        AppLanguage.FRENCH -> "Utilisez le service vocal du téléphone ou un serveur Whisper pour le serbe, le suédois et l'anglais."
+        AppLanguage.GERMAN -> "Nutze den Sprachdienst des Telefons oder einen Whisper-Server für Serbisch, Schwedisch und Englisch."
+        AppLanguage.RUSSIAN -> "Используйте речевую службу телефона или сервер Whisper для сербского, шведского и английского."
+        AppLanguage.JAPANESE -> "端末の音声サービス、またはセルビア語・スウェーデン語・英語に対応する Whisper サーバーを使います。"
+        AppLanguage.KOREAN -> "휴대폰 음성 서비스 또는 세르비아어·스웨덴어·영어를 지원하는 Whisper 서버를 사용합니다."
+    }
+
+    val sidekickSpeechEngineSystem: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "手机语音服务"
+        AppLanguage.ENGLISH -> "Phone speech service"
+        AppLanguage.ARABIC -> "خدمة كلام الهاتف"
+        AppLanguage.PORTUGUESE -> "Serviço de voz do telefone"
+        AppLanguage.SPANISH -> "Servicio de voz del teléfono"
+        AppLanguage.FRENCH -> "Service vocal du téléphone"
+        AppLanguage.GERMAN -> "Sprachdienst des Telefons"
+        AppLanguage.RUSSIAN -> "Речевая служба телефона"
+        AppLanguage.JAPANESE -> "端末の音声サービス"
+        AppLanguage.KOREAN -> "휴대폰 음성 서비스"
+    }
+
+    val sidekickSpeechEngineWhisper: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Whisper 服务器"
+        AppLanguage.ENGLISH -> "Whisper server"
+        AppLanguage.ARABIC -> "خادم Whisper"
+        AppLanguage.PORTUGUESE -> "Servidor Whisper"
+        AppLanguage.SPANISH -> "Servidor Whisper"
+        AppLanguage.FRENCH -> "Serveur Whisper"
+        AppLanguage.GERMAN -> "Whisper-Server"
+        AppLanguage.RUSSIAN -> "Сервер Whisper"
+        AppLanguage.JAPANESE -> "Whisper サーバー"
+        AppLanguage.KOREAN -> "Whisper 서버"
+    }
+
+    val sidekickSpeechServer: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Whisper 服务器"
+        AppLanguage.ENGLISH -> "Whisper server"
+        AppLanguage.ARABIC -> "خادم Whisper"
+        AppLanguage.PORTUGUESE -> "Servidor Whisper"
+        AppLanguage.SPANISH -> "Servidor Whisper"
+        AppLanguage.FRENCH -> "Serveur Whisper"
+        AppLanguage.GERMAN -> "Whisper-Server"
+        AppLanguage.RUSSIAN -> "Сервер Whisper"
+        AppLanguage.JAPANESE -> "Whisper サーバー"
+        AppLanguage.KOREAN -> "Whisper 서버"
+    }
+
+    val sidekickSpeechServerUnset: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "未设置"
+        AppLanguage.ENGLISH -> "Not set"
+        AppLanguage.ARABIC -> "غير محدد"
+        AppLanguage.PORTUGUESE -> "Não definido"
+        AppLanguage.SPANISH -> "Sin definir"
+        AppLanguage.FRENCH -> "Non défini"
+        AppLanguage.GERMAN -> "Nicht festgelegt"
+        AppLanguage.RUSSIAN -> "Не задано"
+        AppLanguage.JAPANESE -> "未設定"
+        AppLanguage.KOREAN -> "설정 안 됨"
+    }
+
+    val sidekickSpeechServerInvalid: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "URL 无效"
+        AppLanguage.ENGLISH -> "Invalid URL"
+        AppLanguage.ARABIC -> "عنوان URL غير صالح"
+        AppLanguage.PORTUGUESE -> "URL inválido"
+        AppLanguage.SPANISH -> "URL no válida"
+        AppLanguage.FRENCH -> "URL invalide"
+        AppLanguage.GERMAN -> "Ungültige URL"
+        AppLanguage.RUSSIAN -> "Неверный URL"
+        AppLanguage.JAPANESE -> "URL が無効です"
+        AppLanguage.KOREAN -> "잘못된 URL"
+    }
+
+    val sidekickSpeechServerDialogTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Whisper 服务器"
+        AppLanguage.ENGLISH -> "Whisper server"
+        AppLanguage.ARABIC -> "خادم Whisper"
+        AppLanguage.PORTUGUESE -> "Servidor Whisper"
+        AppLanguage.SPANISH -> "Servidor Whisper"
+        AppLanguage.FRENCH -> "Serveur Whisper"
+        AppLanguage.GERMAN -> "Whisper-Server"
+        AppLanguage.RUSSIAN -> "Сервер Whisper"
+        AppLanguage.JAPANESE -> "Whisper サーバー"
+        AppLanguage.KOREAN -> "Whisper 서버"
+    }
+
+    val sidekickSpeechProtocol: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "协议"
+        AppLanguage.ENGLISH -> "Protocol"
+        AppLanguage.ARABIC -> "البروتوكول"
+        AppLanguage.PORTUGUESE -> "Protocolo"
+        AppLanguage.SPANISH -> "Protocolo"
+        AppLanguage.FRENCH -> "Protocole"
+        AppLanguage.GERMAN -> "Protokoll"
+        AppLanguage.RUSSIAN -> "Протокол"
+        AppLanguage.JAPANESE -> "プロトコル"
+        AppLanguage.KOREAN -> "프로토콜"
+    }
+
+    val sidekickSpeechProtocolOpenAi: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "兼容 OpenAI"
+        AppLanguage.ENGLISH -> "OpenAI-compatible"
+        AppLanguage.ARABIC -> "متوافق مع OpenAI"
+        AppLanguage.PORTUGUESE -> "Compatível com OpenAI"
+        AppLanguage.SPANISH -> "Compatible con OpenAI"
+        AppLanguage.FRENCH -> "Compatible OpenAI"
+        AppLanguage.GERMAN -> "OpenAI-kompatibel"
+        AppLanguage.RUSSIAN -> "Совместимо с OpenAI"
+        AppLanguage.JAPANESE -> "OpenAI 互換"
+        AppLanguage.KOREAN -> "OpenAI 호환"
+    }
+
+    val sidekickSpeechProtocolWhisperCpp: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "whisper.cpp"
+        AppLanguage.ENGLISH -> "whisper.cpp"
+        AppLanguage.ARABIC -> "whisper.cpp"
+        AppLanguage.PORTUGUESE -> "whisper.cpp"
+        AppLanguage.SPANISH -> "whisper.cpp"
+        AppLanguage.FRENCH -> "whisper.cpp"
+        AppLanguage.GERMAN -> "whisper.cpp"
+        AppLanguage.RUSSIAN -> "whisper.cpp"
+        AppLanguage.JAPANESE -> "whisper.cpp"
+        AppLanguage.KOREAN -> "whisper.cpp"
+    }
+
+    val sidekickSpeechUrl: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "服务器 URL"
+        AppLanguage.ENGLISH -> "Server URL"
+        AppLanguage.ARABIC -> "عنوان URL للخادم"
+        AppLanguage.PORTUGUESE -> "URL do servidor"
+        AppLanguage.SPANISH -> "URL del servidor"
+        AppLanguage.FRENCH -> "URL du serveur"
+        AppLanguage.GERMAN -> "Server-URL"
+        AppLanguage.RUSSIAN -> "URL сервера"
+        AppLanguage.JAPANESE -> "サーバー URL"
+        AppLanguage.KOREAN -> "서버 URL"
+    }
+
+    val sidekickSpeechUrlHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.ENGLISH -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.ARABIC -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.PORTUGUESE -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.SPANISH -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.FRENCH -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.GERMAN -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.RUSSIAN -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.JAPANESE -> "https://host · http://192.168.1.10:8080"
+        AppLanguage.KOREAN -> "https://host · http://192.168.1.10:8080"
+    }
+
+    val sidekickSpeechModel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "模型"
+        AppLanguage.ENGLISH -> "Model"
+        AppLanguage.ARABIC -> "النموذج"
+        AppLanguage.PORTUGUESE -> "Modelo"
+        AppLanguage.SPANISH -> "Modelo"
+        AppLanguage.FRENCH -> "Modèle"
+        AppLanguage.GERMAN -> "Modell"
+        AppLanguage.RUSSIAN -> "Модель"
+        AppLanguage.JAPANESE -> "モデル"
+        AppLanguage.KOREAN -> "모델"
+    }
+
+    val sidekickSpeechModelHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "whisper-1"
+        AppLanguage.ENGLISH -> "whisper-1"
+        AppLanguage.ARABIC -> "whisper-1"
+        AppLanguage.PORTUGUESE -> "whisper-1"
+        AppLanguage.SPANISH -> "whisper-1"
+        AppLanguage.FRENCH -> "whisper-1"
+        AppLanguage.GERMAN -> "whisper-1"
+        AppLanguage.RUSSIAN -> "whisper-1"
+        AppLanguage.JAPANESE -> "whisper-1"
+        AppLanguage.KOREAN -> "whisper-1"
+    }
+
+    val sidekickSpeechToken: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "API 密钥"
+        AppLanguage.ENGLISH -> "API key"
+        AppLanguage.ARABIC -> "مفتاح API"
+        AppLanguage.PORTUGUESE -> "Chave de API"
+        AppLanguage.SPANISH -> "Clave de API"
+        AppLanguage.FRENCH -> "Clé API"
+        AppLanguage.GERMAN -> "API-Schlüssel"
+        AppLanguage.RUSSIAN -> "Ключ API"
+        AppLanguage.JAPANESE -> "API キー"
+        AppLanguage.KOREAN -> "API 키"
+    }
+
+    val sidekickSpeechTokenHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "局域网服务器可不填"
+        AppLanguage.ENGLISH -> "Optional for a LAN server"
+        AppLanguage.ARABIC -> "اختياري لخادم الشبكة المحلية"
+        AppLanguage.PORTUGUESE -> "Opcional para um servidor da LAN"
+        AppLanguage.SPANISH -> "Opcional para un servidor de la LAN"
+        AppLanguage.FRENCH -> "Facultatif pour un serveur du réseau local"
+        AppLanguage.GERMAN -> "Optional für einen Server im lokalen Netz"
+        AppLanguage.RUSSIAN -> "Необязательно для сервера в локальной сети"
+        AppLanguage.JAPANESE -> "ローカルネットワークのサーバーでは任意"
+        AppLanguage.KOREAN -> "로컬 네트워크 서버에서는 선택 사항"
+    }
+
+    val sidekickSpeechTokenStored: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已保存密钥"
+        AppLanguage.ENGLISH -> "A key is stored"
+        AppLanguage.ARABIC -> "يوجد مفتاح محفوظ"
+        AppLanguage.PORTUGUESE -> "Há uma chave guardada"
+        AppLanguage.SPANISH -> "Hay una clave guardada"
+        AppLanguage.FRENCH -> "Une clé est enregistrée"
+        AppLanguage.GERMAN -> "Ein Schlüssel ist gespeichert"
+        AppLanguage.RUSSIAN -> "Ключ сохранён"
+        AppLanguage.JAPANESE -> "キーは保存済みです"
+        AppLanguage.KOREAN -> "키가 저장되어 있습니다"
+    }
+
+    val sidekickSpeechTest: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "测试连接"
+        AppLanguage.ENGLISH -> "Test connection"
+        AppLanguage.ARABIC -> "اختبار الاتصال"
+        AppLanguage.PORTUGUESE -> "Testar ligação"
+        AppLanguage.SPANISH -> "Probar conexión"
+        AppLanguage.FRENCH -> "Tester la connexion"
+        AppLanguage.GERMAN -> "Verbindung testen"
+        AppLanguage.RUSSIAN -> "Проверить соединение"
+        AppLanguage.JAPANESE -> "接続をテスト"
+        AppLanguage.KOREAN -> "연결 테스트"
+    }
+
+    val sidekickSpeechTesting: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在测试…"
+        AppLanguage.ENGLISH -> "Testing…"
+        AppLanguage.ARABIC -> "جارٍ الاختبار…"
+        AppLanguage.PORTUGUESE -> "A testar…"
+        AppLanguage.SPANISH -> "Probando…"
+        AppLanguage.FRENCH -> "Test en cours…"
+        AppLanguage.GERMAN -> "Wird getestet…"
+        AppLanguage.RUSSIAN -> "Проверка…"
+        AppLanguage.JAPANESE -> "テスト中…"
+        AppLanguage.KOREAN -> "테스트 중…"
+    }
+
+    val sidekickSpeechTestOk: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "服务器接受了请求。"
+        AppLanguage.ENGLISH -> "The server accepted the request."
+        AppLanguage.ARABIC -> "قبل الخادم الطلب."
+        AppLanguage.PORTUGUESE -> "O servidor aceitou o pedido."
+        AppLanguage.SPANISH -> "El servidor aceptó la solicitud."
+        AppLanguage.FRENCH -> "Le serveur a accepté la requête."
+        AppLanguage.GERMAN -> "Der Server hat die Anfrage angenommen."
+        AppLanguage.RUSSIAN -> "Сервер принял запрос."
+        AppLanguage.JAPANESE -> "サーバーがリクエストを受け付けました。"
+        AppLanguage.KOREAN -> "서버가 요청을 수락했습니다."
+    }
+
+    val sidekickSpeechTranscribing: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在转写…"
+        AppLanguage.ENGLISH -> "Transcribing…"
+        AppLanguage.ARABIC -> "جارٍ التحويل إلى نص…"
+        AppLanguage.PORTUGUESE -> "A transcrever…"
+        AppLanguage.SPANISH -> "Transcribiendo…"
+        AppLanguage.FRENCH -> "Transcription…"
+        AppLanguage.GERMAN -> "Wird transkribiert…"
+        AppLanguage.RUSSIAN -> "Расшифровка…"
+        AppLanguage.JAPANESE -> "文字起こし中…"
+        AppLanguage.KOREAN -> "변환 중…"
+    }
+
+    val sidekickSpeechNotConfigured: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请在设置中配置 Whisper 服务器后再使用语音输入。"
+        AppLanguage.ENGLISH -> "Set up a Whisper server in Settings to dictate."
+        AppLanguage.ARABIC -> "اضبط خادم Whisper في الإعدادات لاستخدام الإملاء."
+        AppLanguage.PORTUGUESE -> "Configure um servidor Whisper nas opções para ditar."
+        AppLanguage.SPANISH -> "Configura un servidor Whisper en los ajustes para dictar."
+        AppLanguage.FRENCH -> "Configurez un serveur Whisper dans les réglages pour dicter."
+        AppLanguage.GERMAN -> "Richte einen Whisper-Server in den Einstellungen ein, um zu diktieren."
+        AppLanguage.RUSSIAN -> "Настройте сервер Whisper в настройках, чтобы диктовать."
+        AppLanguage.JAPANESE -> "設定で Whisper サーバーを構成すると音声入力できます。"
+        AppLanguage.KOREAN -> "설정에서 Whisper 서버를 구성하면 받아쓰기를 사용할 수 있습니다."
+    }
+
+    val sidekickSpeechAuth: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "服务器拒绝了 API 密钥。"
+        AppLanguage.ENGLISH -> "The server rejected the API key."
+        AppLanguage.ARABIC -> "رفض الخادم مفتاح API."
+        AppLanguage.PORTUGUESE -> "O servidor recusou a chave de API."
+        AppLanguage.SPANISH -> "El servidor rechazó la clave de API."
+        AppLanguage.FRENCH -> "Le serveur a refusé la clé API."
+        AppLanguage.GERMAN -> "Der Server hat den API-Schlüssel abgelehnt."
+        AppLanguage.RUSSIAN -> "Сервер отклонил ключ API."
+        AppLanguage.JAPANESE -> "サーバーが API キーを拒否しました。"
+        AppLanguage.KOREAN -> "서버가 API 키를 거부했습니다."
+    }
+
+    val sidekickSpeechEndpoint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "服务器拒绝了请求。请检查 URL 和协议。"
+        AppLanguage.ENGLISH -> "The server refused the request. Check the URL and protocol."
+        AppLanguage.ARABIC -> "رفض الخادم الطلب. تحقق من عنوان URL والبروتوكول."
+        AppLanguage.PORTUGUESE -> "O servidor recusou o pedido. Verifique o URL e o protocolo."
+        AppLanguage.SPANISH -> "El servidor rechazó la solicitud. Revisa la URL y el protocolo."
+        AppLanguage.FRENCH -> "Le serveur a refusé la requête. Vérifiez l'URL et le protocole."
+        AppLanguage.GERMAN -> "Der Server hat die Anfrage abgelehnt. Prüfe URL und Protokoll."
+        AppLanguage.RUSSIAN -> "Сервер отклонил запрос. Проверьте URL и протокол."
+        AppLanguage.JAPANESE -> "サーバーがリクエストを拒否しました。URL とプロトコルを確認してください。"
+        AppLanguage.KOREAN -> "서버가 요청을 거부했습니다. URL과 프로토콜을 확인하세요."
+    }
+
+    val sidekickSpeechUrlEmpty: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请输入服务器 URL。"
+        AppLanguage.ENGLISH -> "Enter the server URL."
+        AppLanguage.ARABIC -> "أدخل عنوان URL للخادم."
+        AppLanguage.PORTUGUESE -> "Introduza o URL do servidor."
+        AppLanguage.SPANISH -> "Introduce la URL del servidor."
+        AppLanguage.FRENCH -> "Saisissez l'URL du serveur."
+        AppLanguage.GERMAN -> "Gib die Server-URL ein."
+        AppLanguage.RUSSIAN -> "Введите URL сервера."
+        AppLanguage.JAPANESE -> "サーバー URL を入力してください。"
+        AppLanguage.KOREAN -> "서버 URL을 입력하세요."
+    }
+
+    val sidekickSpeechUrlMalformed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "这不是完整的 URL。请包含 http:// 或 https://。"
+        AppLanguage.ENGLISH -> "That is not a complete URL. Include http:// or https://."
+        AppLanguage.ARABIC -> "هذا ليس عنوان URL كاملًا. أضف http:// أو https://."
+        AppLanguage.PORTUGUESE -> "Isso não é um URL completo. Inclua http:// ou https://."
+        AppLanguage.SPANISH -> "Eso no es una URL completa. Incluye http:// o https://."
+        AppLanguage.FRENCH -> "Ce n'est pas une URL complète. Incluez http:// ou https://."
+        AppLanguage.GERMAN -> "Das ist keine vollständige URL. Gib http:// oder https:// an."
+        AppLanguage.RUSSIAN -> "Это не полный URL. Укажите http:// или https://."
+        AppLanguage.JAPANESE -> "完全な URL ではありません。http:// または https:// を含めてください。"
+        AppLanguage.KOREAN -> "완전한 URL이 아닙니다. http:// 또는 https://를 포함하세요."
+    }
+
+    val sidekickSpeechUrlScheme: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "仅支持 http:// 和 https://。"
+        AppLanguage.ENGLISH -> "Only http:// and https:// are supported."
+        AppLanguage.ARABIC -> "يُدعم http:// و https:// فقط."
+        AppLanguage.PORTUGUESE -> "Só http:// e https:// são suportados."
+        AppLanguage.SPANISH -> "Solo se admiten http:// y https://."
+        AppLanguage.FRENCH -> "Seuls http:// et https:// sont pris en charge."
+        AppLanguage.GERMAN -> "Nur http:// und https:// werden unterstützt."
+        AppLanguage.RUSSIAN -> "Поддерживаются только http:// и https://."
+        AppLanguage.JAPANESE -> "http:// と https:// のみ対応しています。"
+        AppLanguage.KOREAN -> "http://와 https://만 지원합니다."
+    }
+
+    val sidekickSpeechUrlPublicHttp: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "公网服务器请使用 HTTPS。"
+        AppLanguage.ENGLISH -> "Use HTTPS for a server on the internet."
+        AppLanguage.ARABIC -> "استخدم HTTPS لخادم على الإنترنت."
+        AppLanguage.PORTUGUESE -> "Use HTTPS para um servidor na internet."
+        AppLanguage.SPANISH -> "Usa HTTPS para un servidor en internet."
+        AppLanguage.FRENCH -> "Utilisez HTTPS pour un serveur sur internet."
+        AppLanguage.GERMAN -> "Verwende HTTPS für einen Server im Internet."
+        AppLanguage.RUSSIAN -> "Используйте HTTPS для сервера в интернете."
+        AppLanguage.JAPANESE -> "インターネット上のサーバーには HTTPS を使用してください。"
+        AppLanguage.KOREAN -> "인터넷 서버에는 HTTPS를 사용하세요."
+    }
+
+    val sidekickSpeechUrlTokenHttp: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请移除 API 密钥或改用 HTTPS；通过 http:// 它会以明文传输。"
+        AppLanguage.ENGLISH -> "Remove the API key or use HTTPS; over http:// it would travel in clear text."
+        AppLanguage.ARABIC -> "أزل مفتاح API أو استخدم HTTPS؛ عبر http:// سينتقل نصًا صريحًا."
+        AppLanguage.PORTUGUESE -> "Remova a chave de API ou use HTTPS; por http:// ela viajaria em texto simples."
+        AppLanguage.SPANISH -> "Quita la clave de API o usa HTTPS; por http:// viajaría en texto plano."
+        AppLanguage.FRENCH -> "Supprimez la clé API ou utilisez HTTPS ; en http:// elle circulerait en clair."
+        AppLanguage.GERMAN -> "Entferne den API-Schlüssel oder nutze HTTPS; über http:// ginge er im Klartext."
+        AppLanguage.RUSSIAN -> "Уберите ключ API или используйте HTTPS; по http:// он пойдёт открытым текстом."
+        AppLanguage.JAPANESE -> "API キーを削除するか HTTPS を使用してください。http:// では平文で送信されます。"
+        AppLanguage.KOREAN -> "API 키를 제거하거나 HTTPS를 사용하세요. http://에서는 평문으로 전송됩니다."
+    }
+
+    val sidekickSpeechUrlCredentials: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请从 URL 中删除用户名和密码。"
+        AppLanguage.ENGLISH -> "Remove the user name and password from the URL."
+        AppLanguage.ARABIC -> "أزل اسم المستخدم وكلمة المرور من عنوان URL."
+        AppLanguage.PORTUGUESE -> "Remova o nome de utilizador e a palavra-passe do URL."
+        AppLanguage.SPANISH -> "Quita el usuario y la contraseña de la URL."
+        AppLanguage.FRENCH -> "Supprimez le nom d'utilisateur et le mot de passe de l'URL."
+        AppLanguage.GERMAN -> "Entferne Benutzername und Passwort aus der URL."
+        AppLanguage.RUSSIAN -> "Удалите имя пользователя и пароль из URL."
+        AppLanguage.JAPANESE -> "URL からユーザー名とパスワードを削除してください。"
+        AppLanguage.KOREAN -> "URL에서 사용자 이름과 비밀번호를 제거하세요."
+    }
+
+    val sidekickSpeechUrlQuery: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请从 URL 中删除 ?query 或 #fragment。"
+        AppLanguage.ENGLISH -> "Remove the ?query or #fragment from the URL."
+        AppLanguage.ARABIC -> "أزل ?query أو #fragment من عنوان URL."
+        AppLanguage.PORTUGUESE -> "Remova o ?query ou #fragment do URL."
+        AppLanguage.SPANISH -> "Quita el ?query o #fragment de la URL."
+        AppLanguage.FRENCH -> "Supprimez le ?query ou #fragment de l'URL."
+        AppLanguage.GERMAN -> "Entferne ?query oder #fragment aus der URL."
+        AppLanguage.RUSSIAN -> "Удалите ?query или #fragment из URL."
+        AppLanguage.JAPANESE -> "URL から ?query や #fragment を削除してください。"
+        AppLanguage.KOREAN -> "URL에서 ?query 또는 #fragment를 제거하세요."
+    }
 }

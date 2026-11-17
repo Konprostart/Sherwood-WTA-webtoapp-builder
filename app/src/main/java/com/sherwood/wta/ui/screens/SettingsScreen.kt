@@ -30,6 +30,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sherwood.wta.core.ai.AiConfigManager
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.sidekick.SidekickSettings
+import com.sherwood.wta.core.sidekick.input.SidekickSpeechEndpointStore
+import com.sherwood.wta.core.sidekick.input.SidekickSpeechEngine
 import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 import com.sherwood.wta.ui.animation.CardCollapseTransition
 import com.sherwood.wta.ui.animation.CardExpandTransition
@@ -83,12 +85,21 @@ fun SettingsScreen(
     var sidekickVoiceLanguage by remember { mutableStateOf(sidekickSettings.voiceLanguage) }
     var sidekickPreferOnDevice by remember { mutableStateOf(sidekickSettings.preferOnDeviceSpeech) }
     var sidekickVoicePickerOpen by remember { mutableStateOf(false) }
+    val sidekickSpeechStore = remember { SidekickSpeechEndpointStore.getInstance(context) }
+    var sidekickSpeechEngine by remember { mutableStateOf(sidekickSettings.speechEngine) }
+    var sidekickEnginePickerOpen by remember { mutableStateOf(false) }
+    var sidekickServerDialogOpen by remember { mutableStateOf(false) }
+    var sidekickServerLabel by remember { mutableStateOf(sidekickServerSummary(sidekickSpeechStore)) }
 
     val sidekickModelLabel = sidekickModelId
         ?.let { id -> savedModels.firstOrNull { it.id == id } }
         ?.let { model -> model.alias?.takeIf { it.isNotBlank() } ?: model.model.name }
         ?: Strings.sidekickModelFollow
 
+    val sidekickEngineLabel = when (sidekickSpeechEngine) {
+        SidekickSpeechEngine.SYSTEM -> Strings.sidekickSpeechEngineSystem
+        SidekickSpeechEngine.WHISPER -> Strings.sidekickSpeechEngineWhisper
+    }
     val sidekickVoiceLanguageLabel = when (sidekickVoiceLanguage) {
         SidekickVoiceLanguage.AUTO -> Strings.sidekickVoiceLanguageAuto
         SidekickVoiceLanguage.SERBIAN -> Strings.sidekickVoiceLanguageSerbian
@@ -346,15 +357,63 @@ fun SettingsScreen(
                                 )
                             }
                             WtaSectionDivider()
-                            WtaToggleRow(
-                                title = Strings.sidekickVoiceOnDevice,
-                                subtitle = Strings.sidekickVoiceOnDeviceDesc.ifDescriptionsShown(),
-                                checked = sidekickPreferOnDevice,
-                                onCheckedChange = { prefer ->
-                                    sidekickPreferOnDevice = prefer
-                                    sidekickSettings.preferOnDeviceSpeech = prefer
+                            WtaSettingRow(
+                                title = Strings.sidekickSpeechEngine,
+                                subtitle = Strings.sidekickSpeechEngineDesc.ifDescriptionsShown(),
+                                onClick = { sidekickEnginePickerOpen = true }
+                            ) {
+                                Text(
+                                    text = sidekickEngineLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(WtaSpacing.Tiny))
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = null
+                                )
+                            }
+                            AnimatedVisibility(
+                                visible = sidekickSpeechEngine == SidekickSpeechEngine.WHISPER,
+                                enter = CardExpandTransition,
+                                exit = CardCollapseTransition
+                            ) {
+                                Column {
+                                    WtaSectionDivider()
+                                    WtaSettingRow(
+                                        title = Strings.sidekickSpeechServer,
+                                        // The current value is status, not help text: it
+                                        // stays visible when descriptions are hidden.
+                                        subtitle = sidekickServerLabel,
+                                        onClick = { sidekickServerDialogOpen = true }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.ChevronRight,
+                                            contentDescription = null
+                                        )
+                                    }
                                 }
-                            )
+                            }
+                            AnimatedVisibility(
+                                visible = sidekickSpeechEngine == SidekickSpeechEngine.SYSTEM,
+                                enter = CardExpandTransition,
+                                exit = CardCollapseTransition
+                            ) {
+                                Column {
+                                    WtaSectionDivider()
+                                    WtaToggleRow(
+                                        title = Strings.sidekickVoiceOnDevice,
+                                        subtitle = Strings.sidekickVoiceOnDeviceDesc.ifDescriptionsShown(),
+                                        checked = sidekickPreferOnDevice,
+                                        onCheckedChange = { prefer ->
+                                            sidekickPreferOnDevice = prefer
+                                            sidekickSettings.preferOnDeviceSpeech = prefer
+                                        }
+                                    )
+                                }
+                            }
                             WtaSectionDivider()
                             WtaSettingRow(
                                 title = Strings.sidekickManageModels,
@@ -402,6 +461,29 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (sidekickEnginePickerOpen) {
+        SidekickSpeechEngineDialog(
+            selected = sidekickSpeechEngine,
+            onSelect = { engine ->
+                sidekickSpeechEngine = engine
+                sidekickSettings.speechEngine = engine
+                sidekickEnginePickerOpen = false
+            },
+            onDismiss = { sidekickEnginePickerOpen = false }
+        )
+    }
+
+    if (sidekickServerDialogOpen) {
+        SidekickSpeechServerDialog(
+            store = sidekickSpeechStore,
+            onSaved = {
+                sidekickServerLabel = sidekickServerSummary(sidekickSpeechStore)
+                sidekickServerDialogOpen = false
+            },
+            onDismiss = { sidekickServerDialogOpen = false }
+        )
     }
 
     if (sidekickVoicePickerOpen) {
@@ -666,4 +748,18 @@ private fun AccentSwatch(
             textAlign = TextAlign.Center
         )
     }
+}
+
+/**
+ * The one-line state of the Whisper server row.
+ *
+ * Shows the host rather than the whole URL: the row's subtitle is a status, and a long
+ * path would be clipped anyway.
+ */
+private fun sidekickServerSummary(store: SidekickSpeechEndpointStore): String {
+    val raw = store.baseUrl
+    if (raw.isBlank()) return Strings.sidekickSpeechServerUnset
+    if (!store.isUsable()) return Strings.sidekickSpeechServerInvalid
+    val host = runCatching { android.net.Uri.parse(raw).host }.getOrNull()
+    return host?.takeIf { it.isNotBlank() } ?: raw
 }

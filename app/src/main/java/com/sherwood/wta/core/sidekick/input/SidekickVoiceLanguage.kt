@@ -51,6 +51,18 @@ enum class SidekickSpeechFailure {
     /** Rate limited or the remote service is busy. */
     THROTTLED,
 
+    /** The transcription server refused the API key (401/403). */
+    AUTH,
+
+    /**
+     * The server was reached but the request was refused or answered in the wrong shape:
+     * wrong path, wrong protocol, redirect, or an unknown/oversized model.
+     */
+    ENDPOINT,
+
+    /** Whisper dictation is selected but no server URL is configured, or it is invalid. */
+    NOT_CONFIGURED,
+
     /** Anything else the service reported. */
     UNKNOWN
 }
