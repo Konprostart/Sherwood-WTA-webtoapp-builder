@@ -145,7 +145,6 @@ class BrandIconAssetsTest {
                 .that(xml).contains("<monochrome android:drawable=\"@drawable/ic_launcher_foreground\"/>")
             assertWithMessage("$name background layer")
                 .that(xml).contains("android:drawable=\"@color/ic_launcher_background\"")
-                .isTrue()
         }
 
         val background = File(res(), "values/ic_launcher_background.xml").readText()
