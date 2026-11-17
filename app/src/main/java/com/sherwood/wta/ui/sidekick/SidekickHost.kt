@@ -516,7 +516,15 @@ private class SidekickPickers(
     val pickImage: () -> Unit,
     val takePhoto: () -> Unit,
     val pickFiles: () -> Unit,
-    val dictate: () -> Unit
+    val dictate: () -> Unit,
+    /**
+     * Explains why an image cannot be attached.
+     *
+     * The image entries stay tappable even when the selected model has no vision, because a
+     * greyed-out item that does nothing is indistinguishable from a broken one — which is
+     * exactly how the camera was reported. Tapping now says why instead of staying silent.
+     */
+    val onImagesUnsupported: () -> Unit
 )
 
 /**
@@ -655,7 +663,8 @@ private fun rememberSidekickPickers(vm: SidekickViewModel): SidekickPickers {
                 Manifest.permission.RECORD_AUDIO
             ) == PackageManager.PERMISSION_GRANTED
             if (granted) vm.startVoiceInput() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
-        }
+        },
+        onImagesUnsupported = { vm.reportError(Strings.sidekickVisionUnsupported) }
     )
 }
 
@@ -804,19 +813,25 @@ private fun AttachMenuButton(state: SidekickUiState, pickers: SidekickPickers) {
                 leadingIcon = {
                     Icon(Icons.Outlined.PhotoLibrary, contentDescription = null)
                 },
-                enabled = state.visionSupported,
                 onClick = {
                     expanded = false
-                    if (state.visionSupported) pickers.pickImage() else Unit
+                    if (state.visionSupported) {
+                        pickers.pickImage()
+                    } else {
+                        pickers.onImagesUnsupported()
+                    }
                 }
             )
             DropdownMenuItem(
                 text = { Text(Strings.sidekickTakePhoto) },
                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
-                enabled = state.visionSupported,
                 onClick = {
                     expanded = false
-                    if (state.visionSupported) pickers.takePhoto() else Unit
+                    if (state.visionSupported) {
+                        pickers.takePhoto()
+                    } else {
+                        pickers.onImagesUnsupported()
+                    }
                 }
             )
             DropdownMenuItem(
