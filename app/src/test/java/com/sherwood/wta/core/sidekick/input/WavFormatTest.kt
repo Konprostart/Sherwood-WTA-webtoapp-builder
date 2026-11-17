@@ -33,13 +33,13 @@ class WavFormatTest {
 
         val buffer = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN)
         assertThat(le(buffer, 4, 4)).isEqualTo(36 + dataBytes)
-        assertThat(le(buffer, 16, 4)).isEqualTo(16) // fmt chunk size
-        assertThat(le(buffer, 20, 2)).isEqualTo(1) // PCM
-        assertThat(le(buffer, 22, 2)).isEqualTo(1) // mono
-        assertThat(le(buffer, 24, 4)).isEqualTo(16_000)
-        assertThat(le(buffer, 28, 4)).isEqualTo(32_000) // byte rate
-        assertThat(le(buffer, 32, 2)).isEqualTo(2) // block align
-        assertThat(le(buffer, 34, 2)).isEqualTo(16) // bits per sample
+        assertThat(le(buffer, 16, 4)).isEqualTo(16L) // fmt chunk size
+        assertThat(le(buffer, 20, 2)).isEqualTo(1L) // PCM
+        assertThat(le(buffer, 22, 2)).isEqualTo(1L) // mono
+        assertThat(le(buffer, 24, 4)).isEqualTo(16_000L)
+        assertThat(le(buffer, 28, 4)).isEqualTo(32_000L) // byte rate
+        assertThat(le(buffer, 32, 2)).isEqualTo(2L) // block align
+        assertThat(le(buffer, 34, 2)).isEqualTo(16L) // bits per sample
         assertThat(le(buffer, 40, 4)).isEqualTo(dataBytes)
     }
 
@@ -57,7 +57,7 @@ class WavFormatTest {
             assertThat(bytes.size).isEqualTo(WavFormat.HEADER_BYTES + 1_000)
             assertThat(String(bytes.copyOfRange(0, 4), Charsets.US_ASCII)).isEqualTo("RIFF")
             val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-            assertThat(le(buffer, 40, 4)).isEqualTo(1_000)
+            assertThat(le(buffer, 40, 4)).isEqualTo(1_000L)
         } finally {
             file.delete()
         }
