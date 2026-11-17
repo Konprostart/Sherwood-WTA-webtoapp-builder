@@ -305,11 +305,6 @@ class AssetDecryptor(private val context: Context) {
         return String(loadAsset(assetPath), Charsets.UTF_8)
     }
 
-    fun openAsset(assetPath: String): InputStream {
-        val data = loadAsset(assetPath)
-        return data.inputStream()
-    }
-
     fun assetExists(assetPath: String): Boolean {
         return try {
             context.assets.open(assetPath + CryptoConstants.ENCRYPTED_EXTENSION).close()

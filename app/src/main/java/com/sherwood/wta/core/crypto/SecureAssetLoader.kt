@@ -70,10 +70,6 @@ class SecureAssetLoader(private val context: Context) {
         return String(loadAsset(assetPath), Charsets.UTF_8)
     }
 
-    fun openAsset(assetPath: String): InputStream {
-        return loadAsset(assetPath).inputStream()
-    }
-
     /**
      * Opens an asset as a decrypted stream instead of a ByteArray.
      *
