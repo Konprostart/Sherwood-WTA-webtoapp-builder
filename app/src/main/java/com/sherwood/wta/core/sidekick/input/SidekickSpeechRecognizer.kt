@@ -16,9 +16,26 @@ import java.util.Locale
  * Uses the platform `SpeechRecognizer`, which costs zero APK size and needs no API key: the
  * phone's own recognition service does the work. That service may run on-device or in the
  * cloud depending on the device and language pack — this class does not pretend otherwise.
- * When the user prefers on-device recognition and the platform has an on-device recognizer
- * (API 31+), that recognizer is created directly; otherwise the default one is used with
- * `EXTRA_PREFER_OFFLINE` as a hint.
+ *
+ * Two rules keep dictation working for the languages the panel offers (Serbian, English,
+ * Swedish), because both used to fail for *every* selection with
+ * "the speech service does not support this language":
+ *
+ * 1. **Never ask for offline-only recognition on the general service.** Sending
+ *    `EXTRA_PREFER_OFFLINE` makes a service that is otherwise perfectly able to dictate
+ *    answer `ERROR_LANGUAGE_UNAVAILABLE` when the offline model for that language is not
+ *    downloaded — for every language, which is exactly the reported symptom. The honest way
+ *    to ask for on-device recognition is to create the on-device recognizer, and that is
+ *    what the preference now does.
+ * 2. **Use the on-device recognizer only where it can serve the language.** Android's
+ *    on-device models are scoped to the device's configured language, so selecting it
+ *    whenever it merely *exists* made every other language unsupported. It is now chosen
+ *    only when the requested language matches the device locale (or no language was pinned),
+ *    and the session falls through to the next option if a service still refuses.
+ *
+ * The fall-through ladder is finite and language-preserving: it never drops the language
+ * (which would transcribe Swedish as English). It only widens a region-qualified tag to its
+ * primary subtag, which names the same language.
  *
  * Lifetime: one session at a time, released after every terminal event. A recognizer left
  * alive holds an audio session open, which on some devices keeps the microphone indicator
@@ -32,6 +49,10 @@ class SidekickSpeechRecognizer(private val context: Context) {
     private var recognizer: SpeechRecognizer? = null
     private var listener: SidekickSpeechListener? = null
     private var terminalDelivered = false
+
+    /** The ladder of attempts for the session in flight; see [SidekickSpeechPlan]. */
+    private var attempts: List<SidekickSpeechAttempt> = emptyList()
+    private var attemptIndex = 0
 
     /** Whether any recognition service is installed at all. */
     fun isAvailable(): Boolean = runCatching {
@@ -57,26 +78,14 @@ class SidekickSpeechRecognizer(private val context: Context) {
         cancelInternal()
         this.listener = listener
         terminalDelivered = false
-
-        val created = createRecognizer(preferOnDevice)
-        if (created == null) {
-            this.listener = null
-            listener.onFailure(SidekickSpeechFailure.NO_SERVICE)
-            return false
-        }
-        recognizer = created
-        created.setRecognitionListener(Callback())
-        val intent = buildIntent(language, preferOnDevice)
-        return try {
-            created.startListening(intent)
-            true
-        } catch (t: Throwable) {
-            AppLogger.w(TAG, "startListening failed: ${t.javaClass.simpleName}")
-            releaseRecognizer()
-            this.listener = null
-            listener.onFailure(SidekickSpeechFailure.UNKNOWN)
-            false
-        }
+        attempts = SidekickSpeechPlan.attempts(
+            language = language,
+            preferOnDevice = preferOnDevice,
+            onDeviceAvailable = isOnDeviceAvailable(),
+            deviceLanguage = deviceLocaleLanguage()
+        )
+        attemptIndex = 0
+        return startAttempt() != null
     }
 
     /** Stops listening and lets the service deliver its final result. */
@@ -96,15 +105,92 @@ class SidekickSpeechRecognizer(private val context: Context) {
     private fun cancelInternal() {
         listener = null
         terminalDelivered = true
+        attempts = emptyList()
+        attemptIndex = 0
         releaseRecognizer()
     }
 
-    private fun createRecognizer(preferOnDevice: Boolean): SpeechRecognizer? {
+    /**
+     * Whether the platform offers an on-device recognizer at all (API 31+).
+     *
+     * This is availability only — whether it can serve the *selected language* is
+     * [SidekickSpeechPlan]'s decision, because a recognizer that exists can still refuse
+     * every language the panel offers.
+     */
+    private fun isOnDeviceAvailable(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        return runCatching {
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(context.applicationContext)
+        }.getOrDefault(false)
+    }
+
+    private fun deviceLocaleLanguage(): String = runCatching {
+        val configuration = context.applicationContext.resources.configuration
+        val locales = configuration.locales
+        if (locales.isEmpty) {
+            Locale.getDefault().language
+        } else {
+            locales[0].language
+        }
+    }.getOrDefault(Locale.getDefault().language)
+
+    /**
+     * Creates the recognizer for the current rung and starts listening.
+     *
+     * Returns the recognizer when listening began, or `null` when every remaining rung
+     * failed to start — in which case the listener has already been told why.
+     */
+    private fun startAttempt(): SpeechRecognizer? {
+        while (attemptIndex < attempts.size) {
+            val attempt = attempts[attemptIndex]
+            if (this.listener == null) return null
+
+            val created = createRecognizer(attempt.onDevice)
+            if (created == null) {
+                // The on-device recognizer can disappear between the availability check and
+                // here; that is a reason to move on, not to fail the session.
+                attemptIndex++
+                continue
+            }
+            recognizer = created
+            created.setRecognitionListener(Callback())
+            val started = try {
+                created.startListening(buildIntent(attempt.tag))
+                true
+            } catch (t: Throwable) {
+                AppLogger.w(TAG, "startListening failed: ${t.javaClass.simpleName}")
+                false
+            }
+            // A rung that could not even open the microphone must not end the ladder: the
+            // next one is exactly what the fall-through exists for.
+            if (started) return created
+            releaseRecognizer()
+            attemptIndex++
+        }
+        // No rung could even open a microphone: report the failure the service last implied.
+        val pending = this.listener
+        this.listener = null
+        if (!terminalDelivered) {
+            terminalDelivered = true
+            pending?.onFailure(SidekickSpeechFailure.NO_SERVICE)
+        }
+        return null
+    }
+
+    /** Moves to the next rung; returns false when the session is exhausted. */
+    private fun advance(): Boolean {
+        if (terminalDelivered) return false
+        attemptIndex++
+        if (attemptIndex >= attempts.size) return false
+        releaseRecognizer()
+        startAttempt()
+        return !terminalDelivered
+    }
+
+    private fun createRecognizer(onDevice: Boolean): SpeechRecognizer? {
         val appContext = context.applicationContext
         return try {
-            if (preferOnDevice && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext)
-            ) {
+            if (onDevice && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext)
             } else {
                 SpeechRecognizer.createSpeechRecognizer(appContext)
@@ -115,7 +201,7 @@ class SidekickSpeechRecognizer(private val context: Context) {
         }
     }
 
-    private fun buildIntent(language: SidekickVoiceLanguage, preferOnDevice: Boolean): Intent =
+    private fun buildIntent(tag: String?): Intent =
         Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -126,19 +212,12 @@ class SidekickSpeechRecognizer(private val context: Context) {
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-            if (preferOnDevice) {
-                // Only a hint for the system service; it is not a guarantee that the audio
-                // stays on the device, which is why the UI says "request" rather than
-                // "offline".
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            }
-            val tag = language.tag
             if (tag != null) {
+                // The documented input. `EXTRA_LANGUAGE_PREFERENCE` is deliberately not
+                // set: it is the service's report of the user's preference, not a request,
+                // and sending it next to a different `EXTRA_LANGUAGE` made the two
+                // contradict each other.
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, tag)
-                val locale = runCatching { Locale.forLanguageTag(tag) }.getOrNull()
-                if (locale != null && locale.language.isNotEmpty()) {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, locale.language)
-                }
             } else if (Build.VERSION.SDK_INT >= 34) {
                 // Auto: let the service decide, and report which language it used.
                 putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true)
@@ -189,11 +268,15 @@ class SidekickSpeechRecognizer(private val context: Context) {
 
         override fun onError(error: Int) {
             if (terminalDelivered) return
+            val failure = mapError(error)
+            // A service that cannot serve this language or model is worth one more,
+            // narrower attempt before the user is told dictation is impossible.
+            if (SidekickSpeechPlan.isRetryable(failure) && advance()) return
             terminalDelivered = true
             val pending = listener
             listener = null
             releaseRecognizer()
-            pending?.onFailure(mapError(error))
+            pending?.onFailure(failure)
         }
 
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
@@ -227,6 +310,9 @@ class SidekickSpeechRecognizer(private val context: Context) {
         SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED,
         SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> SidekickSpeechFailure.LANGUAGE_UNSUPPORTED
 
+        // ERROR_CANNOT_CHECK_SUPPORT (14) and anything newer: the service declined before
+        // it even tried to listen, which is the "no usable service" case rather than a
+        // language verdict we can justify.
         else -> SidekickSpeechFailure.UNKNOWN
     }
 

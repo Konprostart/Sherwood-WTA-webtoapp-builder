@@ -84,6 +84,21 @@ enum class SidekickAttachmentRejection {
     VISION_UNSUPPORTED
 }
 
+/**
+ * What a picked file is, decided before anything is read.
+ *
+ * The reader needs this up front because the two shapes take different paths — an image is
+ * bounded-decoded, a text file is copied and probed for NUL bytes — and a pick that is
+ * neither must be refused with a reason rather than pasted in as mojibake.
+ */
+enum class SidekickAttachmentKind {
+    IMAGE,
+    TEXT,
+
+    /** Neither of the two shapes the model can consume. */
+    UNSUPPORTED
+}
+
 /** A read attempt: either an attachment, or a reason it was refused. */
 sealed class SidekickAttachmentResult {
     data class Ok(val attachment: SidekickAttachment) : SidekickAttachmentResult()

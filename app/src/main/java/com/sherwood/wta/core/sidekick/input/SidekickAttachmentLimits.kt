@@ -56,6 +56,19 @@ object SidekickAttachmentLimits {
         "sh", "bash", "zsh", "bat", "ps1", "sql", "diff", "patch", "gitignore", "pro"
     )
 
+    /**
+     * Extensions accepted as images.
+     *
+     * Needed because a provider does not always report an image type: the photo picker on
+     * some ROMs, and any file manager that hands a picture over as a download, report
+     * `null` or `application/octet-stream`. Deciding "is this an image" from the MIME type
+     * alone then fell through to the text branch, and a perfectly good screenshot was
+     * refused as "not a text file" — an image that was picked and never appeared.
+     */
+    val IMAGE_EXTENSIONS: Set<String> = setOf(
+        "jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "avif"
+    )
+
     /** MIME types we accept as text when the provider reports them. */
     private val TEXT_MIME_PREFIXES = listOf("text/")
     private val TEXT_MIME_EXACT = setOf(
@@ -76,6 +89,35 @@ object SidekickAttachmentLimits {
     fun isImageMime(mime: String?): Boolean =
         mime?.lowercase()?.startsWith("image/") == true
 
+    /** True when [mime] carries no usable type, so only the extension can decide. */
+    fun isUnhelpfulMime(mime: String?): Boolean {
+        val value = mime?.lowercase()?.substringBefore(';')?.trim().orEmpty()
+        return value.isEmpty() || value == "application/octet-stream"
+    }
+
+    /** Whether [name] carries an image extension (the fallback when MIME is unusable). */
+    fun isImageExtension(name: String?): Boolean {
+        val ext = name?.substringAfterLast('.', "")?.lowercase().orEmpty()
+        return ext.isNotEmpty() && ext in IMAGE_EXTENSIONS
+    }
+
+    /**
+     * Decides what a pick is, from the provider's type and the file name.
+     *
+     * A reported MIME type wins whenever it says something — a provider claiming
+     * `application/pdf` is believed even if the name ends in `.png`. Only a type that says
+     * nothing (`null`, `application/octet-stream`) lets the extension decide, which is the
+     * case the old MIME-only check got wrong: a screenshot delivered that way fell through
+     * to the text branch and was refused as "not a text file".
+     */
+    fun kindFor(mime: String?, name: String?): SidekickAttachmentKind = when {
+        isImageMime(mime) -> SidekickAttachmentKind.IMAGE
+        isTextMime(mime) -> SidekickAttachmentKind.TEXT
+        isTextExtension(name) -> SidekickAttachmentKind.TEXT
+        isUnhelpfulMime(mime) && isImageExtension(name) -> SidekickAttachmentKind.IMAGE
+        else -> SidekickAttachmentKind.UNSUPPORTED
+    }
+
     /**
      * True for image formats that can carry transparency. A JPEG has no alpha channel,
      * so the decoder can skip the flattening pass for it.
@@ -83,6 +125,20 @@ object SidekickAttachmentLimits {
     fun mayHaveAlpha(mime: String?): Boolean {
         val value = mime?.lowercase()?.substringBefore(';')?.trim().orEmpty()
         return value == "image/png" || value == "image/webp" || value == "image/gif"
+    }
+
+    /**
+     * [mayHaveAlpha] for a pick whose MIME type may be missing.
+     *
+     * With no usable type the extension decides. Guessing "has alpha" only costs one extra
+     * bitmap pass; guessing wrong the other way leaves a transparent PNG's content on a
+     * black background, which on a design mockup reads as a broken screenshot.
+     */
+    fun mayHaveAlpha(mime: String?, name: String?): Boolean {
+        if (mayHaveAlpha(mime)) return true
+        if (!isUnhelpfulMime(mime)) return false
+        val ext = name?.substringAfterLast('.', "")?.lowercase().orEmpty()
+        return ext == "png" || ext == "webp" || ext == "gif" || ext == "avif"
     }
 
     fun isTextExtension(name: String?): Boolean {

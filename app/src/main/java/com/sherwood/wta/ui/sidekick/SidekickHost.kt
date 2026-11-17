@@ -2,9 +2,13 @@ package com.sherwood.wta.ui.sidekick
 
 import android.Manifest
 import android.app.Application
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -67,6 +71,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -515,6 +520,29 @@ private class SidekickPickers(
 )
 
 /**
+ * `ACTION_IMAGE_CAPTURE` with the URI grant attached to the intent.
+ *
+ * `ActivityResultContracts.TakePicture` only puts the output URI in `EXTRA_OUTPUT`; it
+ * never adds a grant flag. Whether the camera app can then write through the
+ * `FileProvider` URI depends on the system migrating that extra into `ClipData`, which not
+ * every camera app or ROM does — the capture comes back empty and the panel reports an
+ * unreadable file (or nothing at all). Granting read and write explicitly is the contract
+ * `FileProvider` documents and removes that dependency.
+ */
+private class TakePictureWithGrant : ActivityResultContract<Uri, Boolean>() {
+    override fun createIntent(context: android.content.Context, input: Uri): Intent =
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            .putExtra(MediaStore.EXTRA_OUTPUT, input)
+            .addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+
+    override fun parseResult(resultCode: Int, intent: Intent?): Boolean =
+        resultCode == android.app.Activity.RESULT_OK
+}
+
+/**
  * Creates the document pickers for the composer.
  *
  * They are registered here, above the panel, rather than inside it: a launcher created
@@ -527,7 +555,11 @@ private class SidekickPickers(
 @Composable
 private fun rememberSidekickPickers(vm: SidekickViewModel): SidekickPickers {
     val context = LocalContext.current
-    var pendingCapture by remember { mutableStateOf<File?>(null) }
+    // The path, not the File: it has to outlive a configuration change or process death
+    // while the camera app is in front. Held in a plain `remember`, the result came back
+    // after a recreation with no file to look at. Empty string means "no capture pending",
+    // so nothing nullable has to travel through the saved-state bundle.
+    var pendingCapturePath by rememberSaveable { mutableStateOf("") }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -538,18 +570,40 @@ private fun rememberSidekickPickers(vm: SidekickViewModel): SidekickPickers {
     ) { uris -> if (uris.isNotEmpty()) vm.addAttachments(uris) }
 
     val camera = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
+        TakePictureWithGrant()
     ) { success ->
-        val file = pendingCapture
-        pendingCapture = null
-        if (success && file != null) vm.addCameraPhoto(file) else file?.delete()
+        val file = pendingCapturePath.takeIf { it.isNotEmpty() }?.let { File(it) }
+        pendingCapturePath = ""
+        // For ACTION_IMAGE_CAPTURE the picture is the file at EXTRA_OUTPUT, not the
+        // result code: camera apps exist that write the image and still answer
+        // RESULT_CANCELED, and answering "nothing happened" there is exactly the dead tap
+        // this reported. A file with content is a capture whatever the code says.
+        when {
+            file != null && file.length() > 0L -> vm.addCameraPhoto(file)
+            // The camera claimed success but wrote nothing, which is a real failure worth
+            // naming rather than swallowing.
+            success -> vm.reportError(Strings.sidekickPhotoFailed)
+            // A genuine cancel: discard quietly, the user chose to back out.
+            else -> runCatching { file?.delete() }
+        }
     }
 
     val capture = {
-        val directory = File(context.cacheDir, "sidekick").apply { mkdirs() }
+        val directory = File(context.cacheDir, CAPTURE_DIR).apply { mkdirs() }
+        // Drop a take that was never consumed (cancelled picker, or the panel closed while
+        // the camera app was in front) before writing a new one.
+        if (pendingCapturePath.isNotEmpty()) {
+            runCatching { File(pendingCapturePath).delete() }
+        }
         val file = File(directory, "capture-${System.currentTimeMillis()}.jpg")
-        pendingCapture = file
+        pendingCapturePath = file.absolutePath
         try {
+            // Create the file up front. `FileProvider` only serves paths that exist under a
+            // configured root, and some camera apps and ROMs refuse to open an
+            // `EXTRA_OUTPUT` target that is not there yet — the capture then comes back
+            // empty and the panel appears to do nothing. It also makes "length == 0" an
+            // unambiguous "the camera wrote nothing".
+            file.createNewFile()
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
@@ -559,7 +613,7 @@ private fun rememberSidekickPickers(vm: SidekickViewModel): SidekickPickers {
         } catch (t: Throwable) {
             // The provider is declared in the manifest; a failure here means the ROM or the
             // installer mangled it, which is worth reporting rather than swallowing.
-            pendingCapture = null
+            pendingCapturePath = ""
             runCatching { file.delete() }
             vm.reportError(Strings.sidekickPhotoFailed)
         }
@@ -923,6 +977,15 @@ private fun ListeningRow(label: String, onDone: (() -> Unit)?, onCancel: () -> U
         }
     }
 }
+
+/**
+ * Where camera captures land, under `cacheDir`.
+ *
+ * Must stay inside a root the manifest's `FileProvider` serves (`<cache-path path=".">`),
+ * and must stay `sidekick/` because `StudioStoragePruner` sweeps stale captures and WAV
+ * takes from that same directory.
+ */
+private const val CAPTURE_DIR = "sidekick"
 
 private val FILE_MIME_TYPES = arrayOf(
     "text/*",

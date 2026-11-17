@@ -43,20 +43,34 @@ class SidekickAttachmentReader(private val context: Context) {
                 }
         }
         val mime = runCatching { resolver.getType(uri) }.getOrNull()
+        // The provider's MIME type is the first signal, but it is not always usable: some
+        // photo pickers and every file manager serving a download report `null` or
+        // `application/octet-stream`. Deciding by MIME alone dropped those images into the
+        // text branch and refused them as "not a text file", so the extension decides
+        // whenever the type itself says nothing.
+        val rawName = SidekickAttachmentLimits.sanitizeName(displayName, fallback = "")
+        val kind = SidekickAttachmentLimits.kindFor(mime, rawName)
         val name = SidekickAttachmentLimits.sanitizeName(
             displayName,
-            fallback = if (SidekickAttachmentLimits.isImageMime(mime)) "image" else "file"
+            fallback = when (kind) {
+                SidekickAttachmentKind.IMAGE -> "image"
+                else -> "file"
+            }
         )
 
-        return when {
-            SidekickAttachmentLimits.isImageMime(mime) ->
-                readImage(uri, name, mayHaveAlpha = SidekickAttachmentLimits.mayHaveAlpha(mime))
-            SidekickAttachmentLimits.isTextMime(mime) ||
-                SidekickAttachmentLimits.isTextExtension(name) -> readText(uri, name)
+        return when (kind) {
+            SidekickAttachmentKind.IMAGE ->
+                readImage(
+                    uri,
+                    name,
+                    mayHaveAlpha = SidekickAttachmentLimits.mayHaveAlpha(mime, name)
+                )
+            SidekickAttachmentKind.TEXT -> readText(uri, name)
             // A provider that cannot name the type is common for downloads; if the name has
             // a text extension we already took that branch, so anything left is refused
             // rather than pasted in as mojibake.
-            else -> SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.NOT_TEXT)
+            SidekickAttachmentKind.UNSUPPORTED ->
+                SidekickAttachmentResult.Rejected(SidekickAttachmentRejection.NOT_TEXT)
         }
     }
 
