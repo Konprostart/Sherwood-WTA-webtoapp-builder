@@ -133,7 +133,21 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun close() {
+        // Closing the panel must also end dictation: the recognizer holds an audio
+        // session, so leaving it running keeps the microphone indicator lit on a screen
+        // where the user can no longer see or stop the recording.
+        if (_ui.value.speechListening) cancelVoiceInput()
         _ui.update { it.copy(open = false) }
+    }
+
+    /**
+     * Called when the app leaves the foreground.
+     *
+     * A dictation that keeps running behind another app holds the microphone with no UI
+     * to stop it, so the session is asked for its final transcript instead.
+     */
+    fun onAppBackgrounded() {
+        if (_ui.value.speechListening) stopVoiceInput()
     }
 
     /** Re-reads preferences after the settings screen changed them. */

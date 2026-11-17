@@ -3871,22 +3871,6 @@ builtins.__import__ = _w2a_import
         }
     }
 
-    private fun isAdaptiveIconEntry(entryName: String): Boolean {
-
-        if ((entryName.contains("drawable")) &&
-            (entryName.contains("ic_launcher_foreground") || entryName.contains("ic_launcher_foreground_new")) &&
-            (entryName.endsWith(".xml") || entryName.endsWith(".jpg") || entryName.endsWith(".png"))) {
-            return true
-        }
-        return false
-    }
-
-    private fun isAdaptiveIconDefinition(entryName: String): Boolean {
-        return entryName.startsWith("res/mipmap-anydpi") &&
-            (entryName.contains("ic_launcher") || entryName.contains("ic_launcher_round")) &&
-            entryName.endsWith(".xml")
-    }
-
     private fun copyEntry(zipIn: ZipFile, zipOut: ZipOutputStream, entry: ZipEntry) {
         ZipUtils.copyEntry(zipIn, zipOut, entry)
     }

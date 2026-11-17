@@ -87,7 +87,7 @@ object GitProviderRegistry {
             // server, which is exactly what this layer must not do.
             val configuredHost = runCatching {
                 android.net.Uri.parse(
-                    com.sherwood.wta.core.studio.EndpointConfig.current(context).githubWebBaseUrl
+                    com.sherwood.wta.core.studio.EndpointSettingsStore.current(context).githubWebBaseUrl
                 ).host
             }.getOrNull()
             if (!host.isNullOrBlank() && !configuredHost.isNullOrBlank() &&

@@ -2,6 +2,7 @@ package com.sherwood.wta.core.sidekick
 
 import com.sherwood.wta.core.agent.session.AgentMessage
 import com.sherwood.wta.core.sidekick.input.SidekickAttachment
+import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
 import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
 
 /**
@@ -23,6 +24,13 @@ object SidekickPrompt {
 
     /** How many of the most recent agent messages the digest carries. */
     const val MAX_CONTEXT_MESSAGES = 8
+
+    /**
+     * Lower bound for the transcript body. The wrapper (header and fence) is small, so
+     * this only matters if the header ever grows: a digest cut to nothing is worse than
+     * one that overruns its budget by a few dozen characters.
+     */
+    private const val MIN_CONTEXT_BODY_CHARS = 512
 
     /** How many Sidekick turns are resent with each question. */
     const val MAX_HISTORY_TURNS = 12
@@ -109,14 +117,18 @@ object SidekickPrompt {
             .filter { it.isNotBlank() }
         if (rendered.isEmpty()) return ""
 
-        val body = buildString {
-            appendLine("## Recent main-agent session (read-only snapshot)")
-            if (title.isNotBlank()) appendLine("Session: ${clip(title, 120)}")
-            appendLine("Messages below are the tail of that conversation, oldest first.")
-            appendLine()
-            // The snapshot is untrusted project/build text: fence it the same way as a
-            // file so a log line cannot read as an instruction from the user.
-            appendLine(UNTRUSTED_TOKEN + "_SESSION_OPEN")
+        val open = UNTRUSTED_TOKEN + "_SESSION_OPEN"
+        val shut = UNTRUSTED_TOKEN + "_SESSION_CLOSE"
+
+        val header = buildString {
+            append("## Recent main-agent session (read-only snapshot)")
+            if (title.isNotBlank()) append("\nSession: ${clip(title, 120)}")
+            append("\nMessages below are the tail of that conversation, oldest first.")
+        }
+
+        // The snapshot is untrusted project/build text: fence it the same way as a file so
+        // a log line cannot read as an instruction from the user.
+        val inner = buildString {
             rendered.forEach {
                 appendLine(it)
                 appendLine()
@@ -125,10 +137,21 @@ object SidekickPrompt {
                 appendLine("Last recorded error in that session (verbatim, may be a provider or build message):")
                 appendLine(clip(lastError, MAX_CONTEXT_MESSAGE_CHARS))
             }
-            appendLine(UNTRUSTED_TOKEN + "_SESSION_CLOSE")
         }.trim()
 
-        return clipFromStart(body, MAX_CONTEXT_CHARS)
+        // Clipping happens *before* the fence is added. Clipping an already-fenced block
+        // keeps the end — the closing marker — and drops the opening one, which turns the
+        // snapshot back into unfenced text the system prompt trusts as the user's words.
+        val overhead = header.length + open.length + shut.length + 6
+        val budget = (MAX_CONTEXT_CHARS - overhead).coerceAtLeast(MIN_CONTEXT_BODY_CHARS)
+
+        return buildString {
+            appendLine(header)
+            appendLine()
+            appendLine(open)
+            appendLine(clipFromStart(inner, budget))
+            appendLine(shut)
+        }.trim()
     }
 
     /**

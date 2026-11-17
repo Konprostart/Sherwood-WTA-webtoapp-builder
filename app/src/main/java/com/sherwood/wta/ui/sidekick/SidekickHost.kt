@@ -129,7 +129,12 @@ fun SidekickHost(modifier: Modifier = Modifier) {
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) vm.refreshFromSettings()
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> vm.refreshFromSettings()
+                // Leaving the app must not leave the microphone open behind it.
+                Lifecycle.Event.ON_STOP -> vm.onAppBackgrounded()
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }

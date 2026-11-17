@@ -91,7 +91,7 @@ sealed class TelegramFailure {
 
     /** Transport failure: DNS, TLS, timeout, no network. */
     data class Network(val message: String) : TelegramFailure()
-
+}
 
 class TelegramException(val failure: TelegramFailure) : Exception(
     when (failure) {
