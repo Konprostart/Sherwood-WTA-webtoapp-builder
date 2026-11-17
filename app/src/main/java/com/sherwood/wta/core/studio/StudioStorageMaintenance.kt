@@ -315,12 +315,13 @@ class StudioStorageMaintenance(private val context: Context) {
                 now = now,
                 protectedKeys = protectedKeys
             ) +
-            // Voice takes are deleted by the upload path; one orphaned by a process death
-            // is provably disposable after the same window.
+            // Voice takes are deleted by the upload path and camera captures by the
+            // decode path; one orphaned by a process death between the two is provably
+            // disposable after the same window.
             StudioStoragePruner.pruneTempFiles(
                 dir = File(context.cacheDir, SidekickWavRecorder.CACHE_DIR),
                 now = now,
-                suffixes = listOf(".wav")
+                suffixes = listOf(".wav", ".jpg")
             ) +
             StudioStoragePruner.pruneOrphanSessions(
                 sessionsRoot = File(filesDir, SESSIONS_DIR),
