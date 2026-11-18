@@ -53,7 +53,7 @@ class WorkspaceBundleManagerTest {
     )
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp() = runBlocking<Unit> {
         context = ApplicationProvider.getApplicationContext()
         files = ProjectFileManager(context)
         sessions = SessionStore(context, files)
@@ -117,7 +117,7 @@ class WorkspaceBundleManagerTest {
     // ------------------------------------------------------------ round trip
 
     @Test
-    fun `export carries the conversation, its config and its project files`() = runBlocking {
+    fun `export carries the conversation, its config and its project files`() = runBlocking<Unit> {
         val session = newSessionWith(
             title = "Portfolio site",
             filesToCreate = mapOf(
@@ -149,11 +149,11 @@ class WorkspaceBundleManagerTest {
         assertThat(entries.keys.last()).isEqualTo("manifest.json")
         assertThat(String(entries["manifest.json"]!!)).contains("\"files/index.html\"")
         // The conversation is inside the document, not in a second copy of the store.
-        assertThat(String(entries["workspace.json"]!!)).contains("\"hi\"")
+        assertThat(String(entries["workspace.json"]!!).contains("\"hi\"")).isTrue()
     }
 
     @Test
-    fun `import creates a new session with the same files, history and config`() = runBlocking {
+    fun `import creates a new session with the same files, history and config`() = runBlocking<Unit> {
         val session = newSessionWith(
             title = "Portfolio site",
             filesToCreate = mapOf("index.html" to "<h1>hi</h1>", "src/app.js" to "console.log(1)")
@@ -195,7 +195,7 @@ class WorkspaceBundleManagerTest {
     }
 
     @Test
-    fun `import never overwrites the session it was exported from`() = runBlocking {
+    fun `import never overwrites the session it was exported from`() = runBlocking<Unit> {
         val session = newSessionWith("Keep me", mapOf("index.html" to "original"))
         val imported = manager.importFromStream(ByteArrayInputStream(exportBytes(session.id)))
 
@@ -209,7 +209,7 @@ class WorkspaceBundleManagerTest {
     // --------------------------------------------------------- the allowlist
 
     @Test
-    fun `app owned credentials never reach the archive`() = runBlocking {
+    fun `app owned credentials never reach the archive`() = runBlocking<Unit> {
         plantAllSecrets()
         val session = newSessionWith("Work", mapOf("index.html" to "<h1>hi</h1>"))
 
@@ -228,7 +228,7 @@ class WorkspaceBundleManagerTest {
     }
 
     @Test
-    fun `credential looking files inside the sandbox are omitted and reported`() = runBlocking {
+    fun `credential looking files inside the sandbox are omitted and reported`() = runBlocking<Unit> {
         val session = newSessionWith(
             title = "Work",
             filesToCreate = mapOf(
@@ -258,7 +258,7 @@ class WorkspaceBundleManagerTest {
     }
 
     @Test
-    fun `the session store's own history file is not duplicated into the bundle`() = runBlocking {
+    fun `the session store's own history file is not duplicated into the bundle`() = runBlocking<Unit> {
         val session = newSessionWith("Chat", mapOf("index.html" to "x"))
         sessions.appendMessage(
             session.id,
@@ -274,7 +274,7 @@ class WorkspaceBundleManagerTest {
     // ------------------------------------------------------------ integrity
 
     @Test
-    fun `an archive with a tampered entry is refused before anything is written`() = runBlocking {
+    fun `an archive with a tampered entry is refused before anything is written`() = runBlocking<Unit> {
         val session = newSessionWith("Chat", mapOf("index.html" to "original"))
         val corrupted = rewriteZip(exportBytes(session.id)) { entries ->
             entries["files/index.html"] = "tampered!!".toByteArray()
@@ -287,10 +287,11 @@ class WorkspaceBundleManagerTest {
         assertThat(failure).isInstanceOf(BackupIntegrityException.Mismatch::class.java)
         // Nothing was created: the only session is still the one we exported.
         assertThat(sessions.sessionsFlow.first().map { it.id }).containsExactly(session.id)
+        assertThat(sessions.get(session.id)).isNotNull()
     }
 
     @Test
-    fun `a bundle that carries a forbidden path is refused`() = runBlocking {
+    fun `a bundle that carries a forbidden path is refused`() = runBlocking<Unit> {
         val session = newSessionWith("Chat", mapOf("index.html" to "x"))
         val hostile = rewriteZip(exportBytes(session.id)) { entries ->
             entries["files/.env"] = "API_KEY=leak".toByteArray()
@@ -305,7 +306,7 @@ class WorkspaceBundleManagerTest {
     }
 
     @Test
-    fun `an archive without a manifest is refused`() = runBlocking {
+    fun `an archive without a manifest is refused`() = runBlocking<Unit> {
         val session = newSessionWith("Chat", mapOf("index.html" to "x"))
         val stripped = rewriteZip(exportBytes(session.id)) { entries ->
             entries.remove("manifest.json")
@@ -319,7 +320,7 @@ class WorkspaceBundleManagerTest {
     }
 
     @Test
-    fun `an archive that is not a workspace bundle reports the format`() = runBlocking {
+    fun `an archive that is not a workspace bundle reports the format`() = runBlocking<Unit> {
         val notOurs = ByteArrayOutputStream().also { out ->
             ZipOutputStream(out).use { zip ->
                 zip.putNextEntry(ZipEntry("workspace.json"))

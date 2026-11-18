@@ -160,14 +160,19 @@ internal object WorkspaceAllowlist {
      * miss an obfuscated key.
      */
     fun admits(relativePath: String): Verdict {
-        val path = relativePath.trim().trimStart('/').replace('\\', '/')
-        if (path.isEmpty()) return Verdict.refuse(Refusal.UNSAFE_PATH)
+        val raw = relativePath.trim().replace('\\', '/')
+        if (raw.isEmpty()) return Verdict.refuse(Refusal.UNSAFE_PATH)
 
-        // Traversal and absolute/Windows paths can never be represented faithfully,
-        // and allowing them would make the importer's writer the only defense.
-        if (path.contains("..") || path.contains(':') || path.startsWith("~")) {
+        // Absolute, drive-qualified, home-relative and traversing paths can never be
+        // represented faithfully in the archive. Refusing them is deliberate: silently
+        // reinterpreting "/etc/passwd" as "etc/passwd" would make the archive's meaning
+        // depend on the reader's normalisation instead of on the writer's intent.
+        if (raw.startsWith("/") || raw.contains(':') || raw.startsWith("~")) {
             return Verdict.refuse(Refusal.UNSAFE_PATH)
         }
+        val path = raw.trimStart('/')
+        if (path.isEmpty()) return Verdict.refuse(Refusal.UNSAFE_PATH)
+        if (path.contains("..")) return Verdict.refuse(Refusal.UNSAFE_PATH)
 
         val segments = path.split('/').filter { it.isNotEmpty() }
         if (segments.isEmpty()) return Verdict.refuse(Refusal.UNSAFE_PATH)
