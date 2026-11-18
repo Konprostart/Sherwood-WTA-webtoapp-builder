@@ -6,8 +6,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.sherwood.wta.core.agent.engine.collectWithIdleTimeout
-import com.sherwood.wta.core.agent.llm.LlmEvent
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.core.sidekick.SidekickContextSource
@@ -15,6 +13,7 @@ import com.sherwood.wta.core.sidekick.SidekickEngine
 import com.sherwood.wta.core.sidekick.SidekickEnvironment
 import com.sherwood.wta.core.sidekick.SidekickPrompt
 import com.sherwood.wta.core.sidekick.SidekickSettings
+import com.sherwood.wta.core.sidekick.SidekickStreamEvent
 import com.sherwood.wta.core.sidekick.SidekickTurn
 import com.sherwood.wta.core.sidekick.input.SidekickAttachment
 import com.sherwood.wta.core.sidekick.input.SidekickAttachmentBudget
@@ -31,6 +30,10 @@ import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
 import com.sherwood.wta.core.sidekick.input.SidekickWavRecorder
 import com.sherwood.wta.core.sidekick.input.SidekickWhisperTranscriber
 import com.sherwood.wta.core.sidekick.input.toSpeechFailure
+import com.sherwood.wta.core.sidekick.research.SidekickHttp
+import com.sherwood.wta.core.sidekick.research.SidekickResearch
+import com.sherwood.wta.core.sidekick.research.SidekickSearch
+import com.sherwood.wta.core.sidekick.research.SidekickWebPolicy
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -74,9 +77,11 @@ data class SidekickUiState(
     /** Images and text files staged for the next question, cleared on send. */
     val pendingAttachments: List<SidekickAttachment> = emptyList(),
     /**
-     * Whether the resolved model accepts images. Drives the attachment buttons: an
-     * image into a text-only model is a guaranteed provider error, so the button is
-     * disabled with a reason instead of failing after the pick.
+     * Whether the resolved model can accept images.
+     *
+     * No longer gates the attachment buttons — refusing the pick was the bug. It only
+     * drives [imagesWillBeOmitted], the hint that says an image will not be sent, and the
+     * engine's decision to drop image bytes from the request.
      */
     val visionSupported: Boolean = true,
 
@@ -87,6 +92,16 @@ data class SidekickUiState(
      * results, so this is the only honest state between "stopped" and "got text".
      */
     val speechTranscribing: Boolean = false,
+    /**
+     * Whether the assistant may read the public web for this question.
+     *
+     * Surfaced so the panel can show the globe as on/off without a second preference read
+     * on every recomposition.
+     */
+    val researchEnabled: Boolean = true,
+    /** The read-only research step currently running, if any. */
+    val researchStatus: SidekickStreamEvent.StatusKind? = null,
+
     /** False when no engine can dictate right now. */
     val speechAvailable: Boolean = true,
     /**
@@ -98,6 +113,15 @@ data class SidekickUiState(
     val canSend: Boolean
         get() = !streaming && !speechListening && !speechTranscribing &&
             (draft.isNotBlank() || pendingAttachments.isNotEmpty())
+
+    /**
+     * True when the staged images cannot be read by the bound model.
+     *
+     * The panel uses this for a hint, not a gate: blocking the attach was the bug, so the
+     * image is accepted and this only explains what will happen to it.
+     */
+    val imagesWillBeOmitted: Boolean
+        get() = !visionSupported && pendingAttachments.any { it is SidekickImageAttachment }
 }
 
 /**
@@ -117,6 +141,7 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     private val speech = SidekickSpeechRecognizer(application)
     private val speechEndpoint = SidekickSpeechEndpointStore.getInstance(application)
     private val transcriber = SidekickWhisperTranscriber()
+    private val researchHttp = SidekickHttp()
 
     /**
      * The take in progress, when the Whisper engine is selected. A platform
@@ -137,7 +162,8 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
             includeContext = settings.includeAgentContext,
             fabAnchor = settings.fabAnchor,
             speechAvailable = initialSpeech.available,
-            speechHint = initialSpeech.hint
+            speechHint = initialSpeech.hint,
+            researchEnabled = settings.webResearchEnabled
         )
     )
     val ui: StateFlow<SidekickUiState> = _ui.asStateFlow()
@@ -191,7 +217,8 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
                 // Switching dictation engines (or saving a new server URL) changes
                 // whether the mic can work at all; the panel must not keep an old answer.
                 speechAvailable = status.available,
-                speechHint = status.hint
+                speechHint = status.hint,
+                researchEnabled = settings.webResearchEnabled
             )
         }
         if (_ui.value.open) refreshBinding()
@@ -231,27 +258,14 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             when (val result = engine.resolve(settings.modelId)) {
                 is SidekickEngine.BindingResult.Ok -> _ui.update {
-                    val vision = result.binding.supportsVision
-                    val hadImages = it.pendingAttachments.any { a -> a is SidekickImageAttachment }
+                    // Whatever is staged stays staged. Dropping a screenshot because the
+                    // bound model happens to be text-only is exactly what made attaching
+                    // feel broken; the panel explains the omission instead, and the engine
+                    // leaves the image out of the request.
                     it.copy(
                         bindingLabel = result.binding.label,
                         bindingError = null,
-                        visionSupported = vision,
-                        // A model switch must not leave an unreadable image staged: the next
-                        // request would be rejected by the provider. The drop is reported,
-                        // because a photo quietly disappearing looks like a bug.
-                        pendingAttachments = if (vision) {
-                            it.pendingAttachments
-                        } else {
-                            it.pendingAttachments.filterNot { attachment ->
-                                attachment is SidekickImageAttachment
-                            }
-                        },
-                        error = if (!vision && hadImages) {
-                            Strings.sidekickVisionUnsupported
-                        } else {
-                            it.error
-                        }
+                        visionSupported = result.binding.supportsVision
                     )
                 }
                 SidekickEngine.BindingResult.MissingModel -> _ui.update {
@@ -305,7 +319,7 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
             if (last != null && last.role == SidekickTurn.Role.ASSISTANT && last.text.isBlank()) {
                 turns.removeAt(turns.lastIndex)
             }
-            state.copy(turns = turns, streaming = false)
+            state.copy(turns = turns, streaming = false, researchStatus = null)
         }
     }
 
@@ -373,10 +387,6 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         // old list and both pass the budget.
         var rejection: SidekickAttachmentRejection? = null
         _ui.update { state ->
-            if (attachment is SidekickImageAttachment && !state.visionSupported) {
-                rejection = SidekickAttachmentRejection.VISION_UNSUPPORTED
-                return@update state
-            }
             val budget = SidekickAttachmentBudget.rejection(state.pendingAttachments, attachment)
             if (budget != null) {
                 rejection = budget
@@ -402,7 +412,6 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         SidekickAttachmentRejection.UNREADABLE -> Strings.sidekickAttachmentUnreadable
         SidekickAttachmentRejection.EMPTY -> Strings.sidekickAttachmentEmpty
         SidekickAttachmentRejection.BUDGET -> Strings.sidekickAttachmentBudget
-        SidekickAttachmentRejection.VISION_UNSUPPORTED -> Strings.sidekickVisionUnsupported
     }
 
     // ------------------------------------------------------------ dictation
@@ -726,26 +735,28 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
             var stalled = false
 
             try {
-                engine.stream(
+                engine.answer(
                     binding = binding,
                     history = history,
                     question = question,
                     contextDigest = digest?.text,
                     environment = environment,
-                    attachments = attachments
-                ).collectWithIdleTimeout(
-                    idleTimeoutMs = STREAM_IDLE_TIMEOUT_MS,
-                    onTimeout = { stalled = true }
-                ) { event ->
+                    attachments = attachments,
+                    research = researchForThisTurn(),
+                    idleTimeoutMs = STREAM_IDLE_TIMEOUT_MS
+                ).collect { event ->
                     when (event) {
-                        is LlmEvent.TextDelta -> {
+                        is SidekickStreamEvent.Text -> {
                             text.append(event.delta)
                             replaceLastAnswer(text.toString())
                         }
-                        is LlmEvent.Error -> failure = event.message
-                        // Sidekick has no tools and does not need reasoning streams; the
-                        // remaining events (Started/Done/tool noise) carry no answer text.
-                        else -> Unit
+                        // Shown while a search or a page read runs; a silent second of
+                        // network work reads as a frozen panel.
+                        is SidekickStreamEvent.Status ->
+                            _ui.update { it.copy(researchStatus = event.kind) }
+                        is SidekickStreamEvent.Failure -> failure = event.message
+                        SidekickStreamEvent.Stalled -> stalled = true
+                        SidekickStreamEvent.Finished -> Unit
                     }
                 }
             } catch (cancelled: CancellationException) {
@@ -755,6 +766,7 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
                 failure = t.message ?: t.javaClass.simpleName
             }
 
+            _ui.update { it.copy(researchStatus = null) }
             val answer = text.toString().trim()
             when {
                 stalled && answer.isEmpty() -> fail(Strings.sidekickStalled)
@@ -767,6 +779,42 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /**
+     * Builds the read-only research capability for one turn, or `null` when it is off.
+     *
+     * A fresh instance per turn keeps the search endpoint in sync with the settings dialog
+     * without holding a stale backend for the lifetime of the view model.
+     */
+    private fun researchForThisTurn(): SidekickResearch? {
+        if (!settings.webResearchEnabled) return null
+        return SidekickResearch(
+            http = researchHttp,
+            search = SidekickSearch(researchHttp, searxEndpoint = settings.searchEndpoint),
+            searchEnabled = true
+        )
+    }
+
+    /** Turns web research on or off; the panel's globe reflects the new value immediately. */
+    fun setResearchEnabled(enabled: Boolean) {
+        settings.webResearchEnabled = enabled
+        _ui.update { it.copy(researchEnabled = enabled) }
+    }
+
+    /** Current SearXNG base URL, or `null` for the built-in DuckDuckGo backend. */
+    fun searchEndpoint(): String? = settings.searchEndpoint
+
+    /** Validates and saves an optional SearXNG base URL. Returns false when it is not allowed. */
+    fun setSearchEndpoint(raw: String): Boolean {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) {
+            settings.searchEndpoint = null
+            return true
+        }
+        if (SidekickWebPolicy.check(trimmed) !is SidekickWebPolicy.Verdict.Allowed) return false
+        settings.searchEndpoint = trimmed
+        return true
+    }
+
     /** Failure while a placeholder answer turn is already on screen. */
     private fun fail(message: String) {
         _ui.update { state ->
@@ -775,7 +823,7 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
             if (last != null && last.role == SidekickTurn.Role.ASSISTANT && last.text.isBlank()) {
                 turns.removeAt(turns.lastIndex)
             }
-            state.copy(turns = turns, streaming = false, error = message)
+            state.copy(turns = turns, streaming = false, error = message, researchStatus = null)
         }
     }
 

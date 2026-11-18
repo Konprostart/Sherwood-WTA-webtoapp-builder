@@ -78,10 +78,7 @@ enum class SidekickAttachmentRejection {
     EMPTY,
 
     /** Attaching it would exceed the per-message count or text budget. */
-    BUDGET,
-
-    /** The resolved model has no vision capability, so an image cannot be read by it. */
-    VISION_UNSUPPORTED
+    BUDGET
 }
 
 /**

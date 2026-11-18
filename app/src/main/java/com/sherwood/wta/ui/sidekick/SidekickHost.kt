@@ -54,6 +54,7 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -94,6 +95,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sherwood.wta.core.i18n.Strings
+import com.sherwood.wta.core.sidekick.SidekickStreamEvent
+import com.sherwood.wta.core.sidekick.SidekickText
 import com.sherwood.wta.core.sidekick.SidekickTurn
 import com.sherwood.wta.core.sidekick.input.SidekickAttachment
 import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
@@ -286,19 +289,37 @@ private fun SidekickPanel(
         tonalElevation = 3.dp,
         shadowElevation = 12.dp
     ) {
+        var researchDialogOpen by remember { mutableStateOf(false) }
         Column(modifier = Modifier.fillMaxSize()) {
-            SidekickHeader(state = state, vm = vm)
+            SidekickHeader(
+                state = state,
+                vm = vm,
+                onOpenResearchSettings = { researchDialogOpen = true }
+            )
             SidekickBody(state = state, vm = vm, modifier = Modifier.weight(1f))
             state.error?.let { message ->
                 SidekickError(message = message, onDismiss = { vm.dismissError() })
             }
             SidekickComposer(state = state, vm = vm, pickers = pickers)
         }
+        if (researchDialogOpen) {
+            SidekickResearchDialog(
+                enabled = state.researchEnabled,
+                endpoint = remember { vm.searchEndpoint() },
+                onEnabledChange = vm::setResearchEnabled,
+                onSaveEndpoint = vm::setSearchEndpoint,
+                onDismiss = { researchDialogOpen = false }
+            )
+        }
     }
 }
 
 @Composable
-private fun SidekickHeader(state: SidekickUiState, vm: SidekickViewModel) {
+private fun SidekickHeader(
+    state: SidekickUiState,
+    vm: SidekickViewModel,
+    onOpenResearchSettings: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -339,6 +360,21 @@ private fun SidekickHeader(state: SidekickUiState, vm: SidekickViewModel) {
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+        IconButton(onClick = onOpenResearchSettings) {
+            Icon(
+                // The globe tint is the only always-visible indication that research is
+                // on; a settings row on another screen would hide a capability that
+                // changes what the assistant can answer.
+                imageVector = Icons.Outlined.TravelExplore,
+                contentDescription = SidekickText.webResearch,
+                tint = if (state.researchEnabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(20.dp)
+            )
         }
         if (state.turns.isNotEmpty() && !state.streaming) {
             IconButton(onClick = { vm.clear() }) {
@@ -516,15 +552,7 @@ private class SidekickPickers(
     val pickImage: () -> Unit,
     val takePhoto: () -> Unit,
     val pickFiles: () -> Unit,
-    val dictate: () -> Unit,
-    /**
-     * Explains why an image cannot be attached.
-     *
-     * The image entries stay tappable even when the selected model has no vision, because a
-     * greyed-out item that does nothing is indistinguishable from a broken one — which is
-     * exactly how the camera was reported. Tapping now says why instead of staying silent.
-     */
-    val onImagesUnsupported: () -> Unit
+    val dictate: () -> Unit
 )
 
 /**
@@ -538,17 +566,33 @@ private class SidekickPickers(
  * `FileProvider` documents and removes that dependency.
  */
 private class TakePictureWithGrant : ActivityResultContract<Uri, Boolean>() {
-    override fun createIntent(context: android.content.Context, input: Uri): Intent =
-        Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    override fun createIntent(context: android.content.Context, input: Uri): Intent {
+        // EXTRA_OUTPUT is neither the intent's data nor its ClipData, so the system only
+        // migrates the grant flags into a ClipData entry for ACTION_IMAGE_CAPTURE. Setting
+        // it explicitly makes the grant independent of that migration — and of camera apps
+        // that only look at ClipData.
+        val clip = android.content.ClipData.newRawUri("camera-output", input)
+        return Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             .putExtra(MediaStore.EXTRA_OUTPUT, input)
+            .setClipData(clip)
             .addFlags(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or
                     Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             )
+    }
 
     override fun parseResult(resultCode: Int, intent: Intent?): Boolean =
         resultCode == android.app.Activity.RESULT_OK
 }
+
+/** Package names that can answer `ACTION_IMAGE_CAPTURE` on this device. */
+private fun cameraPackages(context: android.content.Context): List<String> =
+    runCatching {
+        context.packageManager
+            .queryIntentActivities(Intent(MediaStore.ACTION_IMAGE_CAPTURE), 0)
+            .mapNotNull { it.activityInfo?.packageName }
+            .distinct()
+    }.getOrDefault(emptyList())
 
 /**
  * Creates the document pickers for the composer.
@@ -617,13 +661,33 @@ private fun rememberSidekickPickers(vm: SidekickViewModel): SidekickPickers {
                 "${context.packageName}.fileprovider",
                 file
             )
+            // Grant to every camera app that can answer, not only the one the system picks:
+            // the user may choose a different app in the chooser. The intent also carries
+            // the flags and a ClipData entry, so the grant holds even when package
+            // visibility hides an app from this lookup.
+            cameraPackages(context).forEach { pkg ->
+                runCatching {
+                    context.grantUriPermission(
+                        pkg,
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                }
+            }
             camera.launch(uri)
-        } catch (t: Throwable) {
-            // The provider is declared in the manifest; a failure here means the ROM or the
-            // installer mangled it, which is worth reporting rather than swallowing.
+        } catch (missing: android.content.ActivityNotFoundException) {
+            // No camera app, or one this process cannot see. Reported instead of crashing
+            // out of the click handler.
             pendingCapturePath = ""
             runCatching { file.delete() }
-            vm.reportError(Strings.sidekickPhotoFailed)
+            vm.reportError(SidekickText.photoNoCamera)
+        } catch (t: Throwable) {
+            // The provider is declared in the manifest; a failure here means the ROM or the
+            // installer mangled it, or the camera app refused the intent.
+            pendingCapturePath = ""
+            runCatching { file.delete() }
+            vm.reportError(SidekickText.photoLaunchFailed)
         }
         Unit
     }
@@ -663,8 +727,7 @@ private fun rememberSidekickPickers(vm: SidekickViewModel): SidekickPickers {
                 Manifest.permission.RECORD_AUDIO
             ) == PackageManager.PERMISSION_GRANTED
             if (granted) vm.startVoiceInput() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
-        },
-        onImagesUnsupported = { vm.reportError(Strings.sidekickVisionUnsupported) }
+        }
     )
 }
 
@@ -706,6 +769,10 @@ private fun SidekickComposer(
                 onDone = { vm.stopVoiceInput() },
                 onCancel = { vm.cancelVoiceInput() }
             )
+            Spacer(Modifier.height(WtaSpacing.Tiny))
+        }
+        state.researchStatus?.let { status ->
+            ProgressRow(label = researchStatusLabel(status))
             Spacer(Modifier.height(WtaSpacing.Tiny))
         }
         if (state.speechTranscribing) {
@@ -759,6 +826,21 @@ private fun SidekickComposer(
                 pickers = pickers
             )
             IconButton(
+                onClick = { vm.setResearchEnabled(!state.researchEnabled) },
+                enabled = !state.streaming
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.TravelExplore,
+                    contentDescription = SidekickText.webResearch,
+                    tint = if (state.researchEnabled) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(
                 onClick = { pickers.dictate() },
                 enabled = !state.streaming && !state.speechListening &&
                     !state.speechTranscribing && state.speechAvailable
@@ -781,11 +863,12 @@ private fun SidekickComposer(
                 )
             }
         }
-        // A disabled image action without a reason reads as a broken button, so the panel
-        // always says why images are unavailable.
-        if (!state.visionSupported) {
+        // Only when an image is actually staged: a permanent "this model cannot read
+        // images" line is noise for a model the user never sends pictures to, and it was
+        // read as the panel refusing the action instead of explaining it.
+        if (state.imagesWillBeOmitted) {
             Text(
-                text = Strings.sidekickVisionUnsupported,
+                text = SidekickText.imagesTextOnlyHint,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -793,6 +876,13 @@ private fun SidekickComposer(
     }
 }
 
+/**
+ * The attachment menu.
+ *
+ * The image entries are always live. Refusing the pick because the bound model is marked
+ * text-only was the reported "Add image asks for a vision model" dead end: the image is
+ * accepted, staged, and then left out of the request with a visible explanation.
+ */
 @Composable
 private fun AttachMenuButton(state: SidekickUiState, pickers: SidekickPickers) {
     var expanded by remember { mutableStateOf(false) }
@@ -815,11 +905,7 @@ private fun AttachMenuButton(state: SidekickUiState, pickers: SidekickPickers) {
                 },
                 onClick = {
                     expanded = false
-                    if (state.visionSupported) {
-                        pickers.pickImage()
-                    } else {
-                        pickers.onImagesUnsupported()
-                    }
+                    pickers.pickImage()
                 }
             )
             DropdownMenuItem(
@@ -827,11 +913,7 @@ private fun AttachMenuButton(state: SidekickUiState, pickers: SidekickPickers) {
                 leadingIcon = { Icon(Icons.Outlined.PhotoCamera, contentDescription = null) },
                 onClick = {
                     expanded = false
-                    if (state.visionSupported) {
-                        pickers.takePhoto()
-                    } else {
-                        pickers.onImagesUnsupported()
-                    }
+                    pickers.takePhoto()
                 }
             )
             DropdownMenuItem(
@@ -954,6 +1036,30 @@ private fun ImageChip(attachment: SidekickImageAttachment, onRemove: (() -> Unit
             }
         }
     }
+}
+
+/** A progress line with no affordance: used while a read-only step is in flight. */
+@Composable
+private fun ProgressRow(label: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+        Spacer(Modifier.width(WtaSpacing.Small))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun researchStatusLabel(kind: SidekickStreamEvent.StatusKind): String = when (kind) {
+    SidekickStreamEvent.StatusKind.SEARCHING -> SidekickText.statusSearching
+    SidekickStreamEvent.StatusKind.READING_PAGE -> SidekickText.statusReadingPage
+    SidekickStreamEvent.StatusKind.RETRY_TEXT_ONLY -> SidekickText.statusRetryTextOnly
 }
 
 @Composable

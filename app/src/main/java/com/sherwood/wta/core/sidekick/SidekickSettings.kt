@@ -129,6 +129,35 @@ class SidekickSettings private constructor(context: Context) {
             prefs.edit().putString(KEY_SPEECH_ENGINE, value.id).apply()
         }
 
+    /**
+     * Whether the assistant may read the public web while answering.
+     *
+     * On by default: a pasted link that the assistant refuses to open is the single most
+     * common "why doesn't it know this?" complaint. It is a read of public HTTPS pages only,
+     * and the panel shows every step it takes, so the trade is visible rather than silent.
+     */
+    var webResearchEnabled: Boolean
+        get() = prefs.getBoolean(KEY_WEB_RESEARCH, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_WEB_RESEARCH, value).apply()
+        }
+
+    /**
+     * Optional SearXNG base URL used instead of DuckDuckGo for search.
+     *
+     * Only meaningful when [webResearchEnabled]. The value is validated by
+     * [com.sherwood.wta.core.sidekick.research.SidekickWebPolicy] before every request, so
+     * a plain-HTTP or private address simply fails the policy instead of being fetched.
+     */
+    var searchEndpoint: String?
+        get() = prefs.getString(KEY_SEARCH_ENDPOINT, null)?.takeIf { it.isNotBlank() }
+        set(value) {
+            val editor = prefs.edit()
+            if (value.isNullOrBlank()) editor.remove(KEY_SEARCH_ENDPOINT)
+            else editor.putString(KEY_SEARCH_ENDPOINT, value.trim())
+            editor.apply()
+        }
+
     companion object {
         private const val PREFS = "sherwood_sidekick"
         private const val KEY_ENABLED = "enabled"
@@ -138,6 +167,8 @@ class SidekickSettings private constructor(context: Context) {
         private const val KEY_VOICE_LANGUAGE = "voice_language"
         private const val KEY_PREFER_ON_DEVICE = "prefer_on_device_speech"
         private const val KEY_SPEECH_ENGINE = "speech_engine"
+        private const val KEY_WEB_RESEARCH = "web_research"
+        private const val KEY_SEARCH_ENDPOINT = "search_endpoint"
 
         /** Slightly above the bottom edge: clear of a navigation bar, still thumb-reachable. */
         const val DEFAULT_FAB_ANCHOR = 0.92f

@@ -37,6 +37,41 @@ data class SidekickTurn(
 }
 
 /**
+ * What one Sidekick answer emits while it runs.
+ *
+ * Typed rather than pre-rendered strings so the panel owns the wording (and its ten
+ * languages) while the engine owns the behaviour.
+ */
+sealed interface SidekickStreamEvent {
+
+    /** Answer text, appended in order. */
+    data class Text(val delta: String) : SidekickStreamEvent
+
+    /** A read-only step the user should see, so a slow turn does not look frozen. */
+    data class Status(val kind: StatusKind) : SidekickStreamEvent {
+        enum class StatusKind {
+            /** A web search is running. */
+            SEARCHING,
+
+            /** A page or repository is being read. */
+            READING_PAGE,
+
+            /** The provider rejected the image; the same question is retried without it. */
+            RETRY_TEXT_ONLY
+        }
+    }
+
+    /** The provider failed. [message] is the provider's own text and may be English. */
+    data class Failure(val message: String) : SidekickStreamEvent
+
+    /** The stream went silent with nothing to show for it. */
+    data object Stalled : SidekickStreamEvent
+
+    /** The answer is complete (possibly partial, if the user stopped it). */
+    data object Finished : SidekickStreamEvent
+}
+
+/**
  * A read-only snapshot of the main agent session, used as consultable context.
  *
  * [text] is already size-bounded and rendered as plain lines; [lastError] lets "explain
