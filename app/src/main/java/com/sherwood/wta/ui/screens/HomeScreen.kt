@@ -51,6 +51,7 @@ import com.sherwood.wta.core.apkbuilder.ApkBuilder
 import com.sherwood.wta.core.apkbuilder.ExportRuntimeEnsure
 import com.sherwood.wta.core.apkbuilder.BuildResult
 import com.sherwood.wta.core.i18n.Strings
+import com.sherwood.wta.core.workspace.WorkspaceText
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.data.dao.WebAppSummary
 import com.sherwood.wta.data.model.AppCategory
@@ -63,6 +64,7 @@ import com.sherwood.wta.ui.components.EnhancedElevatedCard
 import com.sherwood.wta.ui.components.PremiumTextField
 import com.sherwood.wta.ui.components.LanguageSelectorButton
 import com.sherwood.wta.ui.components.MoveToCategoryDialog
+import com.sherwood.wta.ui.components.WorkspaceBundleDialog
 import com.sherwood.wta.ui.design.WtaScreen
 import com.sherwood.wta.ui.design.WtaRadius
 import com.sherwood.wta.ui.design.rememberHapticClick
@@ -175,6 +177,7 @@ fun HomeScreen(
     var shareApkFailureReport by remember { mutableStateOf<BuildFailureReport?>(null) }
     var showFabMenu by remember { mutableStateOf(false) }
     var showDataBackupDialog by remember { mutableStateOf(false) }
+    var showWorkspaceBundleDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -457,6 +460,11 @@ fun HomeScreen(
                                 text = { Text(Strings.dataBackupTitle) },
                                 onClick = { showMoreMenu = false; showDataBackupDialog = true },
                                 leadingIcon = { Icon(Icons.Outlined.Inventory2, null, Modifier.size(20.dp)) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(WorkspaceText.menuTitle) },
+                                onClick = { showMoreMenu = false; showWorkspaceBundleDialog = true },
+                                leadingIcon = { Icon(Icons.Outlined.SwapHoriz, null, Modifier.size(20.dp)) }
                             )
                             DropdownMenuItem(
                                 text = { Text(Strings.uiConfig) },
@@ -1231,6 +1239,10 @@ fun HomeScreen(
 
     if (showDataBackupDialog) {
         DataBackupDialog(onDismiss = { showDataBackupDialog = false })
+    }
+
+    if (showWorkspaceBundleDialog) {
+        WorkspaceBundleDialog(onDismiss = { showWorkspaceBundleDialog = false })
     }
 
 }
