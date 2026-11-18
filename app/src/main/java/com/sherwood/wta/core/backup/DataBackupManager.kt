@@ -1407,7 +1407,7 @@ class DataBackupManager(private val context: Context) {
     }
 
     /**
-     * Stages a legacy `extensions/*.json` entry as a normal local write.
+     * Stages a legacy extensions JSON entry as a normal local write.
      *
      * These archives predate the `local/files/extension_modules/` path, and the files
      * are the same two plugin-state files. Routing them through the transaction means

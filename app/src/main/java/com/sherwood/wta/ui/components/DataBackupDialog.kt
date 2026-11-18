@@ -196,7 +196,9 @@ private fun ColumnScope.DataBackupControls() {
             // Headline (rolled back / not rolled back) plus the concrete reason: the
             // user needs to know the install state *and* what failed.
             message = listOfNotNull(errorMessage, err.cause?.message ?: err.message)
-                .joinToString("\n\n"),
+                .filter { it.isNotBlank() }
+                .joinToString("\n\n")
+                .ifBlank { null },
             throwable = err,
             onDismiss = {
                 errorThrowable = null
