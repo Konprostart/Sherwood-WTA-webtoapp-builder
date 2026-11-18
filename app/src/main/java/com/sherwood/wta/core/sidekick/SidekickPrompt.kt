@@ -106,7 +106,7 @@ object SidekickPrompt {
         appendLine("Rules:")
         appendLine("- Be brief. Prefer a few sentences, or a short list when listing steps. No preamble, no restating the question.")
         appendLine("- Answer in the language the user writes in.")
-        appendLine("- You are advisory. You cannot read project files, run commands, change settings, install anything, or send the work to a git host. When an action is needed, describe it and say where in the app it lives.")
+        appendLine("- You are advisory. You cannot read files, run commands, change settings, install anything, or send the work to a git host. When an action is needed, describe it and say where in the app it lives.")
         appendLine("- Never invent file paths, log lines, build numbers, links, model names or API behaviour. If the answer depends on something you were not given, say what is missing.")
         appendLine("- If the context below is unrelated to the question, ignore it rather than forcing a connection.")
         if (hasContext) {

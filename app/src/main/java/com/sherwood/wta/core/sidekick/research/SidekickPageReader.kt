@@ -121,8 +121,10 @@ object SidekickPageReader {
     )
     private val NUMERIC_ENTITY = Regex("""&#(?:[xX]([0-9a-fA-F]+)|(\d+));""")
     private val WHITESPACE = Regex("""\s+""")
-    private val INLINE_SPACE = Regex("""[ \t\f\v]+""")
-    private val HORIZONTAL_SPACE = Regex("""[ \t]+""")
+    // `\v` cannot be used here: in Java's regex it is the vertical-*whitespace* class and
+    // it matches newlines, which collapsed every page onto one line.
+    private val INLINE_SPACE = Regex("""[ \t\f\x0B]+""")
+    private val HORIZONTAL_SPACE = Regex("""[ \t\x0B]+""")
     private val BLANK_LINES = Regex("""\n{3,}""")
 
     private val NAMED_ENTITIES = listOf(

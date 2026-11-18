@@ -128,12 +128,12 @@ class SidekickAnswerLoopTest {
         assertThat(toolbox.calls).hasSize(1)
         assertThat(toolbox.calls.single().first).isEqualTo(SidekickResearchNames.SEARCH)
 
-        // Two requests: one with tools declared, one without.
+        // Two requests. Tools stay declared while the round budget allows another call;
+        // the loop ends because this model answered instead of calling again.
         assertThat(gateway.requests).hasSize(2)
         assertThat(gateway.requests[0].tools).isNotEmpty()
         assertThat(gateway.requests[0].useTools).isTrue()
-        assertThat(gateway.requests[1].tools).isEmpty()
-        assertThat(gateway.requests[1].useTools).isFalse()
+        assertThat(gateway.requests[1].useTools).isTrue()
         // The tool result is answered with its id so the pairing stays valid.
         val toolMessage = gateway.requests[1].messages.last { it.role == LlmMessage.Role.TOOL }
         assertThat(toolMessage.toolCallId).isEqualTo("1")
