@@ -27,11 +27,22 @@ class ProjectFileManager(private val context: Context) {
         return if (dir.exists()) dir.deleteRecursively() else false
     }
 
+    /**
+     * Directory holding a session's private persistence files (committed chat history
+     * and in-flight drafts). It lives inside the session sandbox so deleting a session
+     * takes it along, but [listAll] hides it: it is bookkeeping, not project content,
+     * and must never appear in the agent's file view.
+     *
+     * Deliberately does not create the directory — read paths must not mutate the
+     * filesystem while merely listing sessions.
+     */
+    fun sessionStateDir(sessionId: String): File =
+        File(File(getRoot(), sanitizeSessionId(sessionId)), SESSION_STATE_DIR)
+
     fun writeText(sessionId: String, relativePath: String, content: String): FileInfo? {
         val target = resolveSafe(sessionId, relativePath) ?: return null
         snapshotBeforeWrite(sessionId, relativePath, target)
-        target.parentFile?.mkdirs()
-        target.writeText(content)
+        AtomicFiles.writeText(target, content)
         return describe(target, sessionId)
     }
 
@@ -43,26 +54,25 @@ class ProjectFileManager(private val context: Context) {
     fun writeBytes(sessionId: String, relativePath: String, bytes: ByteArray): FileInfo? {
         val target = resolveSafe(sessionId, relativePath) ?: return null
         snapshotBeforeWrite(sessionId, relativePath, target)
-        target.parentFile?.mkdirs()
-        target.writeBytes(bytes)
+        AtomicFiles.writeBytes(target, bytes)
         return describe(target, sessionId)
     }
 
     /**
      * Streamed copy into the sandbox — unlike [writeBytes] the source bytes never
      * land fully in memory, so multi-hundred-MB attachments cannot OOM the app.
-     * On failure the partial target is removed and null is returned. The caller
-     * keeps ownership of [input] (wrap it in `use`).
+     * The bytes are staged in a temp file and renamed into place, so a reader never
+     * sees a partially written target and a failed or killed write cannot destroy the
+     * previous file. On failure the temp file is removed and null is returned. The
+     * caller keeps ownership of [input] (wrap it in `use`).
      */
     fun writeStream(sessionId: String, relativePath: String, input: InputStream): FileInfo? {
         val target = resolveSafe(sessionId, relativePath) ?: return null
         snapshotBeforeWrite(sessionId, relativePath, target)
-        target.parentFile?.mkdirs()
         return try {
-            target.outputStream().buffered().use { out -> input.copyTo(out) }
+            AtomicFiles.writeStream(target, input)
             describe(target, sessionId)
         } catch (e: Exception) {
-            runCatching { target.delete() }
             AppLogger.w(TAG, "writeStream failed for $relativePath: ${e.message}")
             null
         }
@@ -219,9 +229,14 @@ class ProjectFileManager(private val context: Context) {
         val out = mutableListOf<FileInfo>()
         root.walkTopDown().forEach { f ->
             if (f.isFile) {
+                // A temp left behind by a process killed mid-write is not project
+                // content; the next write of that path replaces it.
+                if (AtomicFiles.isTempName(f.name)) return@forEach
                 val rel = f.relativeTo(root).path.replace(File.separatorChar, '/')
 
                 if (rel.startsWith("$CHANGES_DIR/") || rel == CHANGES_DIR) return@forEach
+                // Session persistence (chat history, drafts) is not a project file.
+                if (rel.startsWith("$SESSION_STATE_DIR/") || rel == SESSION_STATE_DIR) return@forEach
                 out += FileInfo(
                     relativePath = rel,
                     sizeBytes = f.length(),
@@ -272,6 +287,9 @@ class ProjectFileManager(private val context: Context) {
 
     private fun snapshotBeforeWrite(sessionId: String, relativePath: String, target: File) {
         if (relativePath.startsWith("$CHANGES_DIR/") || relativePath == CHANGES_DIR) return
+        // Session persistence is rewritten on every turn; an undo snapshot of it would
+        // be meaningless and would grow the sandbox without bound.
+        if (relativePath.startsWith("$SESSION_STATE_DIR/") || relativePath == SESSION_STATE_DIR) return
         val shadow = snapshotPath(sessionId, relativePath)
         val marker = File(shadow.parentFile, shadow.name + DELETED_MARKER_SUFFIX)
         if (shadow.exists() || marker.exists()) return
@@ -354,6 +372,13 @@ class ProjectFileManager(private val context: Context) {
         private const val MAX_PATH_LEN = 500
 
         private const val CHANGES_DIR = ".changes"
+
+        /**
+         * Session persistence lives beside the project files but is not one of them.
+         * Hidden from [listAll] and from file snapshots/undo, which only ever touch
+         * project paths.
+         */
+        const val SESSION_STATE_DIR = ".session"
 
         private const val BINARY_SNIFF_BYTES = 8 * 1024
 
