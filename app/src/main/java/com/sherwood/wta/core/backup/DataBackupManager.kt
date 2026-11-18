@@ -15,6 +15,7 @@ import com.sherwood.wta.data.repository.WebAppRepository
 import com.sherwood.wta.core.stats.AppUsageStats
 import com.sherwood.wta.util.threadLocalCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -55,8 +56,14 @@ class DataBackupManager(private val context: Context) {
     companion object {
         private const val TAG = "DataBackupManager"
 
-        private const val BACKUP_VERSION = 5
+        /**
+         * v6: every archive carries `manifest.json` (size + sha256 per entry), and a
+         * restore writes nothing live until the whole archive has been verified.
+         * v1-v5 archives stay restorable — see [BackupIntegrity.verify].
+         */
+        private const val BACKUP_VERSION = 6
         private const val APPS_JSON = "apps.json"
+        private const val MANIFEST_JSON = "manifest.json"
         private const val RESOURCES_DIR = "resources/"
         private const val ICONS_DIR = "resources/icons/"
         private const val SPLASH_DIR = "resources/splash/"
@@ -260,28 +267,53 @@ class DataBackupManager(private val context: Context) {
             onProgress(50, 100, Strings.backupCreatingFile)
             coroutineContext.ensureActive()
 
+            // Entry fingerprints collected while writing. They become manifest.json,
+            // which is why the manifest is the archive's LAST entry: the digests are
+            // only all known once every other entry has been written.
+            var writtenEntries = 0
+
             context.contentResolver.openOutputStream(outputUri)?.use { outputStream ->
                 ZipOutputStream(BufferedOutputStream(outputStream, BUFFER_SIZE)).use { zipOut ->
 
-                    val jsonBytes = gson.toJson(backupData).toByteArray(Charsets.UTF_8)
-                    zipOut.putNextEntry(ZipEntry(APPS_JSON))
-                    zipOut.write(jsonBytes)
-                    zipOut.closeEntry()
-
+                    val manifestEntries = mutableListOf<BackupEntryFingerprint>()
                     val totalFileCount = resourceFiles.size + localFiles.size
                     val writtenZipPaths = HashSet<String>(totalFileCount * 2)
                     var processedFiles = 0
                     val packThrottle = ProgressThrottle()
 
-                    fun writeZipFile(zipPath: String, file: File) {
-
+                    /**
+                     * Streams one entry and records its (size, sha256) in the same
+                     * pass. A failed mid-entry write is propagated instead of logged:
+                     * silently omitting a user's file produced an archive that
+                     * *looked* complete, and the manifest would then disagree with
+                     * the bytes it was written from.
+                     */
+                    fun writeEntry(zipPath: String, body: (OutputStream) -> Unit) {
                         if (!writtenZipPaths.add(zipPath)) return
-                        if (!file.exists() || !file.canRead()) return
                         zipOut.putNextEntry(ZipEntry(zipPath))
-                        file.inputStream().buffered(BUFFER_SIZE).use { input ->
-                            input.copyTo(zipOut, BUFFER_SIZE)
+                        val sink = Sha256Sink(zipOut)
+                        try {
+                            body(sink)
+                            sink.flush()
+                            manifestEntries.add(BackupEntryFingerprint(zipPath, sink.size, sink.sha256()))
+                        } catch (t: Throwable) {
+                            // Leave the entry closed so the failure is not followed by a
+                            // second, unrelated one from the stream itself.
+                            runCatching { zipOut.closeEntry() }
+                            throw t
                         }
                         zipOut.closeEntry()
+                    }
+
+                    fun writeFileEntry(zipPath: String, file: File) {
+                        // Vanished or unreadable since collection: skip it entirely
+                        // (no entry, no manifest line) so the archive stays coherent.
+                        if (!file.exists() || !file.canRead()) return
+                        writeEntry(zipPath) { sink ->
+                            file.inputStream().buffered(BUFFER_SIZE).use { input ->
+                                input.copyTo(sink, BUFFER_SIZE)
+                            }
+                        }
                     }
 
                     fun reportPackaging() {
@@ -293,33 +325,41 @@ class DataBackupManager(private val context: Context) {
                         onProgress(pct, 100, Strings.backupPackaging)
                     }
 
+                    val jsonBytes = gson.toJson(backupData).toByteArray(Charsets.UTF_8)
+                    writeEntry(APPS_JSON) { it.write(jsonBytes) }
+
                     resourceFiles.forEach { (zipPath, localPath) ->
                         coroutineContext.ensureActive()
                         reportPackaging()
-                        try {
-                            writeZipFile(zipPath, File(localPath))
-                        } catch (e: Exception) {
-                            AppLogger.w(TAG, "无法打包资源文件: $localPath", e)
-                        }
+                        writeFileEntry(zipPath, File(localPath))
                     }
 
                     localFiles.forEach { (zipPath, file) ->
                         coroutineContext.ensureActive()
                         reportPackaging()
-                        try {
-                            writeZipFile(zipPath, file)
-                        } catch (e: Exception) {
-                            AppLogger.w(TAG, "无法打包本地数据: ${file.absolutePath}", e)
-                        }
+                        writeFileEntry(zipPath, file)
                     }
+
+                    val manifest = BackupManifest(
+                        backupVersion = BACKUP_VERSION,
+                        createdAt = System.currentTimeMillis(),
+                        entries = manifestEntries
+                    )
+                    zipOut.putNextEntry(ZipEntry(MANIFEST_JSON))
+                    zipOut.write(manifest.toJson().toByteArray(Charsets.UTF_8))
+                    zipOut.closeEntry()
+
+                    writtenEntries = manifestEntries.size
                 }
             } ?: return@withContext Result.failure(Exception("无法创建输出文件"))
 
+            AppLogger.i(TAG, "写入 $writtenEntries 个条目（含校验清单）")
             onProgress(100, 100, Strings.backupExportComplete)
 
             Result.success(ExportResult(
                 appCount = apps.size,
-                resourceCount = resourceFiles.size + localFiles.size
+                // Everything except apps.json; the manifest itself is not an asset.
+                resourceCount = (writtenEntries - 1).coerceAtLeast(0)
             ))
 
         } catch (e: CancellationException) {
@@ -330,22 +370,50 @@ class DataBackupManager(private val context: Context) {
         }
     }
 
+    /**
+     * Restores an archive as a transaction.
+     *
+     * ```
+     *  1. read     stage every entry into temp files (no live write)
+     *  2. verify   manifest + sha256 of every staged entry
+     *  3. database apps/categories/stats, tracking what was created for compensation
+     *  4. local    snapshot -> journal -> publish settings, prefs, keystores, extensions
+     * ```
+     *
+     * Steps 1–2 cannot damage anything. Step 3 is undone by deleting the rows it
+     * created. Step 4 is undone by replaying its journal. A failure anywhere before
+     * the end leaves the install exactly as it was — previously local files were
+     * overwritten before the database import had even started, so any later failure
+     * left them replaced with no way back.
+     */
     suspend fun importAllData(
         repository: WebAppRepository,
         inputUri: Uri,
         onProgress: (Int, Int, String) -> Unit = { _, _, _ -> }
     ): Result<ImportResult> = withContext(Dispatchers.IO) {
         val extractedFiles = mutableListOf<File>()
+        val pendingLocalEntries = mutableListOf<PendingLocalEntry>()
+        val observedEntries = mutableListOf<BackupEntryFingerprint>()
+        val createdAppIds = mutableListOf<Long>()
+        val createdCategoryIds = mutableListOf<Long>()
+        val transaction = LocalFileTransaction(context)
+        var pluginStoreReleased = false
 
         try {
             onProgress(0, 100, Strings.backupReadingBackup)
             coroutineContext.ensureActive()
 
+            // A restore killed mid-commit left its journal behind. Undo it before this
+            // archive stages anything, so we never commit on top of a half-applied one.
+            val recoveredInterruptedRestore = transaction.recoverInterrupted()
+            if (recoveredInterruptedRestore) {
+                AppLogger.w(TAG, "上次恢复被中断，已回滚到先前状态")
+            }
+
+            // ---- Phase 1: read + stage. Nothing live is written. ----
             var backupData: BackupData? = null
+            var manifest: BackupManifest? = null
             val extractedResources = mutableMapOf<String, String>()
-            var modulesJsonBytes: ByteArray? = null
-            var builtInStatesJsonBytes: ByteArray? = null
-            val pendingLocalEntries = mutableListOf<PendingLocalEntry>()
 
             context.contentResolver.openInputStream(inputUri)?.use { inputStream ->
                 ZipInputStream(BufferedInputStream(inputStream, BUFFER_SIZE)).use { zipIn ->
@@ -366,28 +434,35 @@ class DataBackupManager(private val context: Context) {
 
                         when {
                             entry.name == APPS_JSON -> {
-
                                 val jsonBytes = readJsonEntry(zipIn, entryGuard)
-                                val jsonStr = String(jsonBytes, Charsets.UTF_8)
-                                backupData = parseBackupData(jsonStr)
+                                observedEntries.add(fingerprintOf(APPS_JSON, jsonBytes))
+                                backupData = parseBackupData(String(jsonBytes, Charsets.UTF_8))
                                 AppLogger.i(TAG, "读取到 ${backupData?.appCount} 个应用")
                             }
-                            entry.name == EXTENSION_MODULES_FILE -> {
-                                modulesJsonBytes = readJsonEntry(zipIn, entryGuard)
+                            entry.name == MANIFEST_JSON -> {
+                                val jsonBytes = readJsonEntry(zipIn, entryGuard)
+                                manifest = BackupManifest.fromJson(String(jsonBytes, Charsets.UTF_8))
                             }
-                            entry.name == EXTENSION_BUILTIN_STATES_FILE -> {
-                                builtInStatesJsonBytes = readJsonEntry(zipIn, entryGuard)
+                            entry.name == EXTENSION_MODULES_FILE ||
+                                entry.name == EXTENSION_BUILTIN_STATES_FILE -> {
+                                val jsonBytes = readJsonEntry(zipIn, entryGuard)
+                                observedEntries.add(fingerprintOf(entry.name, jsonBytes))
+                                stageExtensionEntry(entry.name, jsonBytes, pendingLocalEntries)
                             }
                             entry.name.startsWith(RESOURCES_DIR) && !entry.isDirectory -> {
-
-                                val extractedPath = extractResourceFile(entry.name, zipIn, entryGuard)
-                                if (extractedPath != null) {
-                                    extractedResources[entry.name] = extractedPath
-                                    extractedFiles.add(File(extractedPath))
+                                val staged = extractResourceFile(entry.name, zipIn, entryGuard)
+                                if (staged != null) {
+                                    extractedResources[entry.name] = staged.file.absolutePath
+                                    extractedFiles.add(staged.file)
+                                    observedEntries.add(staged.fingerprint)
                                 }
                             }
                             isLocalBackupEntry(entry.name) && !entry.isDirectory -> {
-                                stageLocalBackupEntry(entry.name, zipIn, entryGuard)?.let { pendingLocalEntries.add(it) }
+                                val staged = stageLocalBackupEntry(entry.name, zipIn, entryGuard)
+                                if (staged != null) {
+                                    pendingLocalEntries.add(staged)
+                                    observedEntries.add(staged.fingerprint)
+                                }
                             }
                         }
 
@@ -395,101 +470,232 @@ class DataBackupManager(private val context: Context) {
                         entry = zipIn.nextEntry
                     }
                 }
-            } ?: run {
-                discardPendingLocalEntries(pendingLocalEntries)
-                return@withContext Result.failure(Exception("无法读取备份文件"))
-            }
+            } ?: return@withContext Result.failure(
+                BackupImportException(false, IOException("无法读取备份文件"))
+            )
 
             val data = backupData
             if (data == null) {
-                cleanupExtractedFiles(extractedFiles)
-                discardPendingLocalEntries(pendingLocalEntries)
-                return@withContext Result.failure(Exception("备份文件格式无效"))
+                return@withContext Result.failure(
+                    BackupImportException(false, IOException("备份文件格式无效"))
+                )
             }
 
-            // The backup has validated — only now overwrite live local config files.
-            // Restart is only needed when local files actually changed: Room writes
-            // take effect immediately, so an apps-only restore stays put.
-            val localsRestored = commitPendingLocalEntries(pendingLocalEntries)
+            // ---- Phase 2: prove the archive before writing a single live byte. ----
+            onProgress(55, 100, BackupText.verifyingArchive)
+            coroutineContext.ensureActive()
+            BackupIntegrity.verify(
+                manifest = manifest,
+                observed = observedEntries,
+                manifestRequired = data.version >= BACKUP_VERSION
+            )
+            AppLogger.i(TAG, "完整性校验通过：${observedEntries.size} 个条目")
 
+            // ---- Phase 3: database. Compensation = delete the rows we created. ----
             onProgress(60, 100, Strings.backupImportingData)
             coroutineContext.ensureActive()
+            val imported = restoreDatabase(
+                repository = repository,
+                data = data,
+                extractedResources = extractedResources,
+                createdAppIds = createdAppIds,
+                createdCategoryIds = createdCategoryIds,
+                onProgress = onProgress
+            )
 
-            var importedCount = 0
-            var skippedCount = 0
-            var duplicateCount = 0
-            val categoryIdMap = restoreCategories(data.categories)
-
-            // Dedup against what's already installed so re-importing the same
-            // backup (or a backup overlapping it) doesn't double the library.
-            val existingAppKeys = repository.allWebApps.first()
-                .mapTo(HashSet()) { backupDedupKey(it) }
-
-            val appIdMap = mutableMapOf<Long, Long>()
-            val importThrottle = ProgressThrottle()
-
-            data.apps.forEachIndexed { index, app ->
+            // ---- Phase 4: local files. Snapshot -> journal -> publish. ----
+            var localsRestored = false
+            if (pendingLocalEntries.isNotEmpty()) {
+                onProgress(95, 100, BackupText.restoringSettings)
                 coroutineContext.ensureActive()
-                if (importThrottle.shouldEmit()) {
-                    onProgress(
-                        60 + (index * 35 / data.apps.size),
-                        100,
-                        Strings.backupImportingApp.format(app.name)
-                    )
-                }
 
-                try {
-
-                    val appWithLocalPaths = updateAppPathsToLocal(app, extractedResources)
-
-                    if (!existingAppKeys.add(backupDedupKey(appWithLocalPaths))) {
-                        AppLogger.i(TAG, "跳过重复应用: ${app.name}")
-                        duplicateCount++
-                        return@forEachIndexed
-                    }
-
-                    val newApp = appWithLocalPaths.copy(
-                        id = 0,
-                        categoryId = remapCategoryId(appWithLocalPaths.categoryId, categoryIdMap),
-                        createdAt = System.currentTimeMillis(),
-                        updatedAt = System.currentTimeMillis()
-                    )
-
-                    val newId = repository.createWebApp(newApp)
-                    if (app.id != 0L && newId > 0L) {
-                        appIdMap[app.id] = newId
-                    }
-                    importedCount++
-                } catch (e: Exception) {
-                    AppLogger.w(TAG, "导入应用失败: ${app.name}", e)
-                    skippedCount++
-                }
+                // Release before the files are replaced: PluginStore cancels its own
+                // startup load, and that load could otherwise rewrite modules.json on
+                // top of the bytes just restored.
+                com.sherwood.wta.core.plugin.PluginStore.release()
+                pluginStoreReleased = true
+                transaction.commit(pendingLocalEntries)
+                localsRestored = transaction.anyCommitted
+                com.sherwood.wta.core.plugin.PluginStore.getInstance(context)
+                pluginStoreReleased = false
             }
 
-            restoreUsageStats(data.usageStats, appIdMap)
-
-            restoreHealthRecords(data.healthRecords, appIdMap)
-
-            restoreExtensionFiles(modulesJsonBytes, builtInStatesJsonBytes)
+            transaction.cleanup()
+            cleanupExtractedFiles(extractedFiles)
 
             onProgress(100, 100, Strings.backupImportComplete)
 
             Result.success(ImportResult(
                 totalCount = data.appCount,
-                importedCount = importedCount,
-                skippedCount = skippedCount,
-                duplicateCount = duplicateCount,
-                localFilesRestored = localsRestored
+                importedCount = imported.importedCount,
+                skippedCount = imported.skippedCount,
+                duplicateCount = imported.duplicateCount,
+                localFilesRestored = localsRestored,
+                interruptedRestoreRecovered = recoveredInterruptedRestore
             ))
 
         } catch (e: CancellationException) {
+            // Teardown of a cancelled import must itself be uncancellable: a cancelled
+            // rollback would leave exactly the half-restored state this prevents.
+            withContext(NonCancellable) {
+                rollbackRestore(
+                    repository, transaction, createdAppIds, createdCategoryIds, pluginStoreReleased
+                )
+                cleanupExtractedFiles(extractedFiles)
+            }
             throw e
         } catch (e: Exception) {
-            AppLogger.e(TAG, "导入失败", e)
-            cleanupExtractedFiles(extractedFiles)
-            Result.failure(e)
+            AppLogger.e(TAG, "导入失败，正在回滚", e)
+            val complete = withContext(NonCancellable) {
+                val rolledBack = rollbackRestore(
+                    repository, transaction, createdAppIds, createdCategoryIds, pluginStoreReleased
+                )
+                cleanupExtractedFiles(extractedFiles)
+                rolledBack
+            }
+            Result.failure(BackupImportException(rolledBack = complete, cause = e))
         }
     }
+
+    /** Result of the database phase, plus the progress counters the UI reports. */
+    private class DatabaseRestore(
+        val importedCount: Int,
+        val skippedCount: Int,
+        val duplicateCount: Int
+    )
+
+    /**
+     * Writes the database half of a restore, recording every row it creates so a
+     * failure later in the transaction can delete exactly those rows — never the
+     * pre-existing ones a dedup skipped or a category name reused.
+     */
+    private suspend fun restoreDatabase(
+        repository: WebAppRepository,
+        data: BackupData,
+        extractedResources: Map<String, String>,
+        createdAppIds: MutableList<Long>,
+        createdCategoryIds: MutableList<Long>,
+        onProgress: (Int, Int, String) -> Unit
+    ): DatabaseRestore {
+        var importedCount = 0
+        var skippedCount = 0
+        var duplicateCount = 0
+
+        val categoryIdMap = restoreCategories(data.categories, createdCategoryIds)
+
+        // Dedup against what's already installed so re-importing the same backup
+        // (or a backup overlapping it) doesn't double the library.
+        val existingAppKeys = repository.allWebApps.first()
+            .mapTo(HashSet()) { backupDedupKey(it) }
+
+        val appIdMap = mutableMapOf<Long, Long>()
+        val importThrottle = ProgressThrottle()
+
+        data.apps.forEachIndexed { index, app ->
+            coroutineContext.ensureActive()
+            if (importThrottle.shouldEmit()) {
+                onProgress(
+                    60 + (index * 35 / data.apps.size),
+                    100,
+                    Strings.backupImportingApp.format(app.name)
+                )
+            }
+
+            try {
+                val appWithLocalPaths = updateAppPathsToLocal(app, extractedResources)
+
+                if (!existingAppKeys.add(backupDedupKey(appWithLocalPaths))) {
+                    AppLogger.i(TAG, "跳过重复应用: ${app.name}")
+                    duplicateCount++
+                    return@forEachIndexed
+                }
+
+                val newApp = appWithLocalPaths.copy(
+                    id = 0,
+                    categoryId = remapCategoryId(appWithLocalPaths.categoryId, categoryIdMap),
+                    createdAt = System.currentTimeMillis(),
+                    updatedAt = System.currentTimeMillis()
+                )
+
+                val newId = repository.createWebApp(newApp)
+                if (newId > 0L) createdAppIds.add(newId)
+                if (app.id != 0L && newId > 0L) {
+                    appIdMap[app.id] = newId
+                }
+                importedCount++
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "导入应用失败: ${app.name}", e)
+                skippedCount++
+            }
+        }
+
+        restoreUsageStats(data.usageStats, appIdMap)
+        restoreHealthRecords(data.healthRecords, appIdMap)
+
+        return DatabaseRestore(importedCount, skippedCount, duplicateCount)
+    }
+
+    /**
+     * Undoes a partly applied restore: local files first (from their snapshots), then
+     * the database rows this import created. Runs under [NonCancellable].
+     *
+     * @return true when every step completed, so the UI may state that the previous
+     *         data was put back rather than claiming a rollback that partly failed.
+     */
+    private suspend fun rollbackRestore(
+        repository: WebAppRepository,
+        transaction: LocalFileTransaction,
+        createdAppIds: List<Long>,
+        createdCategoryIds: List<Long>,
+        pluginStoreReleased: Boolean
+    ): Boolean {
+        var complete = true
+
+        if (transaction.hasWork) {
+            val failures = transaction.rollback()
+            if (failures > 0) complete = false
+            AppLogger.w(TAG, "已回滚本地文件恢复（失败 $failures 项）")
+        }
+
+        if (pluginStoreReleased) {
+            // The originals are back on disk; reload the plugin state from them.
+            runCatching {
+                com.sherwood.wta.core.plugin.PluginStore.release()
+                com.sherwood.wta.core.plugin.PluginStore.getInstance(context)
+            }.onFailure { e ->
+                complete = false
+                AppLogger.w(TAG, "回滚后重新加载插件失败", e)
+            }
+        }
+
+        createdAppIds.asReversed().forEach { appId ->
+            runCatching {
+                // Usage stats and health records cascade with the app row; the
+                // explicit delete keeps stats from outliving it on any schema path.
+                AppDatabase.getInstance(context).appUsageStatsDao().deleteByAppId(appId)
+                repository.deleteWebAppById(appId)
+            }.onFailure { e ->
+                complete = false
+                AppLogger.w(TAG, "回滚已导入应用失败: $appId", e)
+            }
+        }
+
+        createdCategoryIds.asReversed().forEach { categoryId ->
+            runCatching {
+                AppDatabase.getInstance(context).appCategoryDao().deleteById(categoryId)
+            }.onFailure { e ->
+                complete = false
+                AppLogger.w(TAG, "回滚已导入分类失败: $categoryId", e)
+            }
+        }
+
+        return complete
+    }
+
+    private fun fingerprintOf(zipPath: String, bytes: ByteArray): BackupEntryFingerprint =
+        BackupEntryFingerprint(zipPath, bytes.size.toLong(), BackupIntegrity.hex(bytes))
 
     /**
      * Reads a JSON entry fully, bounded by the shared zip-bomb guard and a hard
@@ -590,7 +796,15 @@ class DataBackupManager(private val context: Context) {
         )
     }
 
-    private suspend fun restoreCategories(categories: List<AppCategory>): Map<Long, Long> {
+    /**
+     * @param createdCategoryIds collects only the rows this import inserted, so a
+     *        later rollback deletes exactly those and never a pre-existing category
+     *        that was merely reused by name.
+     */
+    private suspend fun restoreCategories(
+        categories: List<AppCategory>,
+        createdCategoryIds: MutableList<Long>
+    ): Map<Long, Long> {
         if (categories.isEmpty()) return emptyMap()
         val dao = AppDatabase.getInstance(context).appCategoryDao()
         // Same-name categories are reused instead of re-created: re-importing a
@@ -610,6 +824,7 @@ class DataBackupManager(private val context: Context) {
             }
             runCatching {
                 val newId = dao.insert(category.copy(id = 0))
+                if (newId > 0L) createdCategoryIds.add(newId)
                 idMap[category.id] = newId
                 idByName[nameKey] = newId
             }.onFailure { e ->
@@ -668,29 +883,6 @@ class DataBackupManager(private val context: Context) {
         return runCatching {
             gson.fromJson(merged, WebApp::class.java)
         }.getOrNull() ?: throw com.google.gson.JsonParseException("Failed to parse WebApp with defaults")
-    }
-
-    private fun restoreExtensionFiles(modulesJsonBytes: ByteArray?, builtInStatesJsonBytes: ByteArray?) {
-        runCatching {
-            // Release before writing the restored bytes, not after: release() cancels the
-            // outgoing instance's startup load, and cancelling it only helps if it happens
-            // before the restored file lands. With the old order the load could still be
-            // mid-migration and rewrite modules.json on top of the bytes just restored.
-            com.sherwood.wta.core.plugin.PluginStore.release()
-
-            if (modulesJsonBytes != null || builtInStatesJsonBytes != null) {
-                val extensionDir = File(context.filesDir, "extension_modules").apply { mkdirs() }
-                modulesJsonBytes?.let { File(extensionDir, "modules.json").writeBytes(it) }
-                builtInStatesJsonBytes?.let { File(extensionDir, "builtin_states.json").writeBytes(it) }
-            }
-
-            // Re-init: restored legacy modules.json is converted by PluginMigrator,
-            // restored plugins/ + plugin_state.json are picked up directly.
-            com.sherwood.wta.core.plugin.PluginStore.getInstance(context)
-            AppLogger.i(TAG, "插件数据已恢复并重新加载")
-        }.onFailure { e ->
-            AppLogger.w(TAG, "恢复插件配置失败", e)
-        }
     }
 
     private fun cleanupExtractedFiles(files: List<File>) {
@@ -1063,11 +1255,17 @@ class DataBackupManager(private val context: Context) {
         )
     }
 
+    /** A resource entry extracted to a staging directory, with its archive digest. */
+    private class StagedResource(
+        val file: File,
+        val fingerprint: BackupEntryFingerprint
+    )
+
     private fun extractResourceFile(
         zipPath: String,
         zipIn: ZipInputStream,
         guard: com.sherwood.wta.util.SafeZip.EntryGuard? = null
-    ): String? {
+    ): StagedResource? {
         return try {
             val (targetDir, prefix) = when {
                 zipPath.startsWith(ICONS_DIR) -> File(context.filesDir, "backup_icons") to ICONS_DIR
@@ -1090,11 +1288,16 @@ class DataBackupManager(private val context: Context) {
             val targetFile = resolveSafeChild(targetDir, relativePath) ?: return null
             targetFile.parentFile?.mkdirs()
 
-            FileOutputStream(targetFile).use { output ->
-                if (guard != null) guard.copyTo(zipIn, output) else zipIn.copyTo(output)
+            // Digest as the bytes are written: verification must not need a second
+            // read of a file that could have been hundreds of megabytes.
+            val fingerprint = FileOutputStream(targetFile).use { output ->
+                val sink = Sha256Sink(output)
+                if (guard != null) guard.copyTo(zipIn, sink) else zipIn.copyTo(sink)
+                sink.flush()
+                BackupEntryFingerprint(zipPath, sink.size, sink.sha256())
             }
 
-            targetFile.absolutePath
+            StagedResource(targetFile, fingerprint)
         } catch (e: com.sherwood.wta.util.SafeZip.ZipBombException) {
             throw e
         } catch (e: Exception) {
@@ -1113,17 +1316,27 @@ class DataBackupManager(private val context: Context) {
     }
 
     /**
-     * Pends a local entry (files/shared_prefs/datastore) for deferred restore instead of
-     * writing it during zip streaming. Writing live config files before apps.json is parsed
-     * meant a corrupt/truncated backup aborted with an "invalid format" error AFTER already overwriting
-     * presets, extension storage and theme prefs — with no rollback. Entries are buffered
-     * to temp files first and only swapped in after the backup validates.
+     * A live target with its bytes staged in a temp file: the unit of the restore
+     * transaction.
+     *
+     * Entries are collected during zip streaming but never written then. Writing live
+     * config files before the archive was even parsed meant a corrupt/truncated backup
+     * aborted AFTER already overwriting presets, extension storage and theme prefs.
+     * Now [LocalFileTransaction] snapshots, journals and only then publishes them.
+     *
+     * [size]/[sha256] are the staged bytes exactly as read from the archive, which is
+     * what the manifest check compares against.
      */
     internal data class PendingLocalEntry(
         val zipPath: String,
         val targetFile: File,
-        val tempFile: File
-    )
+        val tempFile: File,
+        val size: Long,
+        val sha256: String
+    ) {
+        val fingerprint: BackupEntryFingerprint
+            get() = BackupEntryFingerprint(zipPath, size, sha256)
+    }
 
     /** Visible for unit tests (zip-slip staging rules). */
     internal fun stageLocalBackupEntry(
@@ -1177,10 +1390,13 @@ class DataBackupManager(private val context: Context) {
 
         val tempFile = File.createTempFile("wta_backup_", ".part", context.cacheDir)
         return try {
-            FileOutputStream(tempFile).use { output ->
-                if (guard != null) guard.copyTo(zipIn, output) else zipIn.copyTo(output, BUFFER_SIZE)
+            val fingerprint = FileOutputStream(tempFile).use { output ->
+                val sink = Sha256Sink(output)
+                if (guard != null) guard.copyTo(zipIn, sink) else zipIn.copyTo(sink, BUFFER_SIZE)
+                sink.flush()
+                BackupEntryFingerprint(zipPath, sink.size, sink.sha256())
             }
-            PendingLocalEntry(zipPath, targetFile, tempFile)
+            PendingLocalEntry(zipPath, targetFile, tempFile, fingerprint.size, fingerprint.sha256)
         } catch (e: com.sherwood.wta.util.SafeZip.ZipBombException) {
             throw e
         } catch (e: Exception) {
@@ -1190,24 +1406,41 @@ class DataBackupManager(private val context: Context) {
         }
     }
 
-    /** Visible for unit tests (commit accounting). */
-    internal fun commitPendingLocalEntries(pending: List<PendingLocalEntry>): Boolean {
-        var committed = false
-        pending.forEach { entry ->
-            runCatching {
-                entry.targetFile.parentFile?.mkdirs()
-                entry.tempFile.copyTo(entry.targetFile, overwrite = true)
-                committed = true
-            }.onFailure { e ->
-                AppLogger.w(TAG, "恢复本地数据失败: ${entry.zipPath}", e)
-            }
-            entry.tempFile.delete()
+    /**
+     * Stages a legacy `extensions/*.json` entry as a normal local write.
+     *
+     * These archives predate the `local/files/extension_modules/` path, and the files
+     * are the same two plugin-state files. Routing them through the transaction means
+     * they get the same snapshot/journal/rollback as every other local entry instead
+     * of being written after the commit with no way back.
+     */
+    private fun stageExtensionEntry(
+        zipPath: String,
+        bytes: ByteArray,
+        into: MutableList<PendingLocalEntry>
+    ) {
+        val fileName = zipPath.removePrefix(EXTENSION_DIR)
+        val targetFile = resolveSafeChild(
+            File(context.filesDir, "extension_modules").apply { mkdirs() },
+            fileName
+        ) ?: return
+        val tempFile = File.createTempFile("wta_backup_", ".part", context.cacheDir)
+        try {
+            tempFile.writeBytes(bytes)
+        } catch (e: Exception) {
+            AppLogger.w(TAG, "暂存插件配置失败: $zipPath", e)
+            tempFile.delete()
+            return
         }
-        return committed
-    }
-
-    private fun discardPendingLocalEntries(pending: List<PendingLocalEntry>) {
-        pending.forEach { it.tempFile.delete() }
+        into.add(
+            PendingLocalEntry(
+                zipPath = zipPath,
+                targetFile = targetFile,
+                tempFile = tempFile,
+                size = bytes.size.toLong(),
+                sha256 = BackupIntegrity.hex(bytes)
+            )
+        )
     }
 
     /** Visible for unit tests (traversal rules). */
@@ -1282,5 +1515,19 @@ data class ImportResult(
     /** Backup apps already installed (same type+name+URL), skipped not duplicated. */
     val duplicateCount: Int = 0,
     /** True when any local (prefs/datastore/shared/file) entry was committed. */
-    val localFilesRestored: Boolean = false
+    val localFilesRestored: Boolean = false,
+    /** True when an earlier, interrupted restore had to be rolled back first. */
+    val interruptedRestoreRecovered: Boolean = false
 )
+
+/**
+ * Failure of a restore, carrying whether the transaction was undone.
+ *
+ * The UI needs that distinction: "nothing changed" and "the rollback itself failed"
+ * are very different messages, and reporting either one unconditionally would be a
+ * lie in the other case. The original failure is kept as [cause] for the report.
+ */
+class BackupImportException(
+    val rolledBack: Boolean,
+    cause: Throwable
+) : Exception(cause.message ?: "Backup import failed", cause)

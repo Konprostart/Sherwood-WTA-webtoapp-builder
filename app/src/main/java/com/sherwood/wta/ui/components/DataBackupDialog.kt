@@ -34,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.sherwood.wta.SherwoodStudioApplication
+import com.sherwood.wta.core.backup.BackupImportException
+import com.sherwood.wta.core.backup.BackupText
 import com.sherwood.wta.core.backup.DataBackupManager
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.design.WtaAlertDialog
@@ -87,6 +89,7 @@ private fun ColumnScope.DataBackupControls() {
     var isImporting by remember { mutableStateOf(false) }
     var progressMessage by remember { mutableStateOf("") }
     var errorThrowable by remember { mutableStateOf<Throwable?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     var errorScope by remember { mutableStateOf("") }
     var showRestartDialog by remember { mutableStateOf(false) }
     val isBusy = isExporting || isImporting
@@ -117,6 +120,7 @@ private fun ColumnScope.DataBackupControls() {
                     ).show()
                 }.onFailure { e ->
                     errorScope = "Data backup export"
+                    errorMessage = null
                     errorThrowable = e
                 }
             }
@@ -155,6 +159,16 @@ private fun ColumnScope.DataBackupControls() {
                         },
                         Toast.LENGTH_LONG
                     ).show()
+                    // A restore that arrived at an interrupted one first reports it:
+                    // the user's files were changed by that rollback, so staying
+                    // silent would hide why the install looks different.
+                    if (importResult.interruptedRestoreRecovered) {
+                        Toast.makeText(
+                            context,
+                            BackupText.interruptedRestoreRecovered,
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                     // Restored DataStore/SharedPreferences files only take effect
                     // after restart (in-memory caches would otherwise clobber them).
                     // Ask first — silently killing the process reads as a crash.
@@ -163,6 +177,13 @@ private fun ColumnScope.DataBackupControls() {
                     }
                 }.onFailure { e ->
                     errorScope = "Data backup import"
+                    // Distinguish "nothing changed" from "the rollback itself failed".
+                    // Claiming either unconditionally would be untrue in the other case.
+                    errorMessage = when {
+                        e !is BackupImportException -> null
+                        e.rolledBack -> BackupText.restoreRolledBack
+                        else -> BackupText.restoreNotRolledBack
+                    }
                     errorThrowable = e
                 }
             }
@@ -172,9 +193,15 @@ private fun ColumnScope.DataBackupControls() {
     errorThrowable?.let { err ->
         WtaErrorDialog(
             scope = errorScope,
-            message = err.message,
+            // Headline (rolled back / not rolled back) plus the concrete reason: the
+            // user needs to know the install state *and* what failed.
+            message = listOfNotNull(errorMessage, err.cause?.message ?: err.message)
+                .joinToString("\n\n"),
             throwable = err,
-            onDismiss = { errorThrowable = null }
+            onDismiss = {
+                errorThrowable = null
+                errorMessage = null
+            }
         )
     }
 
