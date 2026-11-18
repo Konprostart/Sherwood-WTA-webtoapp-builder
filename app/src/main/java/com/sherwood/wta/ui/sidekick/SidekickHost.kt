@@ -572,13 +572,17 @@ private class TakePictureWithGrant : ActivityResultContract<Uri, Boolean>() {
         // it explicitly makes the grant independent of that migration — and of camera apps
         // that only look at ClipData.
         val clip = android.content.ClipData.newRawUri("camera-output", input)
-        return Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            .putExtra(MediaStore.EXTRA_OUTPUT, input)
-            .setClipData(clip)
-            .addFlags(
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
+        // Built statement by statement rather than as one chain: the platform stub's
+        // chained return types are not consistently non-null, and Kotlin loses the
+        // receiver after the second link.
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, input)
+        intent.clipData = clip
+        intent.addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        )
+        return intent
     }
 
     override fun parseResult(resultCode: Int, intent: Intent?): Boolean =

@@ -48,17 +48,17 @@ sealed interface SidekickStreamEvent {
     data class Text(val delta: String) : SidekickStreamEvent
 
     /** A read-only step the user should see, so a slow turn does not look frozen. */
-    data class Status(val kind: StatusKind) : SidekickStreamEvent {
-        enum class StatusKind {
-            /** A web search is running. */
-            SEARCHING,
+    data class Status(val kind: StatusKind) : SidekickStreamEvent
 
-            /** A page or repository is being read. */
-            READING_PAGE,
+    enum class StatusKind {
+        /** A web search is running. */
+        SEARCHING,
 
-            /** The provider rejected the image; the same question is retried without it. */
-            RETRY_TEXT_ONLY
-        }
+        /** A page or repository is being read. */
+        READING_PAGE,
+
+        /** The provider rejected the image; the same question is retried without it. */
+        RETRY_TEXT_ONLY
     }
 
     /** The provider failed. [message] is the provider's own text and may be English. */
