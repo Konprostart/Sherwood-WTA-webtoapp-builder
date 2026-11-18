@@ -3,9 +3,16 @@ package com.sherwood.wta.core.apkbuilder
 import android.content.Context
 import com.sherwood.wta.core.logging.AppLogger
 import com.sherwood.wta.data.model.WebApp
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 import java.security.MessageDigest
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 enum class ModifyApkMode {
     FULL,
@@ -25,6 +32,15 @@ data class ApkBuildCacheMeta(
     val identityFingerprint: String,
     val contentFingerprint: String,
     val shellTemplateId: String,
+    /**
+     * SHA-256 of the cached unsigned APK. The cache is the build input of every
+     * REUSE_UNSIGNED/CONTENT_OVERLAY run, so a truncated or half-written entry would be
+     * repackaged and signed as if it were a complete APK — the user would only find out
+     * when the generated app fails to install. Every entry must carry the hash of its
+     * own bytes, and a mismatch is a cache miss, never a "probably fine".
+     */
+    val unsignedSha256: String = "",
+    val unsignedSize: Long = 0L,
     val updatedAt: Long = System.currentTimeMillis()
 ) {
     fun toJson(): JSONObject = JSONObject()
@@ -34,10 +50,15 @@ data class ApkBuildCacheMeta(
         .put("identityFingerprint", identityFingerprint)
         .put("contentFingerprint", contentFingerprint)
         .put("shellTemplateId", shellTemplateId)
+        .put("unsignedSha256", unsignedSha256)
+        .put("unsignedSize", unsignedSize)
         .put("updatedAt", updatedAt)
 
     companion object {
-        const val SCHEMA_VERSION = 2
+        // 3: entries carry unsignedSha256/unsignedSize. A v2 entry cannot be verified,
+        // so it is a cache miss — the upgrade costs one FULL rebuild per app and never
+        // serves bytes we cannot check.
+        const val SCHEMA_VERSION = 3
 
         fun fromJson(raw: String): ApkBuildCacheMeta? {
             return try {
@@ -50,6 +71,8 @@ data class ApkBuildCacheMeta(
                     identityFingerprint = obj.getString("identityFingerprint"),
                     contentFingerprint = obj.getString("contentFingerprint"),
                     shellTemplateId = obj.optString("shellTemplateId", ""),
+                    unsignedSha256 = obj.optString("unsignedSha256", ""),
+                    unsignedSize = obj.optLong("unsignedSize", -1L),
                     updatedAt = obj.optLong("updatedAt", 0L)
                 )
             } catch (_: Exception) {
@@ -114,9 +137,17 @@ class ApkBuildCache(private val context: Context) {
         perfFingerprint: String? = null,
         signingFingerprint: String? = null,
         multiWebSiteGalleryItems: List<com.sherwood.wta.data.model.GalleryItem> = emptyList(),
-        multiWebSiteMediaPaths: List<String> = emptyList()
+        multiWebSiteMediaPaths: List<String> = emptyList(),
+        /**
+         * Context of the building coroutine. Fingerprinting a large project tree reads and
+         * hashes every file, which is the slowest part of planning, so the caller's job is
+         * checked between the expensive steps. Defaults to no cancellation (unit tests).
+         */
+        cancellation: CoroutineContext = EmptyCoroutineContext
     ): IncrementalPlan {
+        cancellation.ensureActive()
         val shellId = shellTemplateId(templateApk)
+        cancellation.ensureActive()
         val identity = identityFingerprint(
             config = config,
             shellTemplateId = shellId,
@@ -144,7 +175,8 @@ class ApkBuildCache(private val context: Context) {
             statusBarImageDark = config.statusBarBackgroundImageDark,
             floatingIcon = config.floatingWindowMinimizedIconPath,
             multiWebSiteGalleryItems = multiWebSiteGalleryItems,
-            multiWebSiteMediaPaths = multiWebSiteMediaPaths
+            multiWebSiteMediaPaths = multiWebSiteMediaPaths,
+            cancellation = cancellation
         )
 
         if (forceFullRebuild) {
@@ -167,13 +199,28 @@ class ApkBuildCache(private val context: Context) {
         }
 
         val key = cacheKeyFor(webApp, packageName)
-        val entry = load(key) ?: return IncrementalPlan(
-            mode = IncrementalBuildMode.FULL,
-            identityFingerprint = identity,
-            contentFingerprint = content,
-            shellTemplateId = shellId,
-            reason = "cacheMiss"
-        )
+        val entry = when (val loaded = load(key, cancellation)) {
+            is CacheLoad.Missing -> return IncrementalPlan(
+                mode = IncrementalBuildMode.FULL,
+                identityFingerprint = identity,
+                contentFingerprint = content,
+                shellTemplateId = shellId,
+                reason = "cacheMiss"
+            )
+            // The entry exists but its bytes do not match its own metadata. Serving it
+            // would package a truncated APK; evict it and rebuild from the template.
+            is CacheLoad.Corrupt -> {
+                evict(key, loaded.reason)
+                return IncrementalPlan(
+                    mode = IncrementalBuildMode.FULL,
+                    identityFingerprint = identity,
+                    contentFingerprint = content,
+                    shellTemplateId = shellId,
+                    reason = loaded.reason
+                )
+            }
+            is CacheLoad.Found -> loaded
+        }
 
         if (entry.meta.packageName != packageName) {
             return IncrementalPlan(
@@ -202,15 +249,6 @@ class ApkBuildCache(private val context: Context) {
                 reason = "identityChanged"
             )
         }
-        if (!entry.unsignedApk.isFile || entry.unsignedApk.length() == 0L) {
-            return IncrementalPlan(
-                mode = IncrementalBuildMode.FULL,
-                identityFingerprint = identity,
-                contentFingerprint = content,
-                shellTemplateId = shellId,
-                reason = "cachedUnsignedMissing"
-            )
-        }
         if (entry.meta.contentFingerprint == content) {
             return IncrementalPlan(
                 mode = IncrementalBuildMode.REUSE_UNSIGNED,
@@ -231,39 +269,138 @@ class ApkBuildCache(private val context: Context) {
         )
     }
 
+    /**
+     * Stores [unsignedApk] as this app's incremental base.
+     *
+     * Both files are written through a sibling `.tmp` file and renamed into place, so a
+     * reader can never observe a half-written APK or a metadata file describing bytes that
+     * are not there yet. The APK is renamed first and the metadata second: a crash in
+     * between leaves a new APK with the previous metadata, which [load] rejects on the
+     * hash and rebuilds — the reverse order could leave metadata for an APK that was never
+     * completed, which is only indistinguishable from a good entry if the bytes happen to
+     * match a stale hash.
+     *
+     * The hash is computed in the same pass as the copy, so verifying an entry later costs
+     * a read, never a second write.
+     */
     fun saveUnsigned(
         webApp: WebApp,
         packageName: String,
         unsignedApk: File,
         identityFingerprint: String,
         contentFingerprint: String,
-        shellTemplateId: String
+        shellTemplateId: String,
+        /**
+         * Context of the building coroutine; a cancelled build stops copying mid-copy and
+         * leaves the previous entry untouched.
+         */
+        cancellation: CoroutineContext = EmptyCoroutineContext
     ) {
         if (!unsignedApk.isFile || unsignedApk.length() == 0L) return
         val key = cacheKeyFor(webApp, packageName)
         val dir = File(rootDir, key).apply { mkdirs() }
         val dest = File(dir, UNSIGNED_NAME)
         val metaFile = File(dir, META_NAME)
+        val apkTmp = File(dir, "$UNSIGNED_NAME.tmp")
+        val metaTmp = File(dir, "$META_NAME.tmp")
         try {
-            unsignedApk.copyTo(dest, overwrite = true)
+            // Leftovers from a save that died between write and rename.
+            apkTmp.delete()
+            metaTmp.delete()
+
+            val stored = copyIntoPlace(unsignedApk, dest, apkTmp, cancellation)
+
             val meta = ApkBuildCacheMeta(
                 cacheKey = key,
                 packageName = packageName,
                 identityFingerprint = identityFingerprint,
                 contentFingerprint = contentFingerprint,
-                shellTemplateId = shellTemplateId
+                shellTemplateId = shellTemplateId,
+                unsignedSha256 = stored.sha256,
+                unsignedSize = stored.size
             )
-            metaFile.writeText(meta.toJson().toString())
+            writeTextAtomically(metaFile, metaTmp, meta.toJson().toString())
             AppLogger.i(TAG, "Saved incremental cache for $key (${dest.length() / 1024} KB)")
             trimOldCaches()
+        } catch (e: CancellationException) {
+            // Cancellation is not a cache failure: drop the temp files and rethrow so the
+            // build stops instead of being reported as a successful save of nothing.
+            apkTmp.delete()
+            metaTmp.delete()
+            throw e
         } catch (e: Exception) {
             AppLogger.w(TAG, "Failed to save cache for $key: ${e.message}")
             try {
                 dest.delete()
                 metaFile.delete()
+                apkTmp.delete()
+                metaTmp.delete()
             } catch (_: Exception) {
             }
         }
+    }
+
+    /**
+     * Streaming copy that returns the SHA-256 and length of what was actually written and
+     * publishes it with a single [File.renameTo] in the same directory.
+     */
+    private fun copyIntoPlace(
+        source: File,
+        target: File,
+        temp: File,
+        cancellation: CoroutineContext
+    ): StoredApk {
+        val digest = MessageDigest.getInstance("SHA-256")
+        var size = 0L
+        FileInputStream(source).use { input ->
+            FileOutputStream(temp).use { out ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    cancellation.ensureActive()
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    digest.update(buffer, 0, read)
+                    out.write(buffer, 0, read)
+                    size += read
+                }
+                out.flush()
+                // Durable before the rename: otherwise a power loss can leave the renamed
+                // name pointing at blocks that were never flushed.
+                out.fd.sync()
+            }
+        }
+        publish(temp, target)
+        return StoredApk(digest.digest().toHexString(), size)
+    }
+
+    private data class StoredApk(val sha256: String, val size: Long)
+
+    private fun writeTextAtomically(target: File, temp: File, text: String) {
+        FileOutputStream(temp).use { out ->
+            out.write(text.toByteArray(Charsets.UTF_8))
+            out.flush()
+            out.fd.sync()
+        }
+        publish(temp, target)
+    }
+
+    private fun publish(temp: File, target: File) {
+        if (temp.renameTo(target)) return
+        // Same-directory renames do not fail on a healthy filesystem; if the platform
+        // refuses (e.g. target replaced concurrently), fall back to delete-then-rename
+        // rather than leaving the caller with a stale entry.
+        target.delete()
+        if (!temp.renameTo(target)) {
+            temp.delete()
+            throw IOException("Unable to publish ${target.name}")
+        }
+    }
+
+    private fun evict(key: String, reason: String) {
+        val dir = File(rootDir, key)
+        if (!dir.exists()) return
+        AppLogger.w(TAG, "Evicting incremental cache $key ($reason)")
+        dir.deleteRecursively()
     }
 
     fun clear(webApp: WebApp, packageName: String) {
@@ -324,18 +461,48 @@ class ApkBuildCache(private val context: Context) {
         return false
     }
 
-    private data class CacheEntry(
-        val meta: ApkBuildCacheMeta,
-        val unsignedApk: File
-    )
+    private sealed interface CacheLoad {
+        /** No entry, or metadata we cannot interpret (older schema). Rebuild silently. */
+        data object Missing : CacheLoad
 
-    private fun load(key: String): CacheEntry? {
+        /** An entry exists but its bytes cannot be trusted; [reason] names the miss. */
+        data class Corrupt(val reason: String) : CacheLoad
+
+        data class Found(val meta: ApkBuildCacheMeta, val unsignedApk: File) : CacheLoad
+    }
+
+    /**
+     * Reads an entry and proves that the cached APK is the exact file the metadata
+     * describes. Every reuse path starts here, so a corrupt entry can never reach
+     * packaging or signing: it is evicted and the build falls back to a full rebuild.
+     */
+    private fun load(key: String, cancellation: CoroutineContext): CacheLoad {
         val dir = File(rootDir, key)
         val metaFile = File(dir, META_NAME)
         val unsigned = File(dir, UNSIGNED_NAME)
-        if (!metaFile.isFile || !unsigned.isFile) return null
-        val meta = ApkBuildCacheMeta.fromJson(metaFile.readText()) ?: return null
-        return CacheEntry(meta, unsigned)
+        if (!metaFile.isFile || !unsigned.isFile) return CacheLoad.Missing
+        val rawMeta = try {
+            metaFile.readText()
+        } catch (_: Exception) {
+            return CacheLoad.Corrupt("cachedMetaUnreadable")
+        }
+        val meta = ApkBuildCacheMeta.fromJson(rawMeta) ?: return CacheLoad.Missing
+        if (meta.unsignedSha256.isBlank()) return CacheLoad.Corrupt("cachedUnsignedUnverifiable")
+        // A zero-length cache entry would sign into a zero-length APK; never reuse one.
+        if (meta.unsignedSize <= 0L || unsigned.length() != meta.unsignedSize) {
+            return CacheLoad.Corrupt("cachedUnsignedCorrupt")
+        }
+        cancellation.ensureActive()
+        val actual = try {
+            fileSha256(unsigned)
+        } catch (_: Exception) {
+            return CacheLoad.Corrupt("cachedUnsignedUnreadable")
+        }
+        // ensureActive() sits *before* the comparison on purpose: a cancelled build must
+        // stop even when the entry it just read happens to be valid.
+        cancellation.ensureActive()
+        if (actual != meta.unsignedSha256) return CacheLoad.Corrupt("cachedUnsignedCorrupt")
+        return CacheLoad.Found(meta, unsigned)
     }
 
     private fun trimOldCaches() {
@@ -440,12 +607,17 @@ class ApkBuildCache(private val context: Context) {
         statusBarImageDark: String?,
         floatingIcon: String?,
         multiWebSiteGalleryItems: List<com.sherwood.wta.data.model.GalleryItem> = emptyList(),
-        multiWebSiteMediaPaths: List<String> = emptyList()
+        multiWebSiteMediaPaths: List<String> = emptyList(),
+        cancellation: CoroutineContext = EmptyCoroutineContext
     ): String {
         val parts = mutableListOf<String>()
         parts += "configJson=${ApkConfigJsonFactory.create(config)}"
+        // Hashing a project tree reads every file under it; for a Node/Python project this
+        // is the slowest thing planning does, so a cancel must be able to break in here.
         projectDirs.filterNotNull().forEach { dir ->
+            cancellation.ensureActive()
             parts += "dir=${dir.absolutePath}|${treeFingerprint(dir)}"
+            cancellation.ensureActive()
         }
         parts += "media=${fileFingerprint(mediaContentPath)}"
         parts += "splash=${fileFingerprint(splashMediaPath)}"

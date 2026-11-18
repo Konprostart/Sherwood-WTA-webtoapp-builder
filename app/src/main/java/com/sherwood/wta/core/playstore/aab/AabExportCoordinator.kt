@@ -120,6 +120,11 @@ class AabExportCoordinator(private val context: Context) {
                     (percent.coerceIn(0, 100) * BUILD_PROGRESS_WEIGHT / 100)
                 )
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // ApkBuilder rethrows cancellation instead of reporting a build error; wrapping
+            // it in AabExportException here would turn "the user cancelled" into a failed
+            // AAB export and break structured concurrency.
+            throw e
         } catch (e: Exception) {
             throw AabExportException(
                 failureStage = FailureStage.BUILD_APK,

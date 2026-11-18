@@ -31,12 +31,15 @@ import com.sherwood.wta.data.model.getActivationCodeStrings
 import com.sherwood.wta.ui.components.announcement.toUiTemplate
 import com.sherwood.wta.ui.shell.buildPackagedHtmlShellEntryUrl
 import com.sherwood.wta.ui.theme.ThemeManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
 import java.io.*
 import java.util.zip.*
 import javax.crypto.SecretKey
@@ -423,12 +426,18 @@ class ApkBuilder(private val context: Context) {
         var currentPackageName: String? = null
         var currentUnsignedApkPath: String? = null
         var currentSignedApkPath: String? = null
+        // Set right before the signer touches the output file. Until then a failed build
+        // must not delete `<name>_v<version>.APK`, which may still be the previous, fully
+        // signed artifact the user can install.
+        var signedOutputStarted = false
+        var buildSucceeded = false
         val buildStartMs = System.currentTimeMillis()
 
         logger.startNewLog(webApp.name)
 
         try {
             onProgress(0, "Preparing build...")
+            coroutineContext.ensureActive()
 
             val encryptionConfig = webApp.apkExportConfig?.encryptionConfig?.toEncryptionConfig()
                 ?: EncryptionConfig.DISABLED
@@ -639,6 +648,8 @@ class ApkBuilder(private val context: Context) {
                                 ?.let { sourceDir ->
                                     try {
                                         runtime.syncProjectFromSource(projectId, sourceDir)
+                                    } catch (e: CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         com.sherwood.wta.core.logging.AppLogger.w("ApkBuilder", "同步 Node 源项目失败: ${sourceDir.absolutePath}", e)
                                     }
@@ -705,6 +716,8 @@ class ApkBuilder(private val context: Context) {
                                     null
                                 }
                             }
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             com.sherwood.wta.core.logging.AppLogger.w(
                                 "ApkBuilder",
@@ -960,8 +973,10 @@ class ApkBuilder(private val context: Context) {
                     signingCertHash().joinToString("") { "%02x".format(it) }
                 }.getOrNull(),
                 multiWebSiteGalleryItems = mwSiteMedia.galleryItems.values.flatten(),
-                multiWebSiteMediaPaths = mwSiteMedia.mediaPaths.values.toList()
+                multiWebSiteMediaPaths = mwSiteMedia.mediaPaths.values.toList(),
+                cancellation = coroutineContext
             )
+            coroutineContext.ensureActive()
             logger.logKeyValue("incrementalMode", incrementalPlan.mode.name)
             logger.logKeyValue("incrementalReason", incrementalPlan.reason)
             logger.logKeyValue("identityFingerprint", incrementalPlan.identityFingerprint.take(16) + "...")
@@ -970,6 +985,7 @@ class ApkBuilder(private val context: Context) {
 
             logger.section("Modify APK Content")
             currentStage = BuildStage.MODIFY_APK
+            coroutineContext.ensureActive()
             if (encryptionConfig.enabled) {
                 onProgress(30, "Encrypting resources...")
                 logger.log("Encryption mode enabled")
@@ -1032,6 +1048,10 @@ class ApkBuilder(private val context: Context) {
                             val msg = stageMessage.ifBlank { "Updating app content..." }
                             onProgress(30 + (progress * 0.4).toInt(), msg)
                         }
+                    } catch (e: CancellationException) {
+                        // A cancelled build is not a broken overlay: swallowing it here
+                        // would start a full rebuild the user just asked to stop.
+                        throw e
                     } catch (e: Exception) {
                         logger.warn("Content overlay failed, falling back to full rebuild: ${e.message}")
                         AppLogger.w("ApkBuilder", "Content overlay failed, fallback full", e)
@@ -1132,6 +1152,7 @@ class ApkBuilder(private val context: Context) {
             }
 
             onProgress(70, "Signing APK...")
+            coroutineContext.ensureActive()
 
             if (!unsignedApk.exists() || unsignedApk.length() == 0L) {
                 return@withContext failBuild(
@@ -1148,6 +1169,7 @@ class ApkBuilder(private val context: Context) {
             logger.logKeyValue("unsignedApkSize", "${unsignedApk.length() / 1024} KB")
 
             logger.section("Zip Align APK")
+            coroutineContext.ensureActive()
             val zipAligned = ZipAligner.alignInPlace(unsignedApk)
             logger.logKeyValue("zipAlign16kNativeLibs", zipAligned)
             if (!zipAligned) {
@@ -1167,6 +1189,7 @@ class ApkBuilder(private val context: Context) {
 
             logger.section("Verify APK Artifact")
             currentStage = BuildStage.ARTIFACT_VERIFY
+            coroutineContext.ensureActive()
             val artifactVerification = ApkArtifactVerifier.verify(
                 ApkArtifactVerificationRequest(
                     apkFile = unsignedApk,
@@ -1210,6 +1233,7 @@ class ApkBuilder(private val context: Context) {
 
             // REUSE_UNSIGNED just copied the cached file — re-saving it is a pure
             // 50-150MB disk copy with no benefit. Only cache FULL/OVERLAY outputs.
+            coroutineContext.ensureActive()
             if (!encryptionConfig.enabled && incrementalPlan.mode != IncrementalBuildMode.REUSE_UNSIGNED &&
                 unsignedApk.isFile && unsignedApk.length() > 0L
             ) {
@@ -1219,7 +1243,8 @@ class ApkBuilder(private val context: Context) {
                     unsignedApk = unsignedApk,
                     identityFingerprint = incrementalPlan.identityFingerprint,
                     contentFingerprint = incrementalPlan.contentFingerprint,
-                    shellTemplateId = incrementalPlan.shellTemplateId
+                    shellTemplateId = incrementalPlan.shellTemplateId,
+                    cancellation = coroutineContext
                 )
             }
 
@@ -1236,6 +1261,9 @@ class ApkBuilder(private val context: Context) {
 
             // JarSigner.sign either returns true or throws; output validity is checked
             // right below, which is the real failure path.
+            coroutineContext.ensureActive()
+            // From here on the output file is ours to delete: JarSigner truncates it.
+            signedOutputStarted = true
             try {
                 signer.sign(
                     unsignedApk, signedApk,
@@ -1272,6 +1300,7 @@ class ApkBuilder(private val context: Context) {
             }
 
             logger.logKeyValue("signedApkSize", "${signedApk.length() / 1024} KB")
+            coroutineContext.ensureActive()
 
             onProgress(85, "Verifying APK...")
             currentStage = BuildStage.VERIFY
@@ -1285,6 +1314,7 @@ class ApkBuilder(private val context: Context) {
 
             onProgress(90, "Analyzing & cleaning up...")
             currentStage = BuildStage.ANALYZE_CLEANUP
+            coroutineContext.ensureActive()
 
             val analysisReport = coroutineScope {
                 val analysisDeferred = async {
@@ -1293,6 +1323,8 @@ class ApkBuilder(private val context: Context) {
                         logger.section("APK Analysis")
                         logger.log(ApkAnalyzer.formatReport(report))
                         report
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         AppLogger.e("ApkBuilder", "APK analysis failed (non-fatal)", e)
                         null
@@ -1346,6 +1378,7 @@ class ApkBuilder(private val context: Context) {
                 logPath = logger.getCurrentLogPath()
             )
 
+            buildSucceeded = true
             BuildResult.Success(
                 apkFile = signedApk,
                 logPath = logger.getCurrentLogPath(),
@@ -1356,6 +1389,13 @@ class ApkBuilder(private val context: Context) {
                 metadataPath = metadataFile?.absolutePath
             )
 
+        } catch (e: CancellationException) {
+            // A cancel is not a build failure: no diagnostic, no "Build failed" log entry
+            // the user would mistake for a defect. Cleanup happens in the finally below.
+            logger.section("Build Cancelled")
+            logger.log("Cancelled at stage ${currentStage.label}")
+            logger.endLog(false, "Build cancelled: ${currentStage.label}")
+            throw e
         } catch (e: Exception) {
             failBuild(
                 stage = currentStage,
@@ -1376,6 +1416,12 @@ class ApkBuilder(private val context: Context) {
             // clear the work-dir pointer. The cached template copy and aligned-ELF outputs
             // stay for the next build of the same package.
             try { currentUnsignedApkPath?.let { File(it).delete() } } catch (_: Exception) {}
+            // A cancelled or failed signing run leaves a truncated APK in the visible
+            // output folder. Delete it, but only once the signer has touched the path: a
+            // failure before signing must leave the previous good artifact alone.
+            if (!buildSucceeded && signedOutputStarted) {
+                try { currentSignedApkPath?.let { File(it).delete() } } catch (_: Exception) {}
+            }
             activeWorkDir = null
         }
     }
@@ -1473,533 +1519,556 @@ class ApkBuilder(private val context: Context) {
             "modifyApk started, mode=${mode.name}, encryption=${encryptionConfig.enabled}, " +
                 "abiFilter=${abiFilters.ifEmpty { "all" }}, source=${sourceApk.name}"
         )
+        coroutineContext.ensureActive()
         val iconBitmap = iconPath?.let { template.loadBitmap(it) }
             ?: generateDefaultIcon(config.appName, config.themeType)
-        var hasConfigFile = false
-        var strippedNativeLibSize = 0L
-        val replacedIconPaths = mutableSetOf<String>()
-        var discoveredOldIconPaths = emptySet<String>()
-        var discoveredIconSpecs = emptyList<ArscRebuilder.DiscoveredIconPath>()
+        // A repack that throws (including cancellation) abandons a half-written zip: the
+        // streams are closed by the `use` blocks below, and this finally removes the
+        // partial file and releases the decoded icon instead of leaking both.
+        var completed = false
+        try {
+            var hasConfigFile = false
+            var strippedNativeLibSize = 0L
+            val replacedIconPaths = mutableSetOf<String>()
+            var discoveredOldIconPaths = emptySet<String>()
+            var discoveredIconSpecs = emptyList<ArscRebuilder.DiscoveredIconPath>()
 
-        // Native libs the per-app-type injection step writes (16KB-aligned): the device-ABI
-        // set plus, for NODEJS_APP, libnode.so for every other selected ABI. The template also
-        // ships the device-ABI ones; skip the template's copies in the loop below so the
-        // injection is the single source and we don't emit a duplicate zip entry
-        // ("duplicate entry: lib/<abi>/<lib>.so").
-        val deviceAbi = android.os.Build.SUPPORTED_ABIS?.firstOrNull() ?: "arm64-v8a"
-        val injectedLibs = injectedDeviceLibEntries(config.appType, deviceAbi) +
-            injectedMultiAbiLibEntries(config.appType, deviceAbi, abiFilters)
+            // Native libs the per-app-type injection step writes (16KB-aligned): the device-ABI
+            // set plus, for NODEJS_APP, libnode.so for every other selected ABI. The template also
+            // ships the device-ABI ones; skip the template's copies in the loop below so the
+            // injection is the single source and we don't emit a duplicate zip entry
+            // ("duplicate entry: lib/<abi>/<lib>.so").
+            val deviceAbi = android.os.Build.SUPPORTED_ABIS?.firstOrNull() ?: "arm64-v8a"
+            val injectedLibs = injectedDeviceLibEntries(config.appType, deviceAbi) +
+                injectedMultiAbiLibEntries(config.appType, deviceAbi, abiFilters)
 
-        val geckoEngineFiles = if (mode == ModifyApkMode.FULL && config.engineType == "GECKOVIEW") {
-            val manager = com.sherwood.wta.core.engine.download.EngineFileManager(context)
-            val engineType = com.sherwood.wta.core.engine.EngineType.GECKOVIEW
-            GeckoRuntimeFiles(
-                nativeLibs = manager.listEngineNativeLibs(engineType),
-                omniJa = manager.getOmniJaFile(engineType)
-            )
-        } else null
-        val geckoRuntimeEntries = geckoEngineFiles?.let { runtime ->
-            geckoRuntimeEntryNames(
-                runtime.nativeLibs.mapValues { (_, files) -> files.map(File::getName) },
-                abiFilters
-            )
-        }.orEmpty()
+            val geckoEngineFiles = if (mode == ModifyApkMode.FULL && config.engineType == "GECKOVIEW") {
+                val manager = com.sherwood.wta.core.engine.download.EngineFileManager(context)
+                val engineType = com.sherwood.wta.core.engine.EngineType.GECKOVIEW
+                GeckoRuntimeFiles(
+                    nativeLibs = manager.listEngineNativeLibs(engineType),
+                    omniJa = manager.getOmniJaFile(engineType)
+                )
+            } else null
+            val geckoRuntimeEntries = geckoEngineFiles?.let { runtime ->
+                geckoRuntimeEntryNames(
+                    runtime.nativeLibs.mapValues { (_, files) -> files.map(File::getName) },
+                    abiFilters
+                )
+            }.orEmpty()
 
-        val assetEncryptor = if (encryptionConfig.enabled && encryptionKey != null) {
-            AssetEncryptor(encryptionKey)
-        } else null
+            val assetEncryptor = if (encryptionConfig.enabled && encryptionKey != null) {
+                AssetEncryptor(encryptionKey)
+            } else null
 
-        // Policy changes are structural cache identities: overlays preserve the same
-        // already-written policy. Encrypted exports always take the FULL path.
-        // Disabled exports resolve the marker too (best effort) so its inert
-        // placeholder file can be dropped; templates predating it have nothing
-        // to remove and must not fail.
-        val saepResource = when {
-            mode != ModifyApkMode.FULL -> null
-            saepEnabled -> SaepPolicy.resolveTemplate(context, sourceApk)
-            else -> runCatching { SaepPolicy.findTemplateResource(context, sourceApk) }
-                .onFailure { logger.log("SAEP placeholder cleanup skipped: ${it.message}") }
-                .getOrNull()
-        }
-        val saepBytes = saepResource?.activity?.let {
-            SaepPolicy.generate(
-                config.packageName, it, config.appName, System.currentTimeMillis()
-            )
-        }
-
-        // Feature stacks (issue #1115): graft DEX + resource package + manifest
-        // fragment only for features the config enables; disabled features add
-        // zero bytes to the output. CONTENT_OVERLAY reuses the cached base, so
-        // stack state lives in the identity fingerprint (stacks=).
-        val stackBundles = if (mode == ModifyApkMode.FULL) {
-            FeatureStacks.enabledFor(config).mapNotNull { id ->
-                runCatching {
-                    context.assets.open("${FeatureStacks.ASSET_DIR}/$id.zip").use {
-                        FeatureStackBundle.parse(it.readBytes())
-                    }
-                }.onFailure {
-                    logger.log("feature stack '$id' not grafted: ${it.message}")
-                }.getOrNull()
+            // Policy changes are structural cache identities: overlays preserve the same
+            // already-written policy. Encrypted exports always take the FULL path.
+            // Disabled exports resolve the marker too (best effort) so its inert
+            // placeholder file can be dropped; templates predating it have nothing
+            // to remove and must not fail.
+            val saepResource = when {
+                mode != ModifyApkMode.FULL -> null
+                saepEnabled -> SaepPolicy.resolveTemplate(context, sourceApk)
+                else -> runCatching { SaepPolicy.findTemplateResource(context, sourceApk) }
+                    .onFailure { logger.log("SAEP placeholder cleanup skipped: ${it.message}") }
+                    .getOrNull()
             }
-        } else emptyList()
+            val saepBytes = saepResource?.activity?.let {
+                SaepPolicy.generate(
+                    config.packageName, it, config.appName, System.currentTimeMillis()
+                )
+            }
 
-        ZipFile(sourceApk).use { zipIn ->
-            ZipOutputStream(FileOutputStream(outputApk)).use { zipOut ->
-
-                val entries = zipIn.entries().toList()
-                    .sortedWith(compareBy<ZipEntry> { it.name != "resources.arsc" })
-                val entryNames = entries.map { it.name }.toSet()
-
-                var processedCount = 0
-                var lastReportedProgress = -1
-                var lastReportTimeMs = 0L
-
-                entries.forEach { entry ->
-                    processedCount++
-                    val progressLabel = if (mode == ModifyApkMode.CONTENT_OVERLAY) {
-                        "Updating cached base..."
-                    } else {
-                        "Repacking base template..."
-                    }
-                    // Throttle: report on >=2% delta, 200ms elapsed, or last entry.
-                    val progress = (processedCount * 100) / entries.size
-                    val nowMs = System.currentTimeMillis()
-                    if (progress != lastReportedProgress &&
-                        (progress - lastReportedProgress >= 2 ||
-                            nowMs - lastReportTimeMs >= 200 ||
-                            processedCount == entries.size)
-                    ) {
-                        lastReportedProgress = progress
-                        lastReportTimeMs = nowMs
-                        onProgress(progress, progressLabel)
-                    }
-
-                    if (mode == ModifyApkMode.CONTENT_OVERLAY) {
-                        when {
-                            entry.name.startsWith("META-INF/") &&
-                                (entry.name.endsWith(".SF") || entry.name.endsWith(".RSA") ||
-                                    entry.name.endsWith(".DSA") || entry.name == "META-INF/MANIFEST.MF") -> {
-                            }
-                            buildCache.isContentReplaceableEntry(entry.name) -> {
-                            }
-                            // The injection phase below re-embeds the runtime native libs for the
-                            // device ABI on every build regardless of mode; copying the cached
-                            // copies here too would emit each lib twice (near-2x bloat and
-                            // undefined duplicate-entry behavior).
-                            entry.name in injectedLibs -> {
-                                AppLogger.d("ApkBuilder", "Skipping cached native lib (re-injected this build): ${entry.name}")
-                            }
-                            else -> {
-                                ZipUtils.copyEntryPreserveMethod(zipIn, zipOut, entry)
-                            }
+            // Feature stacks (issue #1115): graft DEX + resource package + manifest
+            // fragment only for features the config enables; disabled features add
+            // zero bytes to the output. CONTENT_OVERLAY reuses the cached base, so
+            // stack state lives in the identity fingerprint (stacks=).
+            val stackBundles = if (mode == ModifyApkMode.FULL) {
+                FeatureStacks.enabledFor(config).mapNotNull { id ->
+                    runCatching {
+                        context.assets.open("${FeatureStacks.ASSET_DIR}/$id.zip").use {
+                            FeatureStackBundle.parse(it.readBytes())
                         }
-                        return@forEach
-                    }
+                    }.onFailure {
+                        logger.log("feature stack '$id' not grafted: ${it.message}")
+                    }.getOrNull()
+                }
+            } else emptyList()
 
-                    when {
+            ZipFile(sourceApk).use { zipIn ->
+                ZipOutputStream(FileOutputStream(outputApk)).use { zipOut ->
 
-                        entry.name.startsWith("META-INF/") &&
-                        (entry.name.endsWith(".SF") || entry.name.endsWith(".RSA") ||
-                         entry.name.endsWith(".DSA") || entry.name == "META-INF/MANIFEST.MF") -> {
+                    val entries = zipIn.entries().toList()
+                        .sortedWith(compareBy<ZipEntry> { it.name != "resources.arsc" })
+                    val entryNames = entries.map { it.name }.toSet()
 
+                    var processedCount = 0
+                    var lastReportedProgress = -1
+                    var lastReportTimeMs = 0L
+
+                    entries.forEach { entry ->
+                        // Repacking is the longest uninterrupted stretch of a build (a
+                        // 300-entry, several-hundred-MB copy). Checking per entry makes
+                        // Cancel land within one file instead of after the whole zip.
+                        coroutineContext.ensureActive()
+                        processedCount++
+                        val progressLabel = if (mode == ModifyApkMode.CONTENT_OVERLAY) {
+                            "Updating cached base..."
+                        } else {
+                            "Repacking base template..."
+                        }
+                        // Throttle: report on >=2% delta, 200ms elapsed, or last entry.
+                        val progress = (processedCount * 100) / entries.size
+                        val nowMs = System.currentTimeMillis()
+                        if (progress != lastReportedProgress &&
+                            (progress - lastReportedProgress >= 2 ||
+                                nowMs - lastReportTimeMs >= 200 ||
+                                processedCount == entries.size)
+                        ) {
+                            lastReportedProgress = progress
+                            lastReportTimeMs = nowMs
+                            onProgress(progress, progressLabel)
                         }
 
-                        entry.name.startsWith("assets/splash_media.") -> {
-                            AppLogger.d("ApkBuilder", "Skipping old splash media: ${entry.name}")
-                        }
-
-                        entry.name == "AndroidManifest.xml" -> {
-                            val originalData = zipIn.getInputStream(entry).readBytes()
-                            // Resolve the template marker before package rewriting: its
-                            // com.sherwood.wta prefix is otherwise renamed with the app ID.
-                            val policyAdjustedData = axmlRebuilder.rewriteSaepPolicyMetadata(
-                                originalData, saepBytes?.let { saepResource?.id }
-                            )
-
-                            var modifiedData = axmlRebuilder.expandAndModifyFull(
-                                policyAdjustedData,
-                                originalPackageName,
-                                config.packageName,
-                                config.versionCode,
-                                config.versionName,
-                                config.deepLinkHosts,
-                                config.deepLinkSchemes,
-                                buildRequiredPermissions(config),
-                                buildRequiredComponents(config),
-                                targetSdk = config.targetSdkOverride,
-                                minSdk = config.minSdkOverride,
-                                shareReceiveMimeTypes = config.shareReceiveMimeTypes,
-                                openWithEnabled = config.openWithEnabled
-                            )
-                            stackBundles.forEach { bundle ->
-                                modifiedData = featureStackGrafter.graftManifest(
-                                    modifiedData, bundle, config.packageName,
-                                    mapOf(
-                                        "admobAppId" to (
-                                            AdMobAppIds.manifestValue(config.adAppId, config.adTestMode)
-                                                ?: config.adAppId
-                                            )
-                                    )
-                                )
-                            }
-                            writeEntryDeflated(zipOut, entry.name, modifiedData)
-                        }
-
-                        // Enabled: replace the resolved raw resource before any generic
-                        // optimizer — the platform reads this policy without the app's
-                        // decryption key. Disabled: drop the inert placeholder entirely.
-                        saepResource != null && entry.name == saepResource.path -> {
-                            saepBytes?.let { writeEntryDeflated(zipOut, entry.name, it) }
-                        }
-
-                        entry.name == "resources.arsc" -> {
-                            val originalData = zipIn.getInputStream(entry).readBytes()
-                            var modifiedData = arscRebuilder.rebuildWithNewAppNameAndIcons(
-                                originalData,
-                                config.appName,
-                                replaceIcons = true
-                            )
-
-                            discoveredOldIconPaths = arscRebuilder.getLastDiscoveredIconPaths()
-                            discoveredIconSpecs = arscRebuilder.getLastDiscoveredIconSpecs()
-                            logger.log("Discovered old icon paths from ARSC: $discoveredOldIconPaths")
-                            stackBundles.forEach { bundle ->
-                                modifiedData = featureStackGrafter.graftResourceTable(
-                                    modifiedData, bundle
-                                )
-                            }
-                            writeEntryStored(zipOut, entry.name, modifiedData)
-                        }
-
-                        entry.name == ApkTemplate.CONFIG_PATH -> {
-                            hasConfigFile = true
-                            writeConfigEntry(zipOut, config, assetEncryptor, encryptionConfig)
-                        }
-
-                        iconBitmap != null && (isIconEntry(entry.name) || discoveredOldIconPaths.contains(entry.name)) -> {
-
-                            // Template icon entries carry obfuscated names, so the ARSC scan is
-                            // what tells a legacy mipmap from the adaptive foreground — write
-                            // layer-appropriate, density-appropriate bitmaps per entry.
-                            val spec = discoveredIconSpecs.firstOrNull { it.path == entry.name }
-                            val iconBytes = when (spec?.kind) {
-                                ArscRebuilder.LauncherIconKind.FOREGROUND ->
-                                    template.createAdaptiveForegroundIcon(iconBitmap, ADAPTIVE_ICON_PX)
-                                ArscRebuilder.LauncherIconKind.ROUND ->
-                                    template.createRoundIcon(iconBitmap, iconPixelSizeForDensity(spec.densityDpi))
-                                ArscRebuilder.LauncherIconKind.LAUNCHER ->
-                                    template.scaleBitmapToPng(iconBitmap, iconPixelSizeForDensity(spec.densityDpi))
-                                null -> template.createAdaptiveForegroundIcon(iconBitmap, ADAPTIVE_ICON_PX)
-                            }
-                            writeEntryDeflated(zipOut, entry.name, iconBytes)
-                            replacedIconPaths.add(entry.name)
-                            AppLogger.d("ApkBuilder", "Replaced icon entry: ${entry.name} (kind=${spec?.kind}, ${iconBytes.size} bytes)")
-                        }
-
-                        entry.name in geckoRuntimeEntries -> {
-                            AppLogger.d("ApkBuilder", "Skipping template Gecko runtime entry; downloaded runtime will replace it: ${entry.name}")
-                        }
-
-                        entry.name.startsWith("lib/") -> {
-                            val abi = entry.name.removePrefix("lib/").substringBefore("/")
-                            val libName = entry.name.substringAfterLast("/")
-
+                        if (mode == ModifyApkMode.CONTENT_OVERLAY) {
                             when {
-
-                                injectedLibs.contains(entry.name) -> {
-                                    AppLogger.d("ApkBuilder", "Skipping template/cached native lib (injected this build): ${entry.name}")
+                                entry.name.startsWith("META-INF/") &&
+                                    (entry.name.endsWith(".SF") || entry.name.endsWith(".RSA") ||
+                                        entry.name.endsWith(".DSA") || entry.name == "META-INF/MANIFEST.MF") -> {
                                 }
-
-                                abiFilters.isNotEmpty() && !abiFilters.contains(abi) -> {
-                                    AppLogger.d("ApkBuilder", "Skipping architecture: ${entry.name}")
+                                buildCache.isContentReplaceableEntry(entry.name) -> {
                                 }
-
-                                !isRequiredNativeLib(libName, config.appType, config.engineType) -> {
-                                    val sizeKb = if (entry.size >= 0) entry.size / 1024 else entry.compressedSize / 1024
-                                    AppLogger.d("ApkBuilder", "APK slim: stripped $libName (${sizeKb} KB)")
-                                    logger.log("APK slim: stripped $libName (${sizeKb} KB) - not needed for ${config.appType}")
-                                    strippedNativeLibSize += if (entry.size >= 0) entry.size else entry.compressedSize
+                                // The injection phase below re-embeds the runtime native libs for the
+                                // device ABI on every build regardless of mode; copying the cached
+                                // copies here too would emit each lib twice (near-2x bloat and
+                                // undefined duplicate-entry behavior).
+                                entry.name in injectedLibs -> {
+                                    AppLogger.d("ApkBuilder", "Skipping cached native lib (re-injected this build): ${entry.name}")
                                 }
                                 else -> {
                                     ZipUtils.copyEntryPreserveMethod(zipIn, zipOut, entry)
                                 }
                             }
+                            return@forEach
                         }
 
-                        entry.name.startsWith("kotlin/") || entry.name == "DebugProbesKt.bin" -> {
+                        when {
 
-                        }
+                            entry.name.startsWith("META-INF/") &&
+                            (entry.name.endsWith(".SF") || entry.name.endsWith(".RSA") ||
+                             entry.name.endsWith(".DSA") || entry.name == "META-INF/MANIFEST.MF") -> {
 
-                        isEditorOnlyAsset(entry.name, config.appType, config.engineType) -> {
-                            AppLogger.d("ApkBuilder", "APK slim: stripped editor asset: ${entry.name}")
-                        }
+                            }
 
-                        perfConfig != null && perfConfig.removeUnusedResources &&
-                        com.sherwood.wta.core.linux.PerformanceOptimizerApk.getRemovableEntries(entry.name, config.appType) -> {
-                            AppLogger.d("ApkBuilder", "Perf: removed unused resource: ${entry.name}")
-                        }
+                            entry.name.startsWith("assets/splash_media.") -> {
+                                AppLogger.d("ApkBuilder", "Skipping old splash media: ${entry.name}")
+                            }
 
-                        perfConfig != null && entry.name.startsWith("assets/") && isOptimizableAsset(entry.name) -> {
-                            val originalData = zipIn.getInputStream(entry).readBytes()
-                            val optimizedData = com.sherwood.wta.core.linux.PerformanceOptimizerApk.optimizeBytesForApk(
-                                context, entry.name.substringAfterLast("/"), originalData, perfConfig
-                            )
-                            writeEntryDeflated(zipOut, entry.name, optimizedData)
-                            if (optimizedData.size < originalData.size) {
-                                AppLogger.d("ApkBuilder", "Perf: optimized ${entry.name}: ${originalData.size} -> ${optimizedData.size}")
+                            entry.name == "AndroidManifest.xml" -> {
+                                val originalData = zipIn.getInputStream(entry).readBytes()
+                                // Resolve the template marker before package rewriting: its
+                                // com.sherwood.wta prefix is otherwise renamed with the app ID.
+                                val policyAdjustedData = axmlRebuilder.rewriteSaepPolicyMetadata(
+                                    originalData, saepBytes?.let { saepResource?.id }
+                                )
+
+                                var modifiedData = axmlRebuilder.expandAndModifyFull(
+                                    policyAdjustedData,
+                                    originalPackageName,
+                                    config.packageName,
+                                    config.versionCode,
+                                    config.versionName,
+                                    config.deepLinkHosts,
+                                    config.deepLinkSchemes,
+                                    buildRequiredPermissions(config),
+                                    buildRequiredComponents(config),
+                                    targetSdk = config.targetSdkOverride,
+                                    minSdk = config.minSdkOverride,
+                                    shareReceiveMimeTypes = config.shareReceiveMimeTypes,
+                                    openWithEnabled = config.openWithEnabled
+                                )
+                                stackBundles.forEach { bundle ->
+                                    modifiedData = featureStackGrafter.graftManifest(
+                                        modifiedData, bundle, config.packageName,
+                                        mapOf(
+                                            "admobAppId" to (
+                                                AdMobAppIds.manifestValue(config.adAppId, config.adTestMode)
+                                                    ?: config.adAppId
+                                                )
+                                        )
+                                    )
+                                }
+                                writeEntryDeflated(zipOut, entry.name, modifiedData)
+                            }
+
+                            // Enabled: replace the resolved raw resource before any generic
+                            // optimizer — the platform reads this policy without the app's
+                            // decryption key. Disabled: drop the inert placeholder entirely.
+                            saepResource != null && entry.name == saepResource.path -> {
+                                saepBytes?.let { writeEntryDeflated(zipOut, entry.name, it) }
+                            }
+
+                            entry.name == "resources.arsc" -> {
+                                val originalData = zipIn.getInputStream(entry).readBytes()
+                                var modifiedData = arscRebuilder.rebuildWithNewAppNameAndIcons(
+                                    originalData,
+                                    config.appName,
+                                    replaceIcons = true
+                                )
+
+                                discoveredOldIconPaths = arscRebuilder.getLastDiscoveredIconPaths()
+                                discoveredIconSpecs = arscRebuilder.getLastDiscoveredIconSpecs()
+                                logger.log("Discovered old icon paths from ARSC: $discoveredOldIconPaths")
+                                stackBundles.forEach { bundle ->
+                                    modifiedData = featureStackGrafter.graftResourceTable(
+                                        modifiedData, bundle
+                                    )
+                                }
+                                writeEntryStored(zipOut, entry.name, modifiedData)
+                            }
+
+                            entry.name == ApkTemplate.CONFIG_PATH -> {
+                                hasConfigFile = true
+                                writeConfigEntry(zipOut, config, assetEncryptor, encryptionConfig)
+                            }
+
+                            iconBitmap != null && (isIconEntry(entry.name) || discoveredOldIconPaths.contains(entry.name)) -> {
+
+                                // Template icon entries carry obfuscated names, so the ARSC scan is
+                                // what tells a legacy mipmap from the adaptive foreground — write
+                                // layer-appropriate, density-appropriate bitmaps per entry.
+                                val spec = discoveredIconSpecs.firstOrNull { it.path == entry.name }
+                                val iconBytes = when (spec?.kind) {
+                                    ArscRebuilder.LauncherIconKind.FOREGROUND ->
+                                        template.createAdaptiveForegroundIcon(iconBitmap, ADAPTIVE_ICON_PX)
+                                    ArscRebuilder.LauncherIconKind.ROUND ->
+                                        template.createRoundIcon(iconBitmap, iconPixelSizeForDensity(spec.densityDpi))
+                                    ArscRebuilder.LauncherIconKind.LAUNCHER ->
+                                        template.scaleBitmapToPng(iconBitmap, iconPixelSizeForDensity(spec.densityDpi))
+                                    null -> template.createAdaptiveForegroundIcon(iconBitmap, ADAPTIVE_ICON_PX)
+                                }
+                                writeEntryDeflated(zipOut, entry.name, iconBytes)
+                                replacedIconPaths.add(entry.name)
+                                AppLogger.d("ApkBuilder", "Replaced icon entry: ${entry.name} (kind=${spec?.kind}, ${iconBytes.size} bytes)")
+                            }
+
+                            entry.name in geckoRuntimeEntries -> {
+                                AppLogger.d("ApkBuilder", "Skipping template Gecko runtime entry; downloaded runtime will replace it: ${entry.name}")
+                            }
+
+                            entry.name.startsWith("lib/") -> {
+                                val abi = entry.name.removePrefix("lib/").substringBefore("/")
+                                val libName = entry.name.substringAfterLast("/")
+
+                                when {
+
+                                    injectedLibs.contains(entry.name) -> {
+                                        AppLogger.d("ApkBuilder", "Skipping template/cached native lib (injected this build): ${entry.name}")
+                                    }
+
+                                    abiFilters.isNotEmpty() && !abiFilters.contains(abi) -> {
+                                        AppLogger.d("ApkBuilder", "Skipping architecture: ${entry.name}")
+                                    }
+
+                                    !isRequiredNativeLib(libName, config.appType, config.engineType) -> {
+                                        val sizeKb = if (entry.size >= 0) entry.size / 1024 else entry.compressedSize / 1024
+                                        AppLogger.d("ApkBuilder", "APK slim: stripped $libName (${sizeKb} KB)")
+                                        logger.log("APK slim: stripped $libName (${sizeKb} KB) - not needed for ${config.appType}")
+                                        strippedNativeLibSize += if (entry.size >= 0) entry.size else entry.compressedSize
+                                    }
+                                    else -> {
+                                        ZipUtils.copyEntryPreserveMethod(zipIn, zipOut, entry)
+                                    }
+                                }
+                            }
+
+                            entry.name.startsWith("kotlin/") || entry.name == "DebugProbesKt.bin" -> {
+
+                            }
+
+                            isEditorOnlyAsset(entry.name, config.appType, config.engineType) -> {
+                                AppLogger.d("ApkBuilder", "APK slim: stripped editor asset: ${entry.name}")
+                            }
+
+                            perfConfig != null && perfConfig.removeUnusedResources &&
+                            com.sherwood.wta.core.linux.PerformanceOptimizerApk.getRemovableEntries(entry.name, config.appType) -> {
+                                AppLogger.d("ApkBuilder", "Perf: removed unused resource: ${entry.name}")
+                            }
+
+                            perfConfig != null && entry.name.startsWith("assets/") && isOptimizableAsset(entry.name) -> {
+                                val originalData = zipIn.getInputStream(entry).readBytes()
+                                val optimizedData = com.sherwood.wta.core.linux.PerformanceOptimizerApk.optimizeBytesForApk(
+                                    context, entry.name.substringAfterLast("/"), originalData, perfConfig
+                                )
+                                writeEntryDeflated(zipOut, entry.name, optimizedData)
+                                if (optimizedData.size < originalData.size) {
+                                    AppLogger.d("ApkBuilder", "Perf: optimized ${entry.name}: ${originalData.size} -> ${optimizedData.size}")
+                                }
+                            }
+
+                            else -> {
+                                copyEntry(zipIn, zipOut, entry)
                             }
                         }
+                    }
 
-                        else -> {
-                            copyEntry(zipIn, zipOut, entry)
+                    if (!hasConfigFile) {
+                        writeConfigEntry(zipOut, config, assetEncryptor, encryptionConfig)
+                    }
+
+                    if (config.adBlock.enabled) {
+                        val globalAdBlock = SherwoodStudioApplication.adBlock
+                        try {
+                            // The zip loop above already reported 100, which the caller
+                            // maps to overall 70% "Repacking base template...". Name this
+                            // step or a large subscription list looks like a frozen repack.
+                            onProgress(100, "Compiling ad-block rules...")
+                            val compiledRules = globalAdBlock.compileRulesText(
+                                context = context,
+                                subscriptionUrls = config.adBlock.subscriptions
+                            )
+                            if (compiledRules.isNotEmpty()) {
+                                val rulesData = compiledRules.toByteArray(Charsets.UTF_8)
+                                writeEntryDeflated(zipOut, "assets/wta_adblock_compiled.txt", rulesData)
+                                logger.log("AdBlock compiled rules bundled (${rulesData.size} bytes)")
+                            } else {
+                                logger.log("AdBlock enabled but compiled rules empty (subscriptions=${config.adBlock.subscriptions.size}, rules=${config.adBlock.rules.size})")
+                            }
+                        } catch (e: Exception) {
+                            logger.log("AdBlock compile failed: ${e.message}")
+                            throw e
                         }
                     }
-                }
 
-                if (!hasConfigFile) {
-                    writeConfigEntry(zipOut, config, assetEncryptor, encryptionConfig)
-                }
+                    ensureRequiredRuntimeAssets(zipOut, config.appType, entryNames)
 
-                if (config.adBlock.enabled) {
-                    val globalAdBlock = SherwoodStudioApplication.adBlock
-                    try {
-                        // The zip loop above already reported 100, which the caller
-                        // maps to overall 70% "Repacking base template...". Name this
-                        // step or a large subscription list looks like a frozen repack.
-                        onProgress(100, "Compiling ad-block rules...")
-                        val compiledRules = globalAdBlock.compileRulesText(
-                            context = context,
-                            subscriptionUrls = config.adBlock.subscriptions
-                        )
-                        if (compiledRules.isNotEmpty()) {
-                            val rulesData = compiledRules.toByteArray(Charsets.UTF_8)
-                            writeEntryDeflated(zipOut, "assets/wta_adblock_compiled.txt", rulesData)
-                            logger.log("AdBlock compiled rules bundled (${rulesData.size} bytes)")
-                        } else {
-                            logger.log("AdBlock enabled but compiled rules empty (subscriptions=${config.adBlock.subscriptions.size}, rules=${config.adBlock.rules.size})")
-                        }
-                    } catch (e: Exception) {
-                        logger.log("AdBlock compile failed: ${e.message}")
-                        throw e
-                    }
-                }
+                    if (encryptionConfig.enabled) {
 
-                ensureRequiredRuntimeAssets(zipOut, config.appType, entryNames)
-
-                if (encryptionConfig.enabled) {
-
-                    val signatureHash = signingCertHash()
-                    encryptedApkBuilder.writeEncryptionMetadata(
-                        zipOut, encryptionConfig, config.packageName, signatureHash,
-                        // Embedded mode: the encryption key IS the random baked key,
-                        // so SecretKeySpec.encoded carries the raw bytes to store.
-                        embeddedKey = if (encryptionConfig.keyMode == "EMBEDDED") {
-                            encryptionKey?.encoded
-                        } else null
-                    )
-                    logger.log("Encryption metadata written")
-                }
-
-                if (encryptionConfig.enabled) {
-                    onProgress(78, "Applying runtime protection...")
-                    logger.section("Runtime Protection")
-                    logger.log("Resource encryption enabled: shell enforces runtime protection (anti-debug / anti-Frida / DEX-tamper) at launch via app_config.json")
-                }
-
-                if (perfConfig != null && perfConfig.injectPerformanceScript) {
-                    onProgress(82, "Injecting performance assets...")
-                    logger.section("Performance Optimization")
-                    val perfScript = com.sherwood.wta.core.linux.PerformanceOptimizer.generatePerformanceScript()
-                    val scriptData = perfScript.toByteArray(Charsets.UTF_8)
-                    writeEntryDeflated(zipOut, "assets/wta_perf_optimize.js", scriptData)
-                    logger.log("Performance script injected (${scriptData.size} bytes)")
-                    logger.log("Perf features: images=${perfConfig.compressImages}, code=${perfConfig.minifyCode}, " +
-                        "webp=${perfConfig.convertToWebP}, preload=${perfConfig.injectPreloadHints}, " +
-                        "lazy=${perfConfig.injectLazyLoading}, scripts=${perfConfig.optimizeScripts}")
-                }
-
-                if (mode == ModifyApkMode.FULL && stackBundles.isNotEmpty()) {
-                    featureStackGrafter.extraEntries(stackBundles, entryNames)
-                        .forEach { (name, data) -> writeEntryDeflated(zipOut, name, data) }
-                    logger.log(
-                        "feature stacks grafted: " +
-                            stackBundles.joinToString(", ") { it.id }
-                    )
-                }
-
-                if (mode == ModifyApkMode.FULL) {
-                    if (iconBitmap != null && replacedIconPaths.isEmpty()) {
-                        addIconsToApk(zipOut, iconBitmap)
-                        logger.log("Added PNG mipmap icons (no existing PNG icons found in template)")
-                    } else if (iconBitmap != null) {
-                        logger.log("Replaced ${replacedIconPaths.size} existing PNG icon entries")
-                    }
-
-                    if (iconBitmap != null) {
-                        addAdaptiveIconPngs(zipOut, iconBitmap, entryNames)
-
-                        // Solid backing color — never the user image itself, or launchers
-                        // composite the picture twice (background + safe-zone foreground).
-                        val bgColor = ApkTemplate.parseIconBackgroundColor(iconBackgroundColor)
-                        val bgBytes = ApkTemplate.createSolidBackgroundIcon(
-                            iconBitmap, ADAPTIVE_ICON_PX, bgColor
-                        )
-                        writeEntryDeflated(zipOut, ArscRebuilder.LAUNCHER_BACKGROUND_DRAWABLE_PATH, bgBytes)
-                        logger.log(
-                            "Added solid launcher background drawable (${bgBytes.size} bytes, " +
-                                "color=${iconBackgroundColor ?: "auto"})"
-                        )
-                    }
-                }
-
-                AppLogger.d("ApkBuilder", "Splash config: splashEnabled=${config.splashEnabled}, splashMediaPath=$splashMediaPath, splashType=${config.splashType}")
-                onProgress(86, "Embedding app assets...")
-                if (config.splashEnabled && splashMediaPath != null) {
-                    addSplashMediaToAssets(zipOut, splashMediaPath, config.splashType, assetEncryptor, encryptionConfig)
-                } else {
-                    AppLogger.w("ApkBuilder", "Skipping splash embed: splashEnabled=${config.splashEnabled}, splashMediaPath=$splashMediaPath")
-                }
-
-                if (errorPageMediaPath != null) {
-                    addErrorPageMediaToAssets(zipOut, errorPageMediaPath, assetEncryptor, encryptionConfig)
-                }
-
-                if (config.announcement.hasCustomIcon && announcementIconPath != null) {
-                    addAnnouncementIconToAssets(zipOut, announcementIconPath, assetEncryptor, encryptionConfig)
-                }
-
-                if (config.statusBarBackgroundType == "IMAGE" && !config.statusBarBackgroundImage.isNullOrEmpty()) {
-                    addStatusBarBackgroundToAssets(zipOut, config.statusBarBackgroundImage!!)
-                }
-
-                // The config JSON promises assets/statusbar_background_dark.png whenever the
-                // dark variant is an image (ApkConfigJsonFactory). Without this embed the
-                // generated app fails to open the asset and silently falls back to a color.
-                if (config.statusBarBackgroundTypeDark == "IMAGE" && !config.statusBarBackgroundImageDark.isNullOrEmpty()) {
-                    addStatusBarBackgroundToAssets(zipOut, config.statusBarBackgroundImageDark!!, "assets/statusbar_background_dark.png")
-                }
-
-                if (config.floatingWindowEnabled && !config.floatingWindowMinimizedIconPath.isNullOrEmpty()) {
-                    addFloatingWindowMinimizedIconToAssets(zipOut, config.floatingWindowMinimizedIconPath!!)
-                }
-
-                if (config.bgmEnabled && bgmPlaylistPaths.isNotEmpty()) {
-                    logger.log("Embedding BGM: ${bgmPlaylistPaths.size} files")
-                    addBgmToAssets(zipOut, bgmPlaylistPaths, bgmLrcDataList, bgmCoverPaths, assetEncryptor, encryptionConfig)
-                }
-
-                addCustomCaCertsToAssets(zipOut, config.networkTrustConfig.customCaCertificates)
-
-                val projectDir = when (config.appType) {
-                    "WORDPRESS" -> wordPressProjectDir
-                    "NODEJS_APP" -> nodejsProjectDir
-                    "PHP_APP" -> phpAppProjectDir
-                    "PYTHON_APP" -> pythonAppProjectDir
-                    "GO_APP" -> goAppProjectDir
-                    "FRONTEND" -> frontendProjectDir
-                    "HTML" -> htmlProjectDir
-                    else -> null
-                }
-                val secondaryProjectDir = when (config.appType) {
-                    "MULTI_WEB" -> config.multiWebProjectId.takeIf { it.isNotBlank() }
-                        ?.let { File(context.filesDir, "html_projects/$it") }
-                    else -> null
-                }
-                val multiWebSiteSourceDirs = resolveMultiWebSiteSourceDirs(config)
-
-                val embedder = AppContentEmbedderFactory.create(config.appType)
-                if (embedder != null) {
-                    if (config.appType == "GO_APP" && projectDir != null) {
-                        onProgress(90, "Verifying Go binary...")
-                        ensureGoProjectBinaryForExport(projectDir, config, onProgress)
-                    }
-                    onProgress(94, "Embedding project files...")
-                    val embedCtx = EmbedContext(
-                        config = config,
-                        logger = logger,
-                        encryptor = assetEncryptor,
-                        encryptionConfig = encryptionConfig,
-                        mediaContentPath = mediaContentPath,
-                        htmlFiles = htmlFiles,
-                        galleryItems = galleryItems,
-                        projectDir = projectDir,
-                        secondaryProjectDir = secondaryProjectDir,
-                        fnAddMediaContent = ::addMediaContentToAssets,
-                        fnAddHtmlFiles = ::addHtmlFilesToAssets,
-                        fnAddGalleryItems = ::addGalleryItemsToAssets,
-                        fnAddWordPressFiles = ::addWordPressFilesToAssets,
-                        fnAddNodeJsFiles = { zo, dir -> addNodeJsFilesToAssets(zo, dir, abiFilters) },
-                        fnAddFrontendFiles = ::addFrontendFilesToAssets,
-                        fnAddPhpAppFiles = ::addPhpAppFilesToAssets,
-                        fnAddPythonAppFiles = ::addPythonAppFilesToAssets,
-                        fnAddGoAppFiles = ::addGoAppFilesToAssets,
-                        multiWebSiteSourceDirs = multiWebSiteSourceDirs,
-                        multiWebSiteGalleryItems = multiWebSiteGalleryItems,
-                        multiWebSiteMediaPaths = multiWebSiteMediaPaths
-                    )
-                    val result = embedder.embed(zipOut, embedCtx)
-                    logger.log("Content embedding [${config.appType}]: ${result.message}")
-                }
-
-                // Build-time Static Asset Pack: embed the scraped static assets + manifest
-                // under assets/static_pack/. Independent of the per-appType embedder, which
-                // returns null for WEB apps. Encrypted builds encrypt each entry (manifest
-                // included) exactly like HtmlContentEmbedder so the runtime AssetDecryptor
-                // transparently reads them back.
-                if (staticPackDir != null && staticPackDir.exists() && staticPackDir.isDirectory) {
-                    onProgress(95, "Embedding static asset pack...")
-                    logger.section("Embed Static Asset Pack")
-                    val (packCount, packSize) = RuntimeAssetEmbedder.embedProjectFiles(
-                        zipOut = zipOut,
-                        projectDir = staticPackDir,
-                        config = RuntimeAssetEmbedder.EmbedConfig(
-                            runtimeName = "staticAssetPack",
-                            assetPrefix = "assets/${com.sherwood.wta.core.webview.StaticAssetPack.ASSET_BASE}",
-                            excludeDirs = emptySet(),
-                            fileHook = if (encryptionConfig.enabled && assetEncryptor != null) {
-                                { zo, assetPath, file ->
-                                    val assetName = assetPath.removePrefix("assets/")
-                                    val entry = java.util.zip.ZipEntry("${assetPath}.enc")
-                                    entry.method = java.util.zip.ZipEntry.DEFLATED
-                                    zo.putNextEntry(entry)
-                                    val written = file.inputStream().buffered().use { input ->
-                                        assetEncryptor.encryptStreaming(input, assetName, zo)
-                                    }
-                                    zo.closeEntry()
-                                    logger.log("File encrypted: ${assetPath}.enc ($written bytes)")
-                                    true
-                                }
+                        val signatureHash = signingCertHash()
+                        encryptedApkBuilder.writeEncryptionMetadata(
+                            zipOut, encryptionConfig, config.packageName, signatureHash,
+                            // Embedded mode: the encryption key IS the random baked key,
+                            // so SecretKeySpec.encoded carries the raw bytes to store.
+                            embeddedKey = if (encryptionConfig.keyMode == "EMBEDDED") {
+                                encryptionKey?.encoded
                             } else null
-                        ),
-                        logger = logger
-                    )
-                    logger.log("Static asset pack embedded: $packCount files, ${packSize / 1024} KB")
-                }
+                        )
+                        logger.log("Encryption metadata written")
+                    }
 
-                if (mode == ModifyApkMode.FULL && config.engineType == "GECKOVIEW") {
-                    onProgress(98, "Injecting native runtime...")
-                    logger.section("Inject GeckoView Runtime (native libs + omni.ja)")
-                    injectGeckoViewRuntime(zipOut, abiFilters, checkNotNull(geckoEngineFiles))
-                }
+                    if (encryptionConfig.enabled) {
+                        onProgress(78, "Applying runtime protection...")
+                        logger.section("Runtime Protection")
+                        logger.log("Resource encryption enabled: shell enforces runtime protection (anti-debug / anti-Frida / DEX-tamper) at launch via app_config.json")
+                    }
 
-                // The Cronet upstream (forced HTTP/3 and/or ECH on the system engine)
-                // needs the native lib inside the APK; cronetNeededForExport mirrors the
-                // runtime activation condition (SOCKS wins and disables both).
-                if (mode == ModifyApkMode.FULL && cronetNeededForExport(config)) {
-                    onProgress(98, "Injecting HTTP/3 runtime...")
-                    logger.section("Inject Cronet Runtime (forced HTTP/3 / ECH)")
-                    injectCronetNativeLib(zipOut)
+                    if (perfConfig != null && perfConfig.injectPerformanceScript) {
+                        onProgress(82, "Injecting performance assets...")
+                        logger.section("Performance Optimization")
+                        val perfScript = com.sherwood.wta.core.linux.PerformanceOptimizer.generatePerformanceScript()
+                        val scriptData = perfScript.toByteArray(Charsets.UTF_8)
+                        writeEntryDeflated(zipOut, "assets/wta_perf_optimize.js", scriptData)
+                        logger.log("Performance script injected (${scriptData.size} bytes)")
+                        logger.log("Perf features: images=${perfConfig.compressImages}, code=${perfConfig.minifyCode}, " +
+                            "webp=${perfConfig.convertToWebP}, preload=${perfConfig.injectPreloadHints}, " +
+                            "lazy=${perfConfig.injectLazyLoading}, scripts=${perfConfig.optimizeScripts}")
+                    }
+
+                    if (mode == ModifyApkMode.FULL && stackBundles.isNotEmpty()) {
+                        featureStackGrafter.extraEntries(stackBundles, entryNames)
+                            .forEach { (name, data) -> writeEntryDeflated(zipOut, name, data) }
+                        logger.log(
+                            "feature stacks grafted: " +
+                                stackBundles.joinToString(", ") { it.id }
+                        )
+                    }
+
+                    if (mode == ModifyApkMode.FULL) {
+                        if (iconBitmap != null && replacedIconPaths.isEmpty()) {
+                            addIconsToApk(zipOut, iconBitmap)
+                            logger.log("Added PNG mipmap icons (no existing PNG icons found in template)")
+                        } else if (iconBitmap != null) {
+                            logger.log("Replaced ${replacedIconPaths.size} existing PNG icon entries")
+                        }
+
+                        if (iconBitmap != null) {
+                            addAdaptiveIconPngs(zipOut, iconBitmap, entryNames)
+
+                            // Solid backing color — never the user image itself, or launchers
+                            // composite the picture twice (background + safe-zone foreground).
+                            val bgColor = ApkTemplate.parseIconBackgroundColor(iconBackgroundColor)
+                            val bgBytes = ApkTemplate.createSolidBackgroundIcon(
+                                iconBitmap, ADAPTIVE_ICON_PX, bgColor
+                            )
+                            writeEntryDeflated(zipOut, ArscRebuilder.LAUNCHER_BACKGROUND_DRAWABLE_PATH, bgBytes)
+                            logger.log(
+                                "Added solid launcher background drawable (${bgBytes.size} bytes, " +
+                                    "color=${iconBackgroundColor ?: "auto"})"
+                            )
+                        }
+                    }
+
+                    AppLogger.d("ApkBuilder", "Splash config: splashEnabled=${config.splashEnabled}, splashMediaPath=$splashMediaPath, splashType=${config.splashType}")
+                    onProgress(86, "Embedding app assets...")
+                    coroutineContext.ensureActive()
+                    if (config.splashEnabled && splashMediaPath != null) {
+                        addSplashMediaToAssets(zipOut, splashMediaPath, config.splashType, assetEncryptor, encryptionConfig)
+                    } else {
+                        AppLogger.w("ApkBuilder", "Skipping splash embed: splashEnabled=${config.splashEnabled}, splashMediaPath=$splashMediaPath")
+                    }
+
+                    if (errorPageMediaPath != null) {
+                        addErrorPageMediaToAssets(zipOut, errorPageMediaPath, assetEncryptor, encryptionConfig)
+                    }
+
+                    if (config.announcement.hasCustomIcon && announcementIconPath != null) {
+                        addAnnouncementIconToAssets(zipOut, announcementIconPath, assetEncryptor, encryptionConfig)
+                    }
+
+                    if (config.statusBarBackgroundType == "IMAGE" && !config.statusBarBackgroundImage.isNullOrEmpty()) {
+                        addStatusBarBackgroundToAssets(zipOut, config.statusBarBackgroundImage!!)
+                    }
+
+                    // The config JSON promises assets/statusbar_background_dark.png whenever the
+                    // dark variant is an image (ApkConfigJsonFactory). Without this embed the
+                    // generated app fails to open the asset and silently falls back to a color.
+                    if (config.statusBarBackgroundTypeDark == "IMAGE" && !config.statusBarBackgroundImageDark.isNullOrEmpty()) {
+                        addStatusBarBackgroundToAssets(zipOut, config.statusBarBackgroundImageDark!!, "assets/statusbar_background_dark.png")
+                    }
+
+                    if (config.floatingWindowEnabled && !config.floatingWindowMinimizedIconPath.isNullOrEmpty()) {
+                        addFloatingWindowMinimizedIconToAssets(zipOut, config.floatingWindowMinimizedIconPath!!)
+                    }
+
+                    if (config.bgmEnabled && bgmPlaylistPaths.isNotEmpty()) {
+                        logger.log("Embedding BGM: ${bgmPlaylistPaths.size} files")
+                        addBgmToAssets(zipOut, bgmPlaylistPaths, bgmLrcDataList, bgmCoverPaths, assetEncryptor, encryptionConfig)
+                    }
+
+                    addCustomCaCertsToAssets(zipOut, config.networkTrustConfig.customCaCertificates)
+
+                    val projectDir = when (config.appType) {
+                        "WORDPRESS" -> wordPressProjectDir
+                        "NODEJS_APP" -> nodejsProjectDir
+                        "PHP_APP" -> phpAppProjectDir
+                        "PYTHON_APP" -> pythonAppProjectDir
+                        "GO_APP" -> goAppProjectDir
+                        "FRONTEND" -> frontendProjectDir
+                        "HTML" -> htmlProjectDir
+                        else -> null
+                    }
+                    val secondaryProjectDir = when (config.appType) {
+                        "MULTI_WEB" -> config.multiWebProjectId.takeIf { it.isNotBlank() }
+                            ?.let { File(context.filesDir, "html_projects/$it") }
+                        else -> null
+                    }
+                    val multiWebSiteSourceDirs = resolveMultiWebSiteSourceDirs(config)
+
+                    val embedder = AppContentEmbedderFactory.create(config.appType)
+                    if (embedder != null) {
+                        if (config.appType == "GO_APP" && projectDir != null) {
+                            onProgress(90, "Verifying Go binary...")
+                            ensureGoProjectBinaryForExport(projectDir, config, onProgress)
+                        }
+                        onProgress(94, "Embedding project files...")
+                        val embedCtx = EmbedContext(
+                            config = config,
+                            logger = logger,
+                            encryptor = assetEncryptor,
+                            encryptionConfig = encryptionConfig,
+                            mediaContentPath = mediaContentPath,
+                            htmlFiles = htmlFiles,
+                            galleryItems = galleryItems,
+                            projectDir = projectDir,
+                            secondaryProjectDir = secondaryProjectDir,
+                            fnAddMediaContent = ::addMediaContentToAssets,
+                            fnAddHtmlFiles = ::addHtmlFilesToAssets,
+                            fnAddGalleryItems = ::addGalleryItemsToAssets,
+                            fnAddWordPressFiles = ::addWordPressFilesToAssets,
+                            fnAddNodeJsFiles = { zo, dir -> addNodeJsFilesToAssets(zo, dir, abiFilters) },
+                            fnAddFrontendFiles = ::addFrontendFilesToAssets,
+                            fnAddPhpAppFiles = ::addPhpAppFilesToAssets,
+                            fnAddPythonAppFiles = ::addPythonAppFilesToAssets,
+                            fnAddGoAppFiles = ::addGoAppFilesToAssets,
+                            multiWebSiteSourceDirs = multiWebSiteSourceDirs,
+                            multiWebSiteGalleryItems = multiWebSiteGalleryItems,
+                            multiWebSiteMediaPaths = multiWebSiteMediaPaths
+                        )
+                        // Embedding a Node/Python project copies thousands of files.
+                        coroutineContext.ensureActive()
+                        val result = embedder.embed(zipOut, embedCtx)
+                        logger.log("Content embedding [${config.appType}]: ${result.message}")
+                    }
+
+                    // Build-time Static Asset Pack: embed the scraped static assets + manifest
+                    // under assets/static_pack/. Independent of the per-appType embedder, which
+                    // returns null for WEB apps. Encrypted builds encrypt each entry (manifest
+                    // included) exactly like HtmlContentEmbedder so the runtime AssetDecryptor
+                    // transparently reads them back.
+                    if (staticPackDir != null && staticPackDir.exists() && staticPackDir.isDirectory) {
+                        onProgress(95, "Embedding static asset pack...")
+                        logger.section("Embed Static Asset Pack")
+                        val (packCount, packSize) = RuntimeAssetEmbedder.embedProjectFiles(
+                            zipOut = zipOut,
+                            projectDir = staticPackDir,
+                            config = RuntimeAssetEmbedder.EmbedConfig(
+                                runtimeName = "staticAssetPack",
+                                assetPrefix = "assets/${com.sherwood.wta.core.webview.StaticAssetPack.ASSET_BASE}",
+                                excludeDirs = emptySet(),
+                                fileHook = if (encryptionConfig.enabled && assetEncryptor != null) {
+                                    { zo, assetPath, file ->
+                                        val assetName = assetPath.removePrefix("assets/")
+                                        val entry = java.util.zip.ZipEntry("${assetPath}.enc")
+                                        entry.method = java.util.zip.ZipEntry.DEFLATED
+                                        zo.putNextEntry(entry)
+                                        val written = file.inputStream().buffered().use { input ->
+                                            assetEncryptor.encryptStreaming(input, assetName, zo)
+                                        }
+                                        zo.closeEntry()
+                                        logger.log("File encrypted: ${assetPath}.enc ($written bytes)")
+                                        true
+                                    }
+                                } else null
+                            ),
+                            logger = logger
+                        )
+                        logger.log("Static asset pack embedded: $packCount files, ${packSize / 1024} KB")
+                    }
+
+                    if (mode == ModifyApkMode.FULL && config.engineType == "GECKOVIEW") {
+                        onProgress(98, "Injecting native runtime...")
+                        logger.section("Inject GeckoView Runtime (native libs + omni.ja)")
+                        injectGeckoViewRuntime(zipOut, abiFilters, checkNotNull(geckoEngineFiles))
+                    }
+
+                    // The Cronet upstream (forced HTTP/3 and/or ECH on the system engine)
+                    // needs the native lib inside the APK; cronetNeededForExport mirrors the
+                    // runtime activation condition (SOCKS wins and disables both).
+                    if (mode == ModifyApkMode.FULL && cronetNeededForExport(config)) {
+                        onProgress(98, "Injecting HTTP/3 runtime...")
+                        logger.section("Inject Cronet Runtime (forced HTTP/3 / ECH)")
+                        injectCronetNativeLib(zipOut)
+                    }
                 }
             }
-        }
 
-        if (strippedNativeLibSize > 0) {
-            val savedMb = strippedNativeLibSize / 1024 / 1024
-            logger.log("APK slim: total native lib savings: ${savedMb} MB")
-            AppLogger.d("ApkBuilder", "APK slim: stripped ${savedMb} MB of unused native libraries")
-        }
+            if (strippedNativeLibSize > 0) {
+                val savedMb = strippedNativeLibSize / 1024 / 1024
+                logger.log("APK slim: total native lib savings: ${savedMb} MB")
+                AppLogger.d("ApkBuilder", "APK slim: stripped ${savedMb} MB of unused native libraries")
+            }
 
-        iconBitmap?.recycle()
+            completed = true
+        } finally {
+            iconBitmap?.recycle()
+            if (!completed) {
+                // Never leave a truncated zip where the caller expects a repacked APK.
+                // CONTENT_OVERLAY retries against the template and the build-level
+                // finally deletes the work-dir copy anyway; this just makes the
+                // abandoned file disappear at the moment it became invalid.
+                try { outputApk.delete() } catch (_: Exception) {}
+            }
+        }
     }
 
     private fun isRequiredNativeLib(libName: String, appType: String, engineType: String): Boolean {

@@ -92,8 +92,10 @@ import com.sherwood.wta.ui.design.WtaScreen
 import com.sherwood.wta.ui.design.WtaSettingRow
 import com.sherwood.wta.ui.design.WtaSpacing
 import com.sherwood.wta.ui.design.WtaSwitch
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -158,6 +160,10 @@ private fun BuildApkContent(
     var showExportAabConfirm by remember { mutableStateOf(false) }
 
     var isBuilding by remember(webApp.id) { mutableStateOf(false) }
+    // Handle of the running build. Cancelling it is the only way to stop a repack that is
+    // already copying hundreds of megabytes; ApkBuilder checks the job between phases and
+    // per repacked entry, so the cancel lands promptly instead of after the whole build.
+    var buildJob by remember(webApp.id) { mutableStateOf<Job?>(null) }
     var progress by remember(webApp.id) { mutableIntStateOf(0) }
     var progressText by remember(webApp.id) { mutableStateOf(Strings.preparing) }
     var analysisReport by remember(webApp.id) { mutableStateOf<com.sherwood.wta.core.apkbuilder.ApkAnalyzer.AnalysisReport?>(null) }
@@ -341,6 +347,19 @@ private fun BuildApkContent(
         }
     }
 
+    /**
+     * Requests cancellation of the running build.
+     *
+     * The job handle is the only durable way to stop a repack: `ApkBuilder` checks it
+     * between phases and per repacked entry, so a cancel requested during a 300 MB copy
+     * takes effect within one entry instead of after the whole build. State cleanup and
+     * the "cancelled" status are applied when the coroutine actually observes the
+     * cancellation, which is why this only raises the request.
+     */
+    fun cancelBuild() {
+        buildJob?.cancel()
+    }
+
     fun launchBuild() {
         if (isBuilding) return
         val apkBuilder = apkBuilderState ?: return
@@ -354,76 +373,94 @@ private fun BuildApkContent(
         cacheMessage = null
         progress = 0
         progressText = Strings.preparing
-        scope.launch {
-            progressText = when (webAppWithConfig.appType) {
-                AppType.PYTHON_APP -> Strings.preparingPythonEnv
-                AppType.NODEJS_APP -> Strings.preparingNodeEnv
-                AppType.PHP_APP,
-                AppType.WORDPRESS -> Strings.preparing
-                else -> Strings.preparing
-            }
-            val ensureOk = ExportRuntimeEnsure.ensure(
-                context,
-                webAppWithConfig.appType,
-                webAppWithConfig.webViewConfig.forceHttp3 ||
-                    webAppWithConfig.webViewConfig.dnsConfig.echEffective,
-                neededAbis = webAppWithConfig.apkExportConfig?.architecture?.abiFilters
-            )
-            if (!ensureOk) {
-                // Abort here: buildApk runs the same ensure again, so falling
-                // through would burn a second full runtime download attempt
-                // before the build fails on the same missing dependency.
+        buildJob = scope.launch {
+            try {
                 progressText = when (webAppWithConfig.appType) {
-                    AppType.PYTHON_APP -> Strings.pythonRuntimeDownloadFailed
-                    AppType.NODEJS_APP -> Strings.njsDownloadFailed
+                    AppType.PYTHON_APP -> Strings.preparingPythonEnv
+                    AppType.NODEJS_APP -> Strings.preparingNodeEnv
                     AppType.PHP_APP,
-                    AppType.WORDPRESS -> Strings.wpDownloadFailed
+                    AppType.WORDPRESS -> Strings.preparing
                     else -> Strings.preparing
                 }
-                isBuilding = false
-                return@launch
-            }
-            // Preflight still gates the build, but without the removed on-screen panel
-            // a silent abort would leave no feedback — blocking issues go through the
-            // same failure dialog as real build errors instead.
-            val preflight = withContext(Dispatchers.IO) {
-                ApkExportPreflight.check(context, webAppWithConfig)
-            }
-            if (preflight.hasErrors) {
-                buildFailureReport = buildActionFailureReport(
-                    title = Strings.apkExportPreflightTitle,
-                    stage = "export_preflight",
-                    webApp = webAppWithConfig,
-                    summary = Strings.apkExportPreflightBlocked.format(preflight.errors.size),
-                    extraLines = preflight.issues.map { it.summary() }
+                val ensureOk = ExportRuntimeEnsure.ensure(
+                    context,
+                    webAppWithConfig.appType,
+                    webAppWithConfig.webViewConfig.forceHttp3 ||
+                        webAppWithConfig.webViewConfig.dnsConfig.echEffective,
+                    neededAbis = webAppWithConfig.apkExportConfig?.architecture?.abiFilters
                 )
-                isBuilding = false
-                return@launch
-            }
-
-            val result = apkBuilder.buildApk(
-                webApp = webAppWithConfig,
-                forceFullRebuild = forceFullRebuild
-            ) { p, t ->
-                progress = p
-                progressText = t
-            }
-            when (result) {
-                is BuildResult.Success -> {
-                    analysisReport = result.analysisReport
-                    lastBuildMode = result.buildMode
-                    lastBuildReason = result.buildReason.takeIf { it.isNotBlank() }
-                    historyTick++
-                    progressText = Strings.buildModeUsed.replace(
-                        "%s",
-                        incrementalBuildModeLabel(result.buildMode)
+                if (!ensureOk) {
+                    // Abort here: buildApk runs the same ensure again, so falling
+                    // through would burn a second full runtime download attempt
+                    // before the build fails on the same missing dependency.
+                    progressText = when (webAppWithConfig.appType) {
+                        AppType.PYTHON_APP -> Strings.pythonRuntimeDownloadFailed
+                        AppType.NODEJS_APP -> Strings.njsDownloadFailed
+                        AppType.PHP_APP,
+                        AppType.WORDPRESS -> Strings.wpDownloadFailed
+                        else -> Strings.preparing
+                    }
+                    isBuilding = false
+                    return@launch
+                }
+                // Preflight still gates the build, but without the removed on-screen panel
+                // a silent abort would leave no feedback — blocking issues go through the
+                // same failure dialog as real build errors instead.
+                val preflight = withContext(Dispatchers.IO) {
+                    ApkExportPreflight.check(context, webAppWithConfig)
+                }
+                if (preflight.hasErrors) {
+                    buildFailureReport = buildActionFailureReport(
+                        title = Strings.apkExportPreflightTitle,
+                        stage = "export_preflight",
+                        webApp = webAppWithConfig,
+                        summary = Strings.apkExportPreflightBlocked.format(preflight.errors.size),
+                        extraLines = preflight.issues.map { it.summary() }
                     )
                     isBuilding = false
+                    return@launch
                 }
-                is BuildResult.Error -> {
-                    buildFailureReport = buildBuildFailureReport(webAppWithConfig, result)
-                    isBuilding = false
+
+                val result = apkBuilder.buildApk(
+                    webApp = webAppWithConfig,
+                    forceFullRebuild = forceFullRebuild
+                ) { p, t ->
+                    progress = p
+                    progressText = t
                 }
+                when (result) {
+                    is BuildResult.Success -> {
+                        analysisReport = result.analysisReport
+                        lastBuildMode = result.buildMode
+                        lastBuildReason = result.buildReason.takeIf { it.isNotBlank() }
+                        historyTick++
+                        progressText = Strings.buildModeUsed.replace(
+                            "%s",
+                            incrementalBuildModeLabel(result.buildMode)
+                        )
+                        isBuilding = false
+                    }
+                    is BuildResult.Error -> {
+                        buildFailureReport = buildBuildFailureReport(webAppWithConfig, result)
+                        isBuilding = false
+                    }
+                }
+            } catch (e: CancellationException) {
+                // Cancel is a user action, not a failure: leave the screen idle with a
+                // plain status rather than a failure report the user did not cause. The
+                // progress card disappears with isBuilding, so the toast is what tells the
+                // user the cancel was accepted.
+                isBuilding = false
+                progress = 0
+                progressText = Strings.playStoreExportCancelled
+                android.widget.Toast.makeText(
+                    context,
+                    Strings.playStoreExportCancelled,
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                throw e
+            } finally {
+                buildJob = null
             }
         }
     }
@@ -902,6 +939,14 @@ private fun BuildApkContent(
                                 modifier = Modifier.fillMaxWidth(),
                                 trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                             )
+                        }
+
+                        // Cancelling is cooperative: the request is answered at the next
+                        // checkpoint inside ApkBuilder, so the card keeps reporting the
+                        // phase the build is actually finishing rather than pretending it
+                        // stopped instantly.
+                        TextButton(onClick = { cancelBuild() }) {
+                            Text(Strings.cancel)
                         }
                     }
                     }
