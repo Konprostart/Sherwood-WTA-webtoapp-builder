@@ -406,6 +406,10 @@ internal class WorkspaceBundleManager(context: Context) {
 
             val title = rawTitle.trim().take(MAX_TITLE_CHARS)
             val messages = rawMessages.map(SessionMigration::normalizeMessage)
+            // `create` makes the new session current. If the import then fails we put the
+            // previous selection back, so a rejected archive leaves the user where they
+            // were instead of with no session open.
+            val previousCurrent = sessions.currentSessionIdFlow.first()
             val created = sessions.create(title = "")
             val newId = created.id
             try {
@@ -459,6 +463,9 @@ internal class WorkspaceBundleManager(context: Context) {
                 // Only what this import created is removed; nothing else was touched.
                 runCatching { sessions.delete(newId) }
                     .onFailure { AppLogger.w(TAG, "Could not remove the partial imported session", it) }
+                if (previousCurrent != null && previousCurrent != newId) {
+                    runCatching { sessions.setCurrent(previousCurrent) }
+                }
                 throw t
             }
         } catch (e: WorkspaceBundleException) {
