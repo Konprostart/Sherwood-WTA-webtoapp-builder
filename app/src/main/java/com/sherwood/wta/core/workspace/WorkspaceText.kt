@@ -295,9 +295,9 @@ internal object WorkspaceText {
             "「$sessionTitle」を書き出しました: $files ファイル。"
         }
         AppLanguage.KOREAN -> if (omitted > 0) {
-            "\"$sessionTitle\" 내보냄: $files개 파일 (안전 규칙으로 $omitted개 제외)."
+            "\"$sessionTitle\" 내보냄: ${files}개 파일 (안전 규칙으로 ${omitted}개 제외)."
         } else {
-            "\"$sessionTitle\" 내보냄: $files개 파일."
+            "\"$sessionTitle\" 내보냄: ${files}개 파일."
         }
     }
 
@@ -311,7 +311,7 @@ internal object WorkspaceText {
         AppLanguage.GERMAN -> "\"$sessionTitle\" importiert: $files Dateien, $messages Nachrichten."
         AppLanguage.RUSSIAN -> "Импортировано «$sessionTitle»: $files файлов, сообщений: $messages."
         AppLanguage.JAPANESE -> "「$sessionTitle」を読み込みました: $files ファイル、$messages メッセージ。"
-        AppLanguage.KOREAN -> "\"$sessionTitle\" 가져옴: 파일 $files개, 메시지 $messages개."
+        AppLanguage.KOREAN -> "\"$sessionTitle\" 가져옴: 파일 ${files}개, 메시지 ${messages}개."
     }
 
     /** Explains why an entry was refused, so nothing is dropped without a reason. */

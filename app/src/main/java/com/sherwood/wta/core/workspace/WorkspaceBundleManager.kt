@@ -111,7 +111,7 @@ internal class WorkspaceBundleManager(context: Context) {
     suspend fun exportWorkspace(
         outputUri: Uri,
         sessionId: String? = null,
-        onProgress: Progress = NoProgress
+        onProgress: WorkspaceProgress = NoWorkspaceProgress
     ): Result<ExportResult> = withContext(Dispatchers.IO) {
         try {
             appContext.contentResolver.openOutputStream(outputUri)?.use { out ->
@@ -129,7 +129,7 @@ internal class WorkspaceBundleManager(context: Context) {
     suspend fun exportToStream(
         sessionId: String?,
         output: OutputStream,
-        onProgress: Progress = NoProgress
+        onProgress: WorkspaceProgress = NoWorkspaceProgress
     ): ExportResult {
         val context = currentCoroutineContext()
         onProgress(0, 100, WorkspaceText.readingSession)
@@ -269,7 +269,7 @@ internal class WorkspaceBundleManager(context: Context) {
     /** Imports [inputUri] as a new session. Nothing local is modified on failure. */
     suspend fun importWorkspace(
         inputUri: Uri,
-        onProgress: Progress = NoProgress
+        onProgress: WorkspaceProgress = NoWorkspaceProgress
     ): Result<ImportResult> = withContext(Dispatchers.IO) {
         try {
             appContext.contentResolver.openInputStream(inputUri)?.use { input ->
@@ -293,7 +293,7 @@ internal class WorkspaceBundleManager(context: Context) {
      */
     suspend fun importFromStream(
         input: InputStream,
-        onProgress: Progress = NoProgress
+        onProgress: WorkspaceProgress = NoWorkspaceProgress
     ): ImportResult {
         val context = currentCoroutineContext()
         onProgress(0, 100, WorkspaceText.checkingBundle)
@@ -518,16 +518,18 @@ internal class WorkspaceBundleManager(context: Context) {
      * relative name, so it is refused. Copying through it would put bytes from outside
      * the sandbox into a shareable archive.
      */
-    private fun isConfined(file: File, root: File): Boolean = try {
-        if (!file.isFile) return false
-        val prefix = root.canonicalPath.trimEnd(File.separatorChar) + File.separator
-        val canonical = file.canonicalPath
-        if (!canonical.startsWith(prefix)) return false
-        val canonicalRelative = canonical.removePrefix(prefix).replace(File.separatorChar, '/')
-        val lexicalRelative = file.relativeTo(root).path.replace(File.separatorChar, '/')
-        canonicalRelative == lexicalRelative
-    } catch (e: Exception) {
-        false
+    private fun isConfined(file: File, root: File): Boolean {
+        return try {
+            if (!file.isFile) return false
+            val prefix = root.canonicalPath.trimEnd(File.separatorChar) + File.separator
+            val canonical = file.canonicalPath
+            if (!canonical.startsWith(prefix)) return false
+            val canonicalRelative = canonical.removePrefix(prefix).replace(File.separatorChar, '/')
+            val lexicalRelative = file.relativeTo(root).path.replace(File.separatorChar, '/')
+            canonicalRelative == lexicalRelative
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**
@@ -595,11 +597,6 @@ internal class WorkspaceBundleManager(context: Context) {
 
     private data class Digest(val size: Long, val sha256: String)
 
-    /** Progress callback, matching [com.sherwood.wta.core.backup.DataBackupManager]. */
-    fun interface Progress {
-        fun onProgress(percent: Int, total: Int, message: String)
-    }
-
     companion object {
         private const val TAG = "WorkspaceBundleManager"
         private const val BUFFER_SIZE = 8192
@@ -607,9 +604,13 @@ internal class WorkspaceBundleManager(context: Context) {
         private const val MAX_MANIFEST_BYTES = 16 * 1024 * 1024
         private const val MAX_TITLE_CHARS = 120
 
-        val NoProgress = Progress { _, _, _ -> }
     }
 }
+
+/** Progress callback, matching [com.sherwood.wta.core.backup.DataBackupManager]. */
+internal typealias WorkspaceProgress = (percent: Int, total: Int, message: String) -> Unit
+
+internal val NoWorkspaceProgress: WorkspaceProgress = { _, _, _ -> }
 
 /**
  * Bundle-level constants. Kept in one object so the document model, the exporter and the
