@@ -34,6 +34,24 @@ class UpdateCheckPolicyTest {
     }
 
     @Test
+    fun `a failed automatic check is not retried on every launch`() {
+        assertThat(
+            UpdateCheckPolicy.isAutoCheckDue(
+                now,
+                lastSuccessAtMillis = 0L,
+                lastAttemptAtMillis = now - 10 * 60_000L
+            )
+        ).isFalse()
+        assertThat(
+            UpdateCheckPolicy.isAutoCheckDue(
+                now,
+                lastSuccessAtMillis = 0L,
+                lastAttemptAtMillis = now - UpdateCheckPolicy.AUTO_RETRY_FLOOR_MS - 1
+            )
+        ).isTrue()
+    }
+
+    @Test
     fun `a manual check is allowed when none was attempted`() {
         assertThat(UpdateCheckPolicy.isManualCheckAllowed(now, lastAttemptAtMillis = 0L)).isTrue()
     }

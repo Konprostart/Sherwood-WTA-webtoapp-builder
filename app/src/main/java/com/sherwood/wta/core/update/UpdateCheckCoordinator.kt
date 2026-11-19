@@ -44,7 +44,8 @@ object UpdateCheckCoordinator {
         if (!UpdateCheckPolicy.isAutoCheckDue(
                 nowMillis,
                 snapshot.lastSuccessAtMillis,
-                snapshot.autoCheckEnabled
+                snapshot.autoCheckEnabled,
+                snapshot.lastAttemptAtMillis
             )
         ) {
             return null

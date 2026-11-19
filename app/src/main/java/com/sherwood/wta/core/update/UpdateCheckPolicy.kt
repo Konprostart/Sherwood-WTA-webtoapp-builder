@@ -23,15 +23,29 @@ object UpdateCheckPolicy {
     const val MANUAL_CHECK_FLOOR_MS = 30_000L
 
     /**
-     * True when a silent check may run: automatic checks are enabled, and no successful check
-     * happened within the interval. A check that never succeeded is always due.
+     * A failed automatic check is retried no sooner than this. Without it a permanently offline
+     * device would run the whole mirror race on every cold start, because a failure never advances
+     * the success clock.
+     */
+    const val AUTO_RETRY_FLOOR_MS = 30L * 60L * 1000L
+
+    /**
+     * True when a silent check may run: automatic checks are enabled, no attempt happened inside
+     * the retry floor, and no successful check happened within the interval. A check that never
+     * succeeded is due once the retry floor has passed.
      */
     fun isAutoCheckDue(
         nowMillis: Long,
         lastSuccessAtMillis: Long,
-        autoCheckEnabled: Boolean = true
+        autoCheckEnabled: Boolean = true,
+        lastAttemptAtMillis: Long = 0L
     ): Boolean {
         if (!autoCheckEnabled) return false
+        if (lastAttemptAtMillis > 0L && nowMillis >= lastAttemptAtMillis &&
+            nowMillis - lastAttemptAtMillis < AUTO_RETRY_FLOOR_MS
+        ) {
+            return false
+        }
         if (lastSuccessAtMillis <= 0L) return true
         return nowMillis - lastSuccessAtMillis >= AUTO_CHECK_INTERVAL_HOURS * 60L * 60L * 1000L
     }
