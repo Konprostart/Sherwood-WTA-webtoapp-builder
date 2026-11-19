@@ -9233,6 +9233,54 @@ object StringsA {
         AppLanguage.JAPANESE -> "再試行"
         AppLanguage.KOREAN -> "재시도"
     }
+    val updateAutoCheckTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "自动检查更新"
+        AppLanguage.ENGLISH -> "Automatic update check"
+        AppLanguage.ARABIC -> "التحقق التلقائي من التحديثات"
+        AppLanguage.PORTUGUESE -> "Verificação automática de atualizações"
+        AppLanguage.SPANISH -> "Comprobación automática de actualizaciones"
+        AppLanguage.FRENCH -> "Vérification automatique des mises à jour"
+        AppLanguage.GERMAN -> "Automatische Update-Prüfung"
+        AppLanguage.RUSSIAN -> "Автоматическая проверка обновлений"
+        AppLanguage.JAPANESE -> "更新の自動確認"
+        AppLanguage.KOREAN -> "자동 업데이트 확인"
+    }
+    val updateAutoCheckDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "每天在后台检查一次 GitHub 上的新版本。"
+        AppLanguage.ENGLISH -> "Checks GitHub for a new release once a day in the background."
+        AppLanguage.ARABIC -> "يتحقق من GitHub بحثًا عن إصدار جديد مرة واحدة يوميًا في الخلفية."
+        AppLanguage.PORTUGUESE -> "Verifica no GitHub uma nova versão uma vez por dia, em segundo plano."
+        AppLanguage.SPANISH -> "Busca una nueva versión en GitHub una vez al día en segundo plano."
+        AppLanguage.FRENCH -> "Recherche une nouvelle version sur GitHub une fois par jour en arrière-plan."
+        AppLanguage.GERMAN -> "Prüft GitHub einmal täglich im Hintergrund auf eine neue Version."
+        AppLanguage.RUSSIAN -> "Раз в день проверяет GitHub на наличие новой версии в фоновом режиме."
+        AppLanguage.JAPANESE -> "1日1回、バックグラウンドで GitHub の新しいリリースを確認します。"
+        AppLanguage.KOREAN -> "하루에 한 번 백그라운드에서 GitHub의 새 릴리스를 확인합니다."
+    }
+    fun updateLastChecked(at: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "上次检查：$at"
+        AppLanguage.ENGLISH -> "Last checked $at"
+        AppLanguage.ARABIC -> "آخر تحقق $at"
+        AppLanguage.PORTUGUESE -> "Verificado $at"
+        AppLanguage.SPANISH -> "Comprobado $at"
+        AppLanguage.FRENCH -> "Vérifié $at"
+        AppLanguage.GERMAN -> "Zuletzt geprüft $at"
+        AppLanguage.RUSSIAN -> "Последняя проверка $at"
+        AppLanguage.JAPANESE -> "最終確認 $at"
+        AppLanguage.KOREAN -> "마지막 확인 $at"
+    }
+    val updateInstallMismatch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "下载的文件与此应用版本不匹配，未安装任何内容。"
+        AppLanguage.ENGLISH -> "The downloaded file does not match this build of the app. Nothing was installed."
+        AppLanguage.ARABIC -> "الملف الذي تم تنزيله لا يطابق هذه النسخة من التطبيق. لم يتم تثبيت أي شيء."
+        AppLanguage.PORTUGUESE -> "O arquivo baixado não corresponde a esta versão do app. Nada foi instalado."
+        AppLanguage.SPANISH -> "El archivo descargado no coincide con esta versión de la app. No se instaló nada."
+        AppLanguage.FRENCH -> "Le fichier téléchargé ne correspond pas à cette version de l'application. Rien n'a été installé."
+        AppLanguage.GERMAN -> "Die heruntergeladene Datei passt nicht zu dieser App-Version. Es wurde nichts installiert."
+        AppLanguage.RUSSIAN -> "Загруженный файл не соответствует этой сборке приложения. Ничего не установлено."
+        AppLanguage.JAPANESE -> "ダウンロードしたファイルはこのアプリのビルドと一致しません。何もインストールされていません。"
+        AppLanguage.KOREAN -> "다운로드한 파일이 이 앱 빌드와 일치하지 않습니다. 아무것도 설치되지 않았습니다."
+    }
     val updateDownloadFailed: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "下载失败"
         AppLanguage.ENGLISH -> "Download failed"

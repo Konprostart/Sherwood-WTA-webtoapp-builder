@@ -63,6 +63,28 @@ object UpdateChecker {
         }
     }
 
+    /**
+     * Distribution flavor of the running app. The two flavors have different application
+     * ids (`com.sherwood.wta` vs `com.sherwood.wta.play`) and both are published as release
+     * assets, so a check must only ever offer the APK that can actually replace the installed
+     * package. Offering the other family would hand the user an "app not installed" or a
+     * silent second copy of the app instead of an update.
+     */
+    enum class Variant {
+        STANDARD,
+        GPLAY;
+
+        companion object {
+            /** The flavor this process was built for (see the `distribution` product flavors). */
+            fun current(): Variant =
+                if (com.sherwood.wta.BuildConfig.GPLAY) GPLAY else STANDARD
+
+            /** Family of an asset: names carrying `-gplay` are the Play flavor. */
+            fun ofAsset(assetName: String): Variant =
+                if (assetName.contains("-gplay", ignoreCase = true)) GPLAY else STANDARD
+        }
+    }
+
     data class Version(val major: Int, val minor: Int, val patch: Int) : Comparable<Version> {
         override fun toString(): String = "$major.$minor.$patch"
 
@@ -119,47 +141,91 @@ object UpdateChecker {
 
     suspend fun check(
         currentVersionName: String,
-        endpoints: EndpointConfig = EndpointConfig.defaults()
+        endpoints: EndpointConfig = EndpointConfig.defaults(),
+        variant: Variant = Variant.current()
     ): Result = withContext(Dispatchers.IO) {
         val current = Version.parse(currentVersionName)
             ?: return@withContext Result.Failed("Cannot parse current version: $currentVersionName")
 
         try {
-            val json = fetchLatestReleaseJson(endpoints)
+            val release = fetchNewestRelease(endpoints)
                 ?: return@withContext Result.Failed("Empty response from release API")
-
-            val release = JSONObject(json)
-            val tag = release.optString("tag_name").ifBlank { release.optString("name") }
-            val latest = Version.parse(tag)
-                ?: return@withContext Result.Failed("Cannot parse release tag: $tag")
-
-            if (latest <= current) {
-                return@withContext Result.UpToDate(current.toString())
-            }
-
-            val asset = pickBestApkAsset(release)
-                ?: return@withContext Result.Failed("No APK asset found in release $tag")
-
-            val rawUrl = asset.optString("browser_download_url")
-            if (rawUrl.isBlank()) {
-                return@withContext Result.Failed("Release asset has no download URL")
-            }
-
-            val info = ReleaseInfo(
-                version = latest.toString(),
-                // Raw asset URL: ApkUpdateInstaller expands the measured mirror
-                // candidates itself and retries, so a single stale prefix can
-                // no longer sink the download.
-                downloadUrl = rawUrl,
-                sizeBytes = asset.optLong("size", 0L),
-                sha256 = sha256FromDigest(asset.optString("digest")),
-                releaseNotes = localizeReleaseBody(release.optString("body"))
-            )
-            Result.UpdateAvailable(info, current.toString())
+            releaseResult(release, current, variant)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Update check failed", e)
             Result.Failed(e.message ?: "Update check failed", e)
         }
+    }
+
+    /**
+     * Resolves the newest published release object: `/releases/latest` first (cheap and
+     * pre-filtered to a published, non-prerelease release), then the full release list.
+     *
+     * The fallback matters because the single-release endpoint answers 404 for a repository
+     * whose only releases are prereleases — the exact shape a rolling test channel has — and a
+     * mirror/proxy in front of the API can also drop that one path while the list still works.
+     */
+    private suspend fun fetchNewestRelease(endpoints: EndpointConfig): JSONObject? {
+        fetchLatestReleaseJson(endpoints)?.let { body ->
+            runCatching { JSONObject(body) }.getOrNull()?.let { return it }
+        }
+        val listJson = fetchReleasesListJson(endpoints) ?: return null
+        return newestPublishedRelease(listJson)
+    }
+
+    /** Newest non-draft, non-prerelease entry of a `/releases` array, or null when there is none. */
+    internal fun newestPublishedRelease(listJson: String): JSONObject? {
+        val array = runCatching { org.json.JSONArray(listJson) }.getOrNull() ?: return null
+        var best: JSONObject? = null
+        var bestVersion: Version? = null
+        for (i in 0 until array.length()) {
+            val release = array.optJSONObject(i) ?: continue
+            if (release.optBoolean("draft") || release.optBoolean("prerelease")) continue
+            val tag = release.optString("tag_name").ifBlank { release.optString("name") }
+            val version = Version.parse(tag) ?: continue
+            val previous = bestVersion
+            if (previous == null || version > previous) {
+                best = release
+                bestVersion = version
+            }
+        }
+        return best
+    }
+
+    /**
+     * Turns one release object into a [Result] for [variant]. Pure (no network), so the parsing
+     * and selection rules are unit-tested directly.
+     */
+    internal fun releaseResult(release: JSONObject, current: Version, variant: Variant): Result {
+        val tag = release.optString("tag_name").ifBlank { release.optString("name") }
+        val latest = Version.parse(tag)
+            ?: return Result.Failed("Cannot parse release tag: $tag")
+
+        if (latest <= current) {
+            return Result.UpToDate(current.toString())
+        }
+
+        val asset = pickBestApkAsset(release, variant)
+            ?: return Result.Failed(
+                "Release $tag has no ${variant.name.lowercase()} APK asset"
+            )
+
+        val rawUrl = asset.optString("browser_download_url")
+        if (rawUrl.isBlank()) {
+            return Result.Failed("Release asset has no download URL")
+        }
+
+        val info = ReleaseInfo(
+            version = latest.toString(),
+            // Raw asset URL: ApkUpdateInstaller expands the measured mirror
+            // candidates itself and retries, so a single stale prefix can
+            // no longer sink the download.
+            downloadUrl = rawUrl,
+            sizeBytes = asset.optLong("size", 0L),
+            sha256 = sha256FromDigest(asset.optString("digest")),
+            releaseNotes = localizeReleaseBody(release.optString("body"))
+        )
+        return Result.UpdateAvailable(info, current.toString())
     }
 
     /**
@@ -171,12 +237,13 @@ object UpdateChecker {
      * no APK to download. Draft releases are excluded by the API.
      */
     suspend fun fetchAllReleases(
-        endpoints: EndpointConfig = EndpointConfig.defaults()
+        endpoints: EndpointConfig = EndpointConfig.defaults(),
+        variant: Variant = Variant.current()
     ): List<ReleaseSummary> = withContext(Dispatchers.IO) {
         try {
             // Null means every candidate failed — surface it as an error so the
             // history UI shows a failure state instead of an empty list.
-            val json = fetchAllReleasesJson(endpoints)
+            val json = fetchReleasesListJson(endpoints)
                 ?: throw IllegalStateException("Empty response from release API")
             val arr = org.json.JSONArray(json)
             val out = ArrayList<ReleaseSummary>(arr.length())
@@ -184,7 +251,7 @@ object UpdateChecker {
                 val release = arr.optJSONObject(i) ?: continue
                 val tag = release.optString("tag_name").ifBlank { release.optString("name") }
                 val version = Version.parse(tag)?.toString() ?: tag
-                val asset = pickBestApkAsset(release)
+                val asset = pickBestApkAsset(release, variant)
                 val rawUrl = asset?.optString("browser_download_url")?.takeIf { it.isNotBlank() }
                 out.add(
                     ReleaseSummary(
@@ -216,25 +283,49 @@ object UpdateChecker {
             ?.substringAfter("sha256:")?.trim()?.takeIf { it.isNotBlank() }
 
     /**
-     * Picks the APK asset with the highest version embedded in its file name
-     * (for example "Sherwood-WTA-2.8.2.apk"). Non-APK assets are ignored.
+     * Picks the APK asset of [variant] with the highest version embedded in its file name
+     * (for example "Sherwood-WTA-2.8.2.apk" or "Sherwood-WTA-2.8.2-gplay.apk").
+     *
+     * Assets of the other flavor are never returned: they carry a different application id, so
+     * installing one can only fail or install a second copy of the app. Ties, and names without
+     * a version, fall back to the larger asset.
      */
-    internal fun pickBestApkAsset(release: JSONObject): JSONObject? {
+    internal fun pickBestApkAsset(release: JSONObject, variant: Variant): JSONObject? {
         val assets = release.optJSONArray("assets") ?: return null
+        val tagVersion = Version.parse(
+            release.optString("tag_name").ifBlank { release.optString("name") }
+        )
         var best: JSONObject? = null
         var bestVersion: Version? = null
+        var bestSize = -1L
         for (i in 0 until assets.length()) {
             val asset = assets.optJSONObject(i) ?: continue
             val name = asset.optString("name")
             if (!name.endsWith(".apk", ignoreCase = true)) continue
-            val assetVersion = Version.parse(name.removeSuffix(".APK").removeSuffix(".apk").substringAfterLast('-'))
-            if (best == null || (assetVersion != null && bestVersion != null && assetVersion > bestVersion) ||
-                (assetVersion != null && bestVersion == null)) {
+            if (Variant.ofAsset(name) != variant) continue
+            val version = assetVersionOf(name) ?: tagVersion
+            val size = asset.optLong("size", 0L)
+            // A name without a version ranks below any parsed one and is compared by size only
+            // against other unversioned assets; `best == null` always accepts the first match.
+            val versionKey = version ?: Version(0, 0, 0)
+            val bestKey = bestVersion ?: Version(0, 0, 0)
+            val better = best == null ||
+                versionKey > bestKey ||
+                (versionKey == bestKey && size > bestSize)
+            if (better) {
                 best = asset
-                bestVersion = assetVersion
+                bestVersion = version
+                bestSize = size
             }
         }
         return best
+    }
+
+    /** Version embedded in an asset file name ("…-2.8.2-gplay.apk" → 2.8.2), or null. */
+    internal fun assetVersionOf(assetName: String): Version? {
+        val stem = assetName.removeSuffix(".apk").removeSuffix(".APK")
+            .removeSuffix("-gplay").removeSuffix("-GPLAY")
+        return Version.parse(stem.substringAfterLast('-'))
     }
 
     private suspend fun fetchLatestReleaseJson(endpoints: EndpointConfig): String? =
@@ -243,7 +334,7 @@ object UpdateChecker {
         // api.github.com. Only a JSON object counts as a hit.
         fetchJsonRaced(endpoints.latestReleaseApiUrl()) { it.trimStart().startsWith("{") }
 
-    private suspend fun fetchAllReleasesJson(endpoints: EndpointConfig): String? =
+    private suspend fun fetchReleasesListJson(endpoints: EndpointConfig): String? =
         // The all-releases endpoint answers with an array, not an object.
         fetchJsonRaced(endpoints.releasesApiUrl()) { it.trimStart().startsWith("[") }
 

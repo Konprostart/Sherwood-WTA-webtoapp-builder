@@ -723,6 +723,10 @@ object Strings {
     val updateVerifying: String get() = StringsA.updateVerifying
     val updateCancelDownload: String get() = StringsA.updateCancelDownload
     val updateRetry: String get() = StringsA.updateRetry
+    val updateAutoCheckTitle: String get() = StringsA.updateAutoCheckTitle
+    val updateAutoCheckDesc: String get() = StringsA.updateAutoCheckDesc
+    fun updateLastChecked(at: String): String = StringsA.updateLastChecked(at)
+    val updateInstallMismatch: String get() = StringsA.updateInstallMismatch
     val updateDownloadFailed: String get() = StringsA.updateDownloadFailed
     val updateReadyHint: String get() = StringsA.updateReadyHint
     val updatePerSec: String get() = StringsA.updatePerSec

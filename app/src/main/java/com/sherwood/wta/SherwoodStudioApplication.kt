@@ -138,6 +138,19 @@ class SherwoodStudioApplication : Application(), ImageLoaderFactory {
             }
         }
 
+        // Silent release check: at most once a day, after startup has settled, and never able to
+        // affect launch. A failure is only logged — the About screen's manual check is where the
+        // user gets a visible status.
+        appScope.launch {
+            kotlinx.coroutines.delay(UPDATE_CHECK_DELAY_MS)
+            runCatching {
+                com.sherwood.wta.core.update.UpdateCheckCoordinator
+                    .autoCheckIfDue(this@SherwoodStudioApplication)
+            }.onFailure {
+                AppLogger.w("Application", "Automatic update check failed: ${it.message}")
+            }
+        }
+
         // Interrupted downloads, abandoned imports and old session sandboxes otherwise
         // accumulate forever. Runs at most once a day, on IO, and must never affect start.
         appScope.launch {
@@ -255,6 +268,9 @@ class SherwoodStudioApplication : Application(), ImageLoaderFactory {
 
     companion object {
         private const val MAINTENANCE_DELAY_MS = 60_000L
+
+        /** Lets the first screen draw before a background network check competes for IO. */
+        private const val UPDATE_CHECK_DELAY_MS = 8_000L
 
         private lateinit var instance: SherwoodStudioApplication
 

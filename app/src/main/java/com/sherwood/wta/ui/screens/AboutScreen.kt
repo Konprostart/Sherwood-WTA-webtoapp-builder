@@ -138,6 +138,7 @@ fun AboutScreen(onBack: () -> Unit) {
             ContactGrid()
 
             DescriptionsToggleCard()
+            UpdateAutoCheckCard()
 
             SeparateTasksCard()
             AdvancedFeaturesCard()
@@ -174,6 +175,34 @@ private fun DescriptionsToggleCard() {
                     onCheckedChange = {
                         scope.launch { themeManager.setShowDescriptions(it) }
                     }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun UpdateAutoCheckCard() {
+    val context = LocalContext.current
+    val store = remember(context) {
+        com.sherwood.wta.core.update.UpdateCheckStore.getInstance(context)
+    }
+    val snapshot by store.state.collectAsStateWithLifecycle()
+
+    WtaCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = WtaCardTone.Elevated,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+    ) {
+        WtaSettingRow(
+            icon = Icons.Outlined.Sync,
+            title = Strings.updateAutoCheckTitle,
+            subtitle = Strings.updateAutoCheckDesc.ifDescriptionsShown(),
+            onClick = { store.setAutoCheckEnabled(!snapshot.autoCheckEnabled) },
+            trailing = {
+                WtaSwitch(
+                    checked = snapshot.autoCheckEnabled,
+                    onCheckedChange = { store.setAutoCheckEnabled(it) }
                 )
             }
         )
@@ -380,6 +409,13 @@ private fun AuthorHeroCard(
     val versionCopied = versionCopiedToast()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
+    // Remembered verdict + throttling state. Shared process-wide, so the silent startup check and
+    // this screen read the same answer instead of each fetching the release API.
+    val updateStore = remember(context) {
+        com.sherwood.wta.core.update.UpdateCheckStore.getInstance(context)
+    }
+    val updateSnapshot by updateStore.state.collectAsStateWithLifecycle()
+
     var updateResult by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf<com.sherwood.wta.core.update.UpdateChecker.Result?>(null)
     }
@@ -403,11 +439,47 @@ private fun AuthorHeroCard(
         androidx.compose.runtime.mutableStateMapOf<String, com.sherwood.wta.core.update.UpdateDownloadState>()
     }
 
+    /**
+     * Manual check. The remembered verdict is shown first so the dialog never flashes an empty
+     * "checking" state when the answer is already known; the coordinator then re-checks when the
+     * request floor allows it.
+     */
+    fun runUpdateCheck() {
+        if (isCheckingUpdate) return
+        isCheckingUpdate = true
+        scope.launch {
+            updateResult = com.sherwood.wta.core.update.UpdateCheckCoordinator
+                .manualCheck(context, currentVersionName = versionName)
+            isCheckingUpdate = false
+        }
+    }
+
+    fun openUpdateDialog() {
+        updateResult = updateStore.cachedResult(versionName)
+        showUpdateDialog = true
+        runUpdateCheck()
+    }
+
+    /**
+     * Verifies a downloaded update against this build before the system installer is launched.
+     * A file that cannot replace this app is deleted so the dialog cannot offer it again.
+     */
+    fun verifyDownloadedUpdate(file: java.io.File): Boolean {
+        val verdict = com.sherwood.wta.core.update.UpdateApkVerifier
+            .verify(context, file, versionCode)
+        if (verdict is com.sherwood.wta.core.update.UpdateApkVerifier.Verdict.Ok) return true
+        runCatching { file.delete() }
+        return false
+    }
+
     if (showUpdateDialog) {
         UpdateCheckDialog(
-            isChecking = isCheckingUpdate,
+            // A remembered verdict stays on screen while the refresh runs; only a check with
+            // nothing to show renders the spinner.
+            isChecking = isCheckingUpdate && updateResult == null,
             result = updateResult,
             currentVersionName = versionName,
+            lastCheckedAtMillis = updateSnapshot.lastSuccessAtMillis,
             downloadState = downloadState,
             onDownload = { info ->
                 com.sherwood.wta.core.update.ApkUpdateInstaller.download(
@@ -423,14 +495,26 @@ private fun AuthorHeroCard(
                 downloadState = com.sherwood.wta.core.update.UpdateDownloadState.Idle
             },
             onInstall = { file ->
-                val started = com.sherwood.wta.core.apkbuilder.ApkInstaller.install(context.applicationContext, file)
-                if (!started) {
-                    Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
+                if (verifyDownloadedUpdate(file)) {
+                    val started = com.sherwood.wta.core.apkbuilder.ApkInstaller
+                        .install(context.applicationContext, file)
+                    if (!started) {
+                        Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    // Wrong flavor / stale build: nothing was installed, so do not leave the
+                    // dialog pointing at a file that no longer exists.
+                    Toast.makeText(context, Strings.updateInstallMismatch, Toast.LENGTH_LONG).show()
+                    downloadState = com.sherwood.wta.core.update.UpdateDownloadState.Idle
                 }
             },
             onDismiss = {
                 com.sherwood.wta.core.update.ApkUpdateInstaller.cancel()
                 showUpdateDialog = false
+                // Dismissing silences the marker for this exact version only; a later release
+                // still shows up.
+                (updateResult as? com.sherwood.wta.core.update.UpdateChecker.Result.UpdateAvailable)
+                    ?.let { updateStore.dismiss(it.info.version) }
                 downloadState = com.sherwood.wta.core.update.UpdateDownloadState.Idle
             }
         )
@@ -458,9 +542,14 @@ private fun AuthorHeroCard(
                 historyDownloadStates.remove(tag)
             },
             onInstall = { file ->
-                val started = com.sherwood.wta.core.apkbuilder.ApkInstaller.install(context.applicationContext, file)
-                if (!started) {
-                    Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
+                if (verifyDownloadedUpdate(file)) {
+                    val started = com.sherwood.wta.core.apkbuilder.ApkInstaller
+                        .install(context.applicationContext, file)
+                    if (!started) {
+                        Toast.makeText(context, Strings.fileManagerInstallFailed, Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, Strings.updateInstallMismatch, Toast.LENGTH_LONG).show()
                 }
             },
             onDismiss = {
@@ -539,18 +628,8 @@ private fun AuthorHeroCard(
             VersionPill(
                 versionName = versionName,
                 versionCode = versionCode,
-                onClick = {
-                    showUpdateDialog = true
-                    if (!isCheckingUpdate) {
-                        isCheckingUpdate = true
-                        updateResult = null
-                        scope.launch {
-                            val result = com.sherwood.wta.core.update.UpdateChecker.check(versionName, com.sherwood.wta.core.studio.EndpointSettingsStore.current(context))
-                            updateResult = result
-                            isCheckingUpdate = false
-                        }
-                    }
-                },
+                updateAvailable = updateSnapshot.showsUpdateIndicator(versionName),
+                onClick = { openUpdateDialog() },
                 onCopy = {
                     val label = "Sherwood Studio version"
                     val text = "Sherwood Studio v$versionName ($versionCode)"
@@ -578,6 +657,35 @@ private fun AuthorHeroCard(
                     }
                 }
             )
+
+            // Non-intrusive marker: the version pill alone is easy to miss, a full card would
+            // push the author block around on every navigation. Shown only for a version the
+            // user has not already dismissed.
+            val pendingUpdate = updateSnapshot.availableUpdate(versionName)
+            if (pendingUpdate != null && updateSnapshot.showsUpdateIndicator(versionName)) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .clickable { openUpdateDialog() }
+                        .padding(horizontal = 12.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Outlined.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "${Strings.updateAvailableTitle} · v${pendingUpdate.version}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }
@@ -586,6 +694,7 @@ private fun AuthorHeroCard(
 private fun VersionPill(
     versionName: String,
     versionCode: Long,
+    updateAvailable: Boolean,
     onClick: () -> Unit,
     onCopy: () -> Unit,
     onHistory: () -> Unit
@@ -632,6 +741,15 @@ private fun VersionPill(
             modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.primary
         )
+        if (updateAvailable) {
+            Spacer(Modifier.width(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+        }
         Spacer(Modifier.width(10.dp))
         Icon(
             Icons.Outlined.History,
@@ -900,6 +1018,7 @@ private fun UpdateCheckDialog(
     isChecking: Boolean,
     result: com.sherwood.wta.core.update.UpdateChecker.Result?,
     currentVersionName: String,
+    lastCheckedAtMillis: Long,
     downloadState: com.sherwood.wta.core.update.UpdateDownloadState,
     onDownload: (com.sherwood.wta.core.update.UpdateChecker.ReleaseInfo) -> Unit,
     onCancelDownload: () -> Unit,
@@ -964,6 +1083,22 @@ private fun UpdateCheckDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                }
+                // Freshness of the shown verdict. Relative time is formatted by the platform,
+                // so it is localised for every app language without a per-locale table.
+                if (lastCheckedAtMillis > 0L && !isChecking) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = Strings.updateLastChecked(
+                            android.text.format.DateUtils.getRelativeTimeSpanString(
+                                lastCheckedAtMillis,
+                                System.currentTimeMillis(),
+                                android.text.format.DateUtils.MINUTE_IN_MILLIS
+                            ).toString()
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         },
