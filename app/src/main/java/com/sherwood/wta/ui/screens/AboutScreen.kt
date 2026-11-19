@@ -448,8 +448,17 @@ private fun AuthorHeroCard(
         if (isCheckingUpdate) return
         isCheckingUpdate = true
         scope.launch {
-            updateResult = com.sherwood.wta.core.update.UpdateCheckCoordinator
+            val result = com.sherwood.wta.core.update.UpdateCheckCoordinator
                 .manualCheck(context, currentVersionName = versionName)
+            // A failed refresh must not erase a known release: the offer is still installable and
+            // the remembered "last checked" line keeps its age visible. With nothing cached the
+            // failure *is* the answer and is shown with its diagnostics.
+            val cached = updateStore.cachedResult(versionName)
+            updateResult = if (result is com.sherwood.wta.core.update.UpdateChecker.Result.Failed && cached != null) {
+                cached
+            } else {
+                result
+            }
             isCheckingUpdate = false
         }
     }
