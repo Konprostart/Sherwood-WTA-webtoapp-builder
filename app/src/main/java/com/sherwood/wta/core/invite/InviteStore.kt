@@ -30,7 +30,6 @@ interface InviteTracker {
 
     companion object {
         /** Installed until a backend exists. Performs no I/O at all. */
-        @JvmField
         val NO_OP: InviteTracker = NoOpInviteTracker
     }
 }
