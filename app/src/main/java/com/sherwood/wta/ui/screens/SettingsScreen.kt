@@ -1,6 +1,10 @@
 package com.sherwood.wta.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -8,13 +12,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,12 +30,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sherwood.wta.core.ai.AiConfigManager
 import com.sherwood.wta.core.i18n.Strings
+import com.sherwood.wta.core.invite.InviteStore
 import com.sherwood.wta.core.sidekick.SidekickSettings
 import com.sherwood.wta.core.sidekick.input.SidekickSpeechEndpointStore
 import com.sherwood.wta.core.sidekick.input.SidekickSpeechEngine
@@ -36,6 +46,10 @@ import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 import com.sherwood.wta.ui.animation.CardCollapseTransition
 import com.sherwood.wta.ui.animation.CardExpandTransition
 import com.sherwood.wta.ui.design.WtaAlertDialog
+import com.sherwood.wta.ui.design.WtaBadge
+import com.sherwood.wta.ui.design.WtaButton
+import com.sherwood.wta.ui.design.WtaButtonSize
+import com.sherwood.wta.ui.design.WtaButtonVariant
 import com.sherwood.wta.ui.design.WtaChip
 import com.sherwood.wta.ui.design.WtaScreen
 import com.sherwood.wta.ui.design.WtaSection
@@ -90,6 +104,43 @@ fun SettingsScreen(
     var sidekickEnginePickerOpen by remember { mutableStateOf(false) }
     var sidekickServerDialogOpen by remember { mutableStateOf(false) }
     var sidekickServerLabel by remember { mutableStateOf(sidekickServerSummary(sidekickSpeechStore)) }
+
+    // ---- invite -------------------------------------------------------------
+    // The card renders what InviteStore owns and nothing else. A future reward backend is
+    // reached through InviteStore's tracker seam, so this screen never learns a server exists
+    // and can keep saying "Soon" without pretending the program is live.
+    val inviteStore = remember { InviteStore(context) }
+    val inviteState by inviteStore.state.collectAsStateWithLifecycle()
+
+    fun copyInvite(value: String) {
+        val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
+        clipboard.setPrimaryClip(ClipData.newPlainText("sherwood-invite", value))
+        // Android 13+ draws its own copy confirmation; a second toast would just be noise.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            Toast.makeText(context, Strings.inviteCopied, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun shareInvite() {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, Strings.inviteShareSubject)
+            putExtra(
+                Intent.EXTRA_TEXT,
+                Strings.inviteShareMessage(inviteState.code, inviteState.link)
+            )
+        }
+        val launched = runCatching {
+            val chooser = Intent.createChooser(send, Strings.inviteShare)
+            // The host may hand us a non-Activity context (preview, toolbar); a chooser that
+            // demanded a task would then never open.
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+        }.isSuccess
+        // Count what the device actually did — opened the share sheet — not what a recipient
+        // may or may not have done with it afterwards.
+        if (launched) scope.launch { inviteStore.recordShare() }
+    }
 
     val sidekickModelLabel = sidekickModelId
         ?.let { id -> savedModels.firstOrNull { it.id == id } }
@@ -457,6 +508,91 @@ fun SettingsScreen(
                             imageVector = Icons.Outlined.ChevronRight,
                             contentDescription = null
                         )
+                    }
+                }
+            }
+
+            WtaSection(
+                title = Strings.inviteSectionTitle,
+                description = Strings.inviteSectionDesc.ifDescriptionsShown()
+            ) {
+                WtaSettingCard {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = WtaSpacing.RowHorizontal,
+                                vertical = WtaSpacing.ContentGap
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(WtaSpacing.ContentGap)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = Strings.inviteYourCode,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        // Selectable, not just visible: a code read off the screen and typed
+                        // into a chat is the fallback when no share target is installed.
+                        SelectionContainer {
+                            Text(
+                                text = inviteState.code,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontFamily = FontFamily.Monospace,
+                                letterSpacing = 2.sp
+                            )
+                        }
+                        Text(
+                            text = inviteState.link,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(WtaSpacing.Small)
+                        ) {
+                            WtaButton(
+                                onClick = { copyInvite(inviteState.code) },
+                                text = Strings.inviteCopyCode,
+                                variant = WtaButtonVariant.Outlined,
+                                size = WtaButtonSize.Small,
+                                modifier = Modifier.weight(1f)
+                            )
+                            WtaButton(
+                                onClick = { copyInvite(inviteState.link) },
+                                text = Strings.inviteCopyLink,
+                                variant = WtaButtonVariant.Outlined,
+                                size = WtaButtonSize.Small,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        WtaButton(
+                            onClick = { shareInvite() },
+                            text = Strings.inviteShare,
+                            variant = WtaButtonVariant.Primary,
+                            size = WtaButtonSize.Medium,
+                            leadingIcon = Icons.Outlined.Share,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = Strings.inviteShareCount(inviteState.shareCount),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    WtaSectionDivider()
+
+                    // The reward program is the one part of this card that is not live. It is
+                    // a row rather than a switch so nothing suggests it can be turned on.
+                    WtaSettingRow(
+                        title = Strings.inviteRewardsTitle,
+                        subtitle = Strings.inviteRewardsDesc.ifDescriptionsShown(),
+                        icon = Icons.Outlined.CardGiftcard
+                    ) {
+                        WtaBadge(text = Strings.inviteRewardsSoon)
                     }
                 }
             }

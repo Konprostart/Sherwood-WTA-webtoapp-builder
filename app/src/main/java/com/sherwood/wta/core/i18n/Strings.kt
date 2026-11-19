@@ -5721,6 +5721,22 @@ object Strings {
     val sidekickSpeechUrlTokenHttp: String get() = StringsE.sidekickSpeechUrlTokenHttp
     val sidekickSpeechUrlCredentials: String get() = StringsE.sidekickSpeechUrlCredentials
     val sidekickSpeechUrlQuery: String get() = StringsE.sidekickSpeechUrlQuery
+
+    // ---- invite ------------------------------------------------------------
+    val inviteSectionTitle: String get() = StringsA.inviteSectionTitle
+    val inviteSectionDesc: String get() = StringsA.inviteSectionDesc
+    val inviteYourCode: String get() = StringsA.inviteYourCode
+    val inviteCopyCode: String get() = StringsA.inviteCopyCode
+    val inviteCopyLink: String get() = StringsA.inviteCopyLink
+    val inviteShare: String get() = StringsA.inviteShare
+    val inviteShareSubject: String get() = StringsA.inviteShareSubject
+    val inviteCopied: String get() = StringsA.inviteCopied
+    val inviteRewardsTitle: String get() = StringsA.inviteRewardsTitle
+    val inviteRewardsDesc: String get() = StringsA.inviteRewardsDesc
+    val inviteRewardsSoon: String get() = StringsA.inviteRewardsSoon
+    fun inviteShareCount(n: Int): String = StringsA.inviteShareCount(n)
+    fun inviteShareMessage(code: String, link: String): String =
+        StringsA.inviteShareMessage(code, link)
 }
 
 

@@ -13983,5 +13983,178 @@ object StringsA {
         AppLanguage.KOREAN -> "빌드 요약"
     }
 
+    // ------------------------------------------------------------------ invite
+    // The referral card in Settings. The code itself is an identifier, not prose, so it is
+    // never translated; only the labels around it are.
+
+    val inviteSectionTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "邀请好友"
+        AppLanguage.ENGLISH -> "Invite friends"
+        AppLanguage.ARABIC -> "ادعُ أصدقاءك"
+        AppLanguage.PORTUGUESE -> "Convide amigos"
+        AppLanguage.SPANISH -> "Invita a tus amigos"
+        AppLanguage.FRENCH -> "Invitez des amis"
+        AppLanguage.GERMAN -> "Freunde einladen"
+        AppLanguage.RUSSIAN -> "Пригласите друзей"
+        AppLanguage.JAPANESE -> "友だちを招待"
+        AppLanguage.KOREAN -> "친구 초대"
+    }
+
+    val inviteSectionDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "分享你的邀请链接。奖励计划上线后，你的邀请码会把你带来的好友与你关联。"
+        AppLanguage.ENGLISH -> "Share your invite link. When the reward program starts, your code links the friends you bring to you."
+        AppLanguage.ARABIC -> "شارك رابط الدعوة الخاص بك. عند إطلاق برنامج المكافآت، سيربط رمزك الأصدقاء الذين تجلبهم بك."
+        AppLanguage.PORTUGUESE -> "Compartilhe seu link de convite. Quando o programa de recompensas começar, seu código liga os amigos que você trouxer a você."
+        AppLanguage.SPANISH -> "Comparte tu enlace de invitación. Cuando empiece el programa de recompensas, tu código vincula contigo a los amigos que traigas."
+        AppLanguage.FRENCH -> "Partagez votre lien d'invitation. Lorsque le programme de récompenses démarrera, votre code reliera à vous les amis que vous amenez."
+        AppLanguage.GERMAN -> "Teile deinen Einladungslink. Wenn das Prämienprogramm startet, verbindet dein Code die Freunde, die du bringst, mit dir."
+        AppLanguage.RUSSIAN -> "Поделитесь своей ссылкой-приглашением. Когда программа наград запустится, ваш код свяжет приведённых вами друзей с вами."
+        AppLanguage.JAPANESE -> "招待リンクを共有しましょう。報酬プログラムが始まると、あなたのコードが連れてきた友だちとあなたを結びつけます。"
+        AppLanguage.KOREAN -> "초대 링크를 공유하세요. 보상 프로그램이 시작되면 초대 코드가 데려온 친구와 나를 연결합니다."
+    }
+
+    val inviteYourCode: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "你的邀请码"
+        AppLanguage.ENGLISH -> "Your invite code"
+        AppLanguage.ARABIC -> "رمز الدعوة الخاص بك"
+        AppLanguage.PORTUGUESE -> "Seu código de convite"
+        AppLanguage.SPANISH -> "Tu código de invitación"
+        AppLanguage.FRENCH -> "Votre code d'invitation"
+        AppLanguage.GERMAN -> "Dein Einladungscode"
+        AppLanguage.RUSSIAN -> "Ваш код приглашения"
+        AppLanguage.JAPANESE -> "あなたの招待コード"
+        AppLanguage.KOREAN -> "내 초대 코드"
+    }
+
+    val inviteCopyCode: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "复制邀请码"
+        AppLanguage.ENGLISH -> "Copy code"
+        AppLanguage.ARABIC -> "نسخ الرمز"
+        AppLanguage.PORTUGUESE -> "Copiar código"
+        AppLanguage.SPANISH -> "Copiar código"
+        AppLanguage.FRENCH -> "Copier le code"
+        AppLanguage.GERMAN -> "Code kopieren"
+        AppLanguage.RUSSIAN -> "Копировать код"
+        AppLanguage.JAPANESE -> "コードをコピー"
+        AppLanguage.KOREAN -> "코드 복사"
+    }
+
+    val inviteCopyLink: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "复制链接"
+        AppLanguage.ENGLISH -> "Copy link"
+        AppLanguage.ARABIC -> "نسخ الرابط"
+        AppLanguage.PORTUGUESE -> "Copiar link"
+        AppLanguage.SPANISH -> "Copiar enlace"
+        AppLanguage.FRENCH -> "Copier le lien"
+        AppLanguage.GERMAN -> "Link kopieren"
+        AppLanguage.RUSSIAN -> "Копировать ссылку"
+        AppLanguage.JAPANESE -> "リンクをコピー"
+        AppLanguage.KOREAN -> "링크 복사"
+    }
+
+    val inviteShare: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "分享给…"
+        AppLanguage.ENGLISH -> "Share with…"
+        AppLanguage.ARABIC -> "مشاركة عبر…"
+        AppLanguage.PORTUGUESE -> "Compartilhar com…"
+        AppLanguage.SPANISH -> "Compartir con…"
+        AppLanguage.FRENCH -> "Partager avec…"
+        AppLanguage.GERMAN -> "Teilen mit…"
+        AppLanguage.RUSSIAN -> "Поделиться с…"
+        AppLanguage.JAPANESE -> "共有…"
+        AppLanguage.KOREAN -> "공유…"
+    }
+
+    val inviteShareSubject: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Sherwood Studio 邀请"
+        AppLanguage.ENGLISH -> "Sherwood Studio invite"
+        AppLanguage.ARABIC -> "دعوة إلى Sherwood Studio"
+        AppLanguage.PORTUGUESE -> "Convite do Sherwood Studio"
+        AppLanguage.SPANISH -> "Invitación a Sherwood Studio"
+        AppLanguage.FRENCH -> "Invitation à Sherwood Studio"
+        AppLanguage.GERMAN -> "Sherwood Studio Einladung"
+        AppLanguage.RUSSIAN -> "Приглашение в Sherwood Studio"
+        AppLanguage.JAPANESE -> "Sherwood Studio への招待"
+        AppLanguage.KOREAN -> "Sherwood Studio 초대"
+    }
+
+    val inviteCopied: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已复制到剪贴板"
+        AppLanguage.ENGLISH -> "Copied to clipboard"
+        AppLanguage.ARABIC -> "تم النسخ إلى الحافظة"
+        AppLanguage.PORTUGUESE -> "Copiado para a área de transferência"
+        AppLanguage.SPANISH -> "Copiado al portapapeles"
+        AppLanguage.FRENCH -> "Copié dans le presse-papiers"
+        AppLanguage.GERMAN -> "In die Zwischenablage kopiert"
+        AppLanguage.RUSSIAN -> "Скопировано в буфер обмена"
+        AppLanguage.JAPANESE -> "クリップボードにコピーしました"
+        AppLanguage.KOREAN -> "클립보드에 복사됨"
+    }
+
+    val inviteRewardsTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "加密奖励"
+        AppLanguage.ENGLISH -> "Crypto rewards"
+        AppLanguage.ARABIC -> "مكافآت بالعملات الرقمية"
+        AppLanguage.PORTUGUESE -> "Recompensas em cripto"
+        AppLanguage.SPANISH -> "Recompensas en cripto"
+        AppLanguage.FRENCH -> "Récompenses en crypto"
+        AppLanguage.GERMAN -> "Krypto-Prämien"
+        AppLanguage.RUSSIAN -> "Награды в криптовалюте"
+        AppLanguage.JAPANESE -> "暗号資産の報酬"
+        AppLanguage.KOREAN -> "암호화폐 보상"
+    }
+
+    val inviteRewardsDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "奖励计划尚未连接后端。在接通之前，每一项奖励都显示“即将推出”。"
+        AppLanguage.ENGLISH -> "The reward program has no backend yet. Until it is connected, every reward reads “Soon”."
+        AppLanguage.ARABIC -> "برنامج المكافآت ليس متصلاً بخادم بعد. وإلى أن يتم توصيله، تظهر كل مكافأة بعبارة «قريبًا»."
+        AppLanguage.PORTUGUESE -> "O programa de recompensas ainda não tem backend. Até ser conectado, toda recompensa mostra “Em breve”."
+        AppLanguage.SPANISH -> "El programa de recompensas aún no tiene backend. Hasta que se conecte, cada recompensa muestra «Pronto»."
+        AppLanguage.FRENCH -> "Le programme de récompenses n'a pas encore de backend. Tant qu'il n'est pas connecté, chaque récompense affiche « Bientôt »."
+        AppLanguage.GERMAN -> "Das Prämienprogramm hat noch kein Backend. Bis es verbunden ist, steht bei jeder Prämie „Bald“."
+        AppLanguage.RUSSIAN -> "У программы наград пока нет серверной части. Пока она не подключена, каждая награда помечена «Скоро»."
+        AppLanguage.JAPANESE -> "報酬プログラムはまだバックエンドに接続されていません。接続されるまで、すべての報酬は「近日公開」と表示されます。"
+        AppLanguage.KOREAN -> "보상 프로그램은 아직 백엔드에 연결되지 않았습니다. 연결될 때까지 모든 보상은 “곧 공개”로 표시됩니다."
+    }
+
+    val inviteRewardsSoon: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "即将推出"
+        AppLanguage.ENGLISH -> "Soon"
+        AppLanguage.ARABIC -> "قريبًا"
+        AppLanguage.PORTUGUESE -> "Em breve"
+        AppLanguage.SPANISH -> "Pronto"
+        AppLanguage.FRENCH -> "Bientôt"
+        AppLanguage.GERMAN -> "Bald"
+        AppLanguage.RUSSIAN -> "Скоро"
+        AppLanguage.JAPANESE -> "近日公開"
+        AppLanguage.KOREAN -> "곧 공개"
+    }
+
+    fun inviteShareCount(n: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已从本设备分享：$n 次邀请"
+        AppLanguage.ENGLISH -> "Invites shared from this device: $n"
+        AppLanguage.ARABIC -> "الدعوات التي تمت مشاركتها من هذا الجهاز: $n"
+        AppLanguage.PORTUGUESE -> "Convites compartilhados deste dispositivo: $n"
+        AppLanguage.SPANISH -> "Invitaciones compartidas desde este dispositivo: $n"
+        AppLanguage.FRENCH -> "Invitations partagées depuis cet appareil : $n"
+        AppLanguage.GERMAN -> "Von diesem Gerät geteilte Einladungen: $n"
+        AppLanguage.RUSSIAN -> "Приглашений, отправленных с этого устройства: $n"
+        AppLanguage.JAPANESE -> "この端末から共有した招待: $n"
+        AppLanguage.KOREAN -> "이 기기에서 공유한 초대: $n"
+    }
+
+    fun inviteShareMessage(code: String, link: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "安装 Sherwood Studio——在手机上构建真正的 Android APK。我的邀请码：$code $link"
+        AppLanguage.ENGLISH -> "Install Sherwood Studio — build real Android APKs on your phone. My invite code: $code $link"
+        AppLanguage.ARABIC -> "ثبّت Sherwood Studio — ابنِ تطبيقات Android APK حقيقية على هاتفك. رمز الدعوة الخاص بي: $code $link"
+        AppLanguage.PORTUGUESE -> "Instale o Sherwood Studio — crie APKs Android de verdade no seu celular. Meu código de convite: $code $link"
+        AppLanguage.SPANISH -> "Instala Sherwood Studio — crea APK de Android reales en tu teléfono. Mi código de invitación: $code $link"
+        AppLanguage.FRENCH -> "Installez Sherwood Studio — créez de vrais APK Android sur votre téléphone. Mon code d'invitation : $code $link"
+        AppLanguage.GERMAN -> "Installiere Sherwood Studio — erstelle echte Android-APKs auf deinem Handy. Mein Einladungscode: $code $link"
+        AppLanguage.RUSSIAN -> "Установите Sherwood Studio — создавайте настоящие Android APK на телефоне. Мой код приглашения: $code $link"
+        AppLanguage.JAPANESE -> "Sherwood Studio をインストール — スマホで本物の Android APK を作れます。私の招待コード: $code $link"
+        AppLanguage.KOREAN -> "Sherwood Studio 설치 — 휴대폰에서 진짜 Android APK를 만드세요. 내 초대 코드: $code $link"
+    }
+
 }
 
