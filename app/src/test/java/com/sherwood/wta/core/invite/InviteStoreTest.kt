@@ -3,6 +3,7 @@ package com.sherwood.wta.core.invite
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -129,6 +130,25 @@ class InviteStoreTest {
 
             assertThat(snapshot.shareCount).isEqualTo(1)
             assertThat(store.snapshot().shareCount).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun `cancellation reaches the caller but the share stays counted`() {
+        val cancelled = object : InviteTracker {
+            override suspend fun recordShare(code: String, link: String): Boolean =
+                throw CancellationException("the scope went away")
+        }
+
+        runBlocking {
+            val store = InviteStore(context, cancelled)
+
+            val failure = runCatching { store.recordShare() }.exceptionOrNull()
+
+            // Swallowed cancellation would strand the caller's scope once a real backend
+            // exists, so it propagates — but the local count was persisted first.
+            assertThat(failure).isInstanceOf(CancellationException::class.java)
+            assertThat(InviteStore(context).snapshot().shareCount).isEqualTo(1)
         }
     }
 }

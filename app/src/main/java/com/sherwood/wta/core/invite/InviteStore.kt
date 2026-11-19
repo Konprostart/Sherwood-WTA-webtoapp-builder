@@ -1,6 +1,7 @@
 package com.sherwood.wta.core.invite
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,9 +113,18 @@ class InviteStore internal constructor(
             next
         }
 
-        // A tracker that throws must not undo the share the user actually performed, and a
-        // tracker that is absent must not look like a failure to the caller.
-        runCatching { tracker.recordShare(updated.code, updated.link) }
+        // A tracker that fails must not undo the share the user actually performed, and a
+        // tracker that is absent must not look like a failure to the caller. Cancellation is
+        // the one exception: swallowing it would strand the caller's own scope, so a future
+        // backend still cancels like every other suspend call.
+        try {
+            tracker.recordShare(updated.code, updated.link)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (failure: Exception) {
+            // Reported nowhere on purpose: the local counter is the device's own record, and
+            // the reward program has no live backend to be out of sync with.
+        }
         return updated
     }
 
