@@ -173,6 +173,9 @@
 
   function refreshRelease() {
     if (navigator.onLine === false) return;
+    // Old WebViews predate fetch; the cached/fallback release is already on
+    // screen, so simply skip the refresh instead of throwing during init.
+    if (typeof fetch !== 'function') return;
     var controller = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = controller
       ? setTimeout(function () {
