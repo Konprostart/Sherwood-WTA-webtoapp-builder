@@ -141,15 +141,12 @@ class VoiceDictation(
         speech.cancel()
         val take = recorder
         recorder = null
-        if (take != null) {
-            claimedTakes.add(take)
-            // Joining the capture thread is a short blocking wait; keep it off the main
-            // thread so a cancel never freezes the composer.
-            scope.launch(Dispatchers.IO) {
-                take.cancel()
-                claimedTakes.remove(take)
-            }
-        }
+        // Unlinked without joining the capture thread: cancel() also runs from `onCleared`,
+        // where a blocking join would stall the main thread and where the scope may already
+        // be cancelled (so no coroutine could finish the job). If an upload was already
+        // reading the file, deleting it is exactly what "discard" means; its listener is
+        // gone by then, so the failure is silent by design.
+        take?.cancelAsync()
         listening = false
         transcribing = false
         activeEngine = null

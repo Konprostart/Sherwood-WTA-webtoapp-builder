@@ -21,7 +21,7 @@ class SidekickVoiceLanguageCatalogTest {
 
         val tags = SidekickVoiceLanguage.entries.mapNotNull { it.tag }
         assertThat(tags).containsNoDuplicates()
-        assertThat(tags).containsNoneIn(ids)
+        assertThat(tags.filter { it in ids }).isEmpty()
 
         for (language in SidekickVoiceLanguage.entries) {
             assertThat(language.id).isNotEmpty()
