@@ -8,6 +8,7 @@ import com.sherwood.wta.core.agent.session.RecordedToolCall
 import com.sherwood.wta.core.agent.session.UserAttachment
 import com.sherwood.wta.core.agent.tool.BuiltApkInfo
 import com.sherwood.wta.core.agent.todo.TodoManager
+import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 
 data class AgentUiState(
     val phase: Phase = Phase.Idle,
@@ -44,6 +45,30 @@ data class AgentUiState(
     val composerText: String = "",
     val slashOpen: Boolean = false,
     val slashCommands: List<SlashCommand> = emptyList(),
+
+    /**
+     * Dictation state for the composer.
+     *
+     * [speechListening] drives the recording row and the microphone's "stop" state;
+     * [speechTranscribing] is the window between "stopped" and "got text", which only the
+     * Whisper engine has (the platform recognizer streams partials).
+     */
+    val speechListening: Boolean = false,
+    val speechTranscribing: Boolean = false,
+
+    /** False when the selected dictation engine cannot run right now. */
+    val speechAvailable: Boolean = true,
+
+    /** Why dictation is unavailable, in the app's own words. */
+    val speechHint: String? = null,
+
+    /**
+     * Language hint used by both dictation engines.
+     *
+     * The same preference the Sidekick reads; changing it here changes it for the panel
+     * too, because "the dictation language" is one user choice, not one per screen.
+     */
+    val voiceLanguage: SidekickVoiceLanguage = SidekickVoiceLanguage.AUTO,
 
     val pendingAttachments: List<UserAttachment> = emptyList(),
 
@@ -108,7 +133,12 @@ data class AgentUiState(
     enum class Phase { Idle, Connecting, Streaming, AwaitingTool, AwaitingUser, Error }
     enum class DrawerTab { Sessions, Files }
 
-    val canSend: Boolean get() = phase == Phase.Idle
+    /**
+     * Sending is also blocked while dictating: the composer text is what the recognizer
+     * is still rewriting, so an early send would submit a half-heard sentence.
+     */
+    val canSend: Boolean
+        get() = phase == Phase.Idle && !speechListening && !speechTranscribing
     val isWorking: Boolean get() = phase != Phase.Idle && phase != Phase.Error
 }
 

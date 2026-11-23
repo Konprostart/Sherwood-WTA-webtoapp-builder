@@ -21648,6 +21648,253 @@ object StringsE {
         AppLanguage.KOREAN -> "스웨덴어"
     }
 
+    val sidekickVoiceLanguageCroatian: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "克罗地亚语"
+        AppLanguage.ENGLISH -> "Croatian"
+        AppLanguage.ARABIC -> "الكرواتية"
+        AppLanguage.PORTUGUESE -> "Croata"
+        AppLanguage.SPANISH -> "Croata"
+        AppLanguage.FRENCH -> "Croate"
+        AppLanguage.GERMAN -> "Kroatisch"
+        AppLanguage.RUSSIAN -> "Хорватский"
+        AppLanguage.JAPANESE -> "クロアチア語"
+        AppLanguage.KOREAN -> "크로아티아어"
+    }
+
+    val sidekickVoiceLanguageBosnian: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "波斯尼亚语"
+        AppLanguage.ENGLISH -> "Bosnian"
+        AppLanguage.ARABIC -> "البوسنية"
+        AppLanguage.PORTUGUESE -> "Bósnio"
+        AppLanguage.SPANISH -> "Bosnio"
+        AppLanguage.FRENCH -> "Bosnien"
+        AppLanguage.GERMAN -> "Bosnisch"
+        AppLanguage.RUSSIAN -> "Боснийский"
+        AppLanguage.JAPANESE -> "ボスニア語"
+        AppLanguage.KOREAN -> "보스니아어"
+    }
+
+    val sidekickVoiceLanguageGerman: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "德语"
+        AppLanguage.ENGLISH -> "German"
+        AppLanguage.ARABIC -> "الألمانية"
+        AppLanguage.PORTUGUESE -> "Alemão"
+        AppLanguage.SPANISH -> "Alemán"
+        AppLanguage.FRENCH -> "Allemand"
+        AppLanguage.GERMAN -> "Deutsch"
+        AppLanguage.RUSSIAN -> "Немецкий"
+        AppLanguage.JAPANESE -> "ドイツ語"
+        AppLanguage.KOREAN -> "독일어"
+    }
+
+    val sidekickVoiceLanguageFrench: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "法语"
+        AppLanguage.ENGLISH -> "French"
+        AppLanguage.ARABIC -> "الفرنسية"
+        AppLanguage.PORTUGUESE -> "Francês"
+        AppLanguage.SPANISH -> "Francés"
+        AppLanguage.FRENCH -> "Français"
+        AppLanguage.GERMAN -> "Französisch"
+        AppLanguage.RUSSIAN -> "Французский"
+        AppLanguage.JAPANESE -> "フランス語"
+        AppLanguage.KOREAN -> "프랑스어"
+    }
+
+    val sidekickVoiceLanguageSpanish: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "西班牙语"
+        AppLanguage.ENGLISH -> "Spanish"
+        AppLanguage.ARABIC -> "الإسبانية"
+        AppLanguage.PORTUGUESE -> "Espanhol"
+        AppLanguage.SPANISH -> "Español"
+        AppLanguage.FRENCH -> "Espagnol"
+        AppLanguage.GERMAN -> "Spanisch"
+        AppLanguage.RUSSIAN -> "Испанский"
+        AppLanguage.JAPANESE -> "スペイン語"
+        AppLanguage.KOREAN -> "스페인어"
+    }
+
+    val sidekickVoiceLanguagePortuguese: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "葡萄牙语"
+        AppLanguage.ENGLISH -> "Portuguese"
+        AppLanguage.ARABIC -> "البرتغالية"
+        AppLanguage.PORTUGUESE -> "Português"
+        AppLanguage.SPANISH -> "Portugués"
+        AppLanguage.FRENCH -> "Portugais"
+        AppLanguage.GERMAN -> "Portugiesisch"
+        AppLanguage.RUSSIAN -> "Португальский"
+        AppLanguage.JAPANESE -> "ポルトガル語"
+        AppLanguage.KOREAN -> "포르투갈어"
+    }
+
+    val sidekickVoiceLanguageItalian: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "意大利语"
+        AppLanguage.ENGLISH -> "Italian"
+        AppLanguage.ARABIC -> "الإيطالية"
+        AppLanguage.PORTUGUESE -> "Italiano"
+        AppLanguage.SPANISH -> "Italiano"
+        AppLanguage.FRENCH -> "Italien"
+        AppLanguage.GERMAN -> "Italienisch"
+        AppLanguage.RUSSIAN -> "Итальянский"
+        AppLanguage.JAPANESE -> "イタリア語"
+        AppLanguage.KOREAN -> "이탈리아어"
+    }
+
+    val sidekickVoiceLanguageDutch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "荷兰语"
+        AppLanguage.ENGLISH -> "Dutch"
+        AppLanguage.ARABIC -> "الهولندية"
+        AppLanguage.PORTUGUESE -> "Neerlandês"
+        AppLanguage.SPANISH -> "Neerlandés"
+        AppLanguage.FRENCH -> "Néerlandais"
+        AppLanguage.GERMAN -> "Niederländisch"
+        AppLanguage.RUSSIAN -> "Нидерландский"
+        AppLanguage.JAPANESE -> "オランダ語"
+        AppLanguage.KOREAN -> "네덜란드어"
+    }
+
+    val sidekickVoiceLanguageRussian: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "俄语"
+        AppLanguage.ENGLISH -> "Russian"
+        AppLanguage.ARABIC -> "الروسية"
+        AppLanguage.PORTUGUESE -> "Russo"
+        AppLanguage.SPANISH -> "Ruso"
+        AppLanguage.FRENCH -> "Russe"
+        AppLanguage.GERMAN -> "Russisch"
+        AppLanguage.RUSSIAN -> "Русский"
+        AppLanguage.JAPANESE -> "ロシア語"
+        AppLanguage.KOREAN -> "러시아어"
+    }
+
+    val sidekickVoiceLanguageUkrainian: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "乌克兰语"
+        AppLanguage.ENGLISH -> "Ukrainian"
+        AppLanguage.ARABIC -> "الأوكرانية"
+        AppLanguage.PORTUGUESE -> "Ucraniano"
+        AppLanguage.SPANISH -> "Ucraniano"
+        AppLanguage.FRENCH -> "Ukrainien"
+        AppLanguage.GERMAN -> "Ukrainisch"
+        AppLanguage.RUSSIAN -> "Украинский"
+        AppLanguage.JAPANESE -> "ウクライナ語"
+        AppLanguage.KOREAN -> "우크라이나어"
+    }
+
+    val sidekickVoiceLanguagePolish: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "波兰语"
+        AppLanguage.ENGLISH -> "Polish"
+        AppLanguage.ARABIC -> "البولندية"
+        AppLanguage.PORTUGUESE -> "Polonês"
+        AppLanguage.SPANISH -> "Polaco"
+        AppLanguage.FRENCH -> "Polonais"
+        AppLanguage.GERMAN -> "Polnisch"
+        AppLanguage.RUSSIAN -> "Польский"
+        AppLanguage.JAPANESE -> "ポーランド語"
+        AppLanguage.KOREAN -> "폴란드어"
+    }
+
+    val sidekickVoiceLanguageCzech: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "捷克语"
+        AppLanguage.ENGLISH -> "Czech"
+        AppLanguage.ARABIC -> "التشيكية"
+        AppLanguage.PORTUGUESE -> "Tcheco"
+        AppLanguage.SPANISH -> "Checo"
+        AppLanguage.FRENCH -> "Tchèque"
+        AppLanguage.GERMAN -> "Tschechisch"
+        AppLanguage.RUSSIAN -> "Чешский"
+        AppLanguage.JAPANESE -> "チェコ語"
+        AppLanguage.KOREAN -> "체코어"
+    }
+
+    val sidekickVoiceLanguageGreek: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "希腊语"
+        AppLanguage.ENGLISH -> "Greek"
+        AppLanguage.ARABIC -> "اليونانية"
+        AppLanguage.PORTUGUESE -> "Grego"
+        AppLanguage.SPANISH -> "Griego"
+        AppLanguage.FRENCH -> "Grec"
+        AppLanguage.GERMAN -> "Griechisch"
+        AppLanguage.RUSSIAN -> "Греческий"
+        AppLanguage.JAPANESE -> "ギリシャ語"
+        AppLanguage.KOREAN -> "그리스어"
+    }
+
+    val sidekickVoiceLanguageTurkish: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "土耳其语"
+        AppLanguage.ENGLISH -> "Turkish"
+        AppLanguage.ARABIC -> "التركية"
+        AppLanguage.PORTUGUESE -> "Turco"
+        AppLanguage.SPANISH -> "Turco"
+        AppLanguage.FRENCH -> "Turc"
+        AppLanguage.GERMAN -> "Türkisch"
+        AppLanguage.RUSSIAN -> "Турецкий"
+        AppLanguage.JAPANESE -> "トルコ語"
+        AppLanguage.KOREAN -> "터키어"
+    }
+
+    val sidekickVoiceLanguageArabic: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "阿拉伯语"
+        AppLanguage.ENGLISH -> "Arabic"
+        AppLanguage.ARABIC -> "العربية"
+        AppLanguage.PORTUGUESE -> "Árabe"
+        AppLanguage.SPANISH -> "Árabe"
+        AppLanguage.FRENCH -> "Arabe"
+        AppLanguage.GERMAN -> "Arabisch"
+        AppLanguage.RUSSIAN -> "Арабский"
+        AppLanguage.JAPANESE -> "アラビア語"
+        AppLanguage.KOREAN -> "아랍어"
+    }
+
+    val sidekickVoiceLanguageHindi: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "印地语"
+        AppLanguage.ENGLISH -> "Hindi"
+        AppLanguage.ARABIC -> "الهندية"
+        AppLanguage.PORTUGUESE -> "Hindi"
+        AppLanguage.SPANISH -> "Hindi"
+        AppLanguage.FRENCH -> "Hindi"
+        AppLanguage.GERMAN -> "Hindi"
+        AppLanguage.RUSSIAN -> "Хинди"
+        AppLanguage.JAPANESE -> "ヒンディー語"
+        AppLanguage.KOREAN -> "힌디어"
+    }
+
+    val sidekickVoiceLanguageChinese: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "中文"
+        AppLanguage.ENGLISH -> "Chinese"
+        AppLanguage.ARABIC -> "الصينية"
+        AppLanguage.PORTUGUESE -> "Chinês"
+        AppLanguage.SPANISH -> "Chino"
+        AppLanguage.FRENCH -> "Chinois"
+        AppLanguage.GERMAN -> "Chinesisch"
+        AppLanguage.RUSSIAN -> "Китайский"
+        AppLanguage.JAPANESE -> "中国語"
+        AppLanguage.KOREAN -> "중국어"
+    }
+
+    val sidekickVoiceLanguageJapanese: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "日语"
+        AppLanguage.ENGLISH -> "Japanese"
+        AppLanguage.ARABIC -> "اليابانية"
+        AppLanguage.PORTUGUESE -> "Japonês"
+        AppLanguage.SPANISH -> "Japonés"
+        AppLanguage.FRENCH -> "Japonais"
+        AppLanguage.GERMAN -> "Japanisch"
+        AppLanguage.RUSSIAN -> "Японский"
+        AppLanguage.JAPANESE -> "日本語"
+        AppLanguage.KOREAN -> "일본어"
+    }
+
+    val sidekickVoiceLanguageKorean: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "韩语"
+        AppLanguage.ENGLISH -> "Korean"
+        AppLanguage.ARABIC -> "الكورية"
+        AppLanguage.PORTUGUESE -> "Coreano"
+        AppLanguage.SPANISH -> "Coreano"
+        AppLanguage.FRENCH -> "Coréen"
+        AppLanguage.GERMAN -> "Koreanisch"
+        AppLanguage.RUSSIAN -> "Корейский"
+        AppLanguage.JAPANESE -> "韓国語"
+        AppLanguage.KOREAN -> "한국어"
+    }
+
     val sidekickVoiceOnDevice: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "优先使用设备端识别"
         AppLanguage.ENGLISH -> "Prefer on-device recognition"

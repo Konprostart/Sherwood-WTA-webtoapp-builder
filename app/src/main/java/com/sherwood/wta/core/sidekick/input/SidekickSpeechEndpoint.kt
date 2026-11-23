@@ -207,12 +207,10 @@ object SidekickSpeechEndpointPolicy {
      * The ISO-639-1 code Whisper expects, or `null` to let the server auto-detect.
      *
      * These are deliberately not the BCP-47 tags the system recognizer uses: Whisper
-     * wants `sr`, not `sr-RS`.
+     * wants `sr`, not `sr-RS`. Derived from the catalog's primary subtag rather than
+     * listed per entry — a hand-written table would have to be extended (and could be
+     * forgotten) every time a language is offered, and would then send `sr-RS` to a
+     * server that only understands ISO-639-1.
      */
-    fun whisperLanguage(language: SidekickVoiceLanguage): String? = when (language) {
-        SidekickVoiceLanguage.AUTO -> null
-        SidekickVoiceLanguage.SERBIAN -> "sr"
-        SidekickVoiceLanguage.ENGLISH -> "en"
-        SidekickVoiceLanguage.SWEDISH -> "sv"
-    }
+    fun whisperLanguage(language: SidekickVoiceLanguage): String? = language.whisperCode
 }

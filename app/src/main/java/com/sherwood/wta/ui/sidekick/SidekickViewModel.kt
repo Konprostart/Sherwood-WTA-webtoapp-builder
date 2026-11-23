@@ -21,15 +21,9 @@ import com.sherwood.wta.core.sidekick.input.SidekickAttachmentReader
 import com.sherwood.wta.core.sidekick.input.SidekickAttachmentRejection
 import com.sherwood.wta.core.sidekick.input.SidekickAttachmentResult
 import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
-import com.sherwood.wta.core.sidekick.input.SidekickSpeechEngine
-import com.sherwood.wta.core.sidekick.input.SidekickSpeechEndpointStore
 import com.sherwood.wta.core.sidekick.input.SidekickSpeechFailure
-import com.sherwood.wta.core.sidekick.input.SidekickSpeechListener
-import com.sherwood.wta.core.sidekick.input.SidekickSpeechRecognizer
 import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
-import com.sherwood.wta.core.sidekick.input.SidekickWavRecorder
-import com.sherwood.wta.core.sidekick.input.SidekickWhisperTranscriber
-import com.sherwood.wta.core.sidekick.input.toSpeechFailure
+import com.sherwood.wta.core.sidekick.input.VoiceDictation
 import com.sherwood.wta.core.sidekick.research.SidekickHttp
 import com.sherwood.wta.core.sidekick.research.SidekickResearch
 import com.sherwood.wta.core.sidekick.research.SidekickSearch
@@ -38,8 +32,6 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -138,18 +130,8 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     private val engine = SidekickEngine.create(application)
     private val contextSource = SidekickContextSource(application)
     private val attachmentReader = SidekickAttachmentReader(application)
-    private val speech = SidekickSpeechRecognizer(application)
-    private val speechEndpoint = SidekickSpeechEndpointStore.getInstance(application)
-    private val transcriber = SidekickWhisperTranscriber()
+    private val dictation = VoiceDictation(application, settings, viewModelScope)
     private val researchHttp = SidekickHttp()
-
-    /**
-     * The take in progress, when the Whisper engine is selected. A platform
-     * `SpeechRecognizer` owns its own session; a WAV take is a file this view model must
-     * finalize (or discard) itself, including when the panel is destroyed.
-     */
-    private var recorder: SidekickWavRecorder? = null
-    private var transcribeJob: Job? = null
 
     /** Draft as it was when dictation started; interim text is appended to it. */
     private var voiceBaseDraft: String = ""
@@ -170,8 +152,6 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
 
     private var answerJob: Job? = null
 
-    /** Safety net for a recognizer that never delivers a final result after stop. */
-    private var voiceStopJob: Job? = null
     private var detachSettingsListener: (() -> Unit)? = null
 
     init {
@@ -230,18 +210,12 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     /**
      * Whether the selected dictation engine can run right now, and why not when it cannot.
      *
-     * For the platform recognizer this is "is there a recognition service"; for Whisper
-     * it is "is a server configured and its URL still acceptable". Neither decrypts the
-     * API key — that happens on IO when a take is actually uploaded.
+     * The engine-specific rule (service present vs. server configured) lives in
+     * [VoiceDictation] so the panel and the agent workspace cannot disagree about it.
      */
-    private fun speechStatus(): SpeechStatus = when (settings.speechEngine) {
-        SidekickSpeechEngine.SYSTEM ->
-            if (speech.isAvailable()) SpeechStatus(true, null)
-            else SpeechStatus(false, Strings.sidekickSpeechUnavailable)
-
-        SidekickSpeechEngine.WHISPER ->
-            if (speechEndpoint.isUsable()) SpeechStatus(true, null)
-            else SpeechStatus(false, Strings.sidekickSpeechNotConfigured)
+    private fun speechStatus(): SpeechStatus {
+        val availability = dictation.availability()
+        return SpeechStatus(availability.available, availability.hint)
     }
 
     /**
@@ -417,14 +391,6 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     // ------------------------------------------------------------ dictation
 
     /**
-     * Takes whose upload has already started.
-     *
-     * The stop button and the 120 s ceiling can fire almost together; without this the
-     * same file would be uploaded twice and the transcript appended twice.
-     */
-    private val claimedTakes = java.util.concurrent.ConcurrentHashMap.newKeySet<SidekickWavRecorder>()
-
-    /**
      * Starts dictation with the selected engine.
      *
      * Both engines need `RECORD_AUDIO`; the caller requests it before calling this, and
@@ -433,240 +399,81 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
     fun startVoiceInput() {
         val state = _ui.value
         if (state.streaming || state.speechListening || state.speechTranscribing) return
-        when (settings.speechEngine) {
-            SidekickSpeechEngine.SYSTEM -> startSystemDictation()
-            SidekickSpeechEngine.WHISPER -> startWhisperDictation()
+        voiceBaseDraft = state.draft
+        _ui.update { it.copy(speechListening = true, error = null) }
+        if (!dictation.start(DictationBridge())) {
+            // The controller already reported why; only the availability flag can still be
+            // stale (a service uninstalled, a server URL removed).
+            val availability = dictation.availability()
+            _ui.update { it.copy(speechListening = false, speechAvailable = availability.available) }
         }
     }
 
     /** Ends dictation and keeps the final transcript. */
     fun stopVoiceInput() {
-        val state = _ui.value
-        if (state.speechTranscribing || !state.speechListening) return
-        when (settings.speechEngine) {
-            SidekickSpeechEngine.SYSTEM -> stopSystemDictation()
-            SidekickSpeechEngine.WHISPER -> stopWhisperDictation()
-        }
+        if (!dictation.isActive()) return
+        dictation.stop()
     }
 
     /** Ends dictation and discards the transcript (or the take, for Whisper). */
     fun cancelVoiceInput() {
         val state = _ui.value
         if (!state.speechListening && !state.speechTranscribing) return
-        cancelTranscription()
-        speech.cancel()
-        voiceStopJob?.cancel()
+        dictation.cancel()
         _ui.update { it.copy(speechListening = false, speechTranscribing = false) }
     }
 
-    // -- platform recognizer
-
-    private fun startSystemDictation() {
-        if (!speech.isAvailable()) {
-            _ui.update {
-                it.copy(speechAvailable = false, error = Strings.sidekickSpeechUnavailable)
-            }
-            return
-        }
-        voiceBaseDraft = _ui.value.draft
-        _ui.update { it.copy(speechListening = true, error = null) }
-        val started = speech.start(
-            language = settings.voiceLanguage,
-            preferOnDevice = settings.preferOnDeviceSpeech,
-            listener = DictationListener()
-        )
-        if (!started) {
-            _ui.update {
-                it.copy(speechListening = false, speechAvailable = speech.isAvailable())
-            }
-        }
-    }
-
-    private fun stopSystemDictation() {
-        speech.stop()
-        // `stopListening` asks the service for a final result, but a misbehaving OEM
-        // recognizer can go quiet instead of answering. Without a ceiling the panel would
-        // stay in "Listening…" until the user reopens it, so the state is released here.
-        voiceStopJob?.cancel()
-        voiceStopJob = viewModelScope.launch {
-            delay(VOICE_STOP_TIMEOUT_MS)
-            if (_ui.value.speechListening) {
-                speech.cancel()
-                _ui.update {
-                    it.copy(
-                        speechListening = false,
-                        draft = voiceBaseDraft,
-                        error = Strings.sidekickSpeechNoMatch
-                    )
-                }
-            }
-        }
-    }
-
-    // -- Whisper server
-
-    private fun startWhisperDictation() {
-        if (!speechEndpoint.isUsable()) {
-            _ui.update {
-                it.copy(speechAvailable = false, error = Strings.sidekickSpeechNotConfigured)
-            }
-            return
-        }
-        voiceBaseDraft = _ui.value.draft
-        val take = SidekickWavRecorder(getApplication())
-        val failure = take.start(
-            onLimitReached = {
-                // Capture thread: the recorder already stopped itself at the ceiling.
-                viewModelScope.launch { finishWhisperTake(take) }
-            }
-        )
-        if (failure != null) {
-            take.cancel()
-            _ui.update {
-                it.copy(
-                    error = speechFailureMessage(failure),
-                    speechAvailable = failure != SidekickSpeechFailure.PERMISSION &&
-                        speechEndpoint.isUsable()
-                )
-            }
-            return
-        }
-        recorder = take
-        _ui.update { it.copy(speechListening = true, error = null) }
-    }
-
-    private fun stopWhisperDictation() {
-        val take = recorder ?: return
-        recorder = null
-        _ui.update { it.copy(speechListening = false, speechTranscribing = true) }
-        transcribeJob = viewModelScope.launch { finishWhisperTake(take) }
-    }
-
     /**
-     * Finalizes the take and uploads it.
+     * Bridges controller callbacks into the panel state.
      *
-     * `stop()` joins the capture thread and `endpoint()` unwraps the API key from the
-     * Keystore — both belong on IO, not on the main thread this method is launched from.
+     * One listener for both engines: the panel does not need to know which engine produced
+     * the text, and the previous split (one set of handlers per engine) is how the two
+     * paths drifted apart.
      */
-    private suspend fun finishWhisperTake(take: SidekickWavRecorder) {
-        if (!claimedTakes.add(take)) return
-        var leftover: File? = null
-        try {
-            // Stopping is not cancellable on purpose. If the panel is closed in the same
-            // breath as the stop, a cancelled coroutine would leave the capture thread
-            // recording until the 120 s ceiling with the microphone open and no UI.
-            val file = withContext(NonCancellable + Dispatchers.IO) { take.stop() }
-            leftover = file
-            if (file == null) {
-                finishTranscription(voiceBaseDraft, SidekickSpeechFailure.NO_MATCH)
-                return
+    private inner class DictationBridge : VoiceDictation.Listener {
+        override fun onListening() {
+            _ui.update {
+                it.copy(speechListening = true, speechTranscribing = false, error = null)
             }
-            val endpoint = withContext(Dispatchers.IO) { speechEndpoint.endpoint() }
-            if (endpoint == null) {
-                finishTranscription(voiceBaseDraft, SidekickSpeechFailure.NOT_CONFIGURED)
-                return
-            }
-            transcriber.transcribe(endpoint, file, settings.voiceLanguage).fold(
-                onSuccess = { text ->
-                    finishTranscription(
-                        composeDraft(voiceBaseDraft, text),
-                        failure = null
-                    )
-                },
-                onFailure = { error ->
-                    // A cancelled upload must not be reported as a transcription failure.
-                    if (error !is CancellationException) {
-                        finishTranscription(voiceBaseDraft, error.toSpeechFailure())
-                    }
-                }
-            )
-        } finally {
-            leftover?.let { file ->
-                withContext(NonCancellable + Dispatchers.IO) { runCatching { file.delete() } }
-            }
-            claimedTakes.remove(take)
         }
-    }
 
-    private fun finishTranscription(draft: String, failure: SidekickSpeechFailure?) {
-        _ui.update {
-            it.copy(
-                speechListening = false,
-                speechTranscribing = false,
-                draft = draft,
-                error = failure?.let { kind -> speechFailureMessage(kind) }
-            )
-        }
-    }
-
-    private fun cancelTranscription() {
-        transcribeJob?.cancel()
-        transcribeJob = null
-        val take = recorder ?: return
-        recorder = null
-        claimedTakes.add(take)
-        // Joining the capture thread is a short blocking wait; keep it off the main thread.
-        viewModelScope.launch(Dispatchers.IO) {
-            take.cancel()
-            claimedTakes.remove(take)
-        }
-    }
-
-    private fun speechFailureMessage(failure: SidekickSpeechFailure): String = when (failure) {
-        SidekickSpeechFailure.NO_SERVICE -> Strings.sidekickSpeechUnavailable
-        SidekickSpeechFailure.NETWORK -> Strings.sidekickSpeechNetwork
-        SidekickSpeechFailure.NO_MATCH -> Strings.sidekickSpeechNoMatch
-        SidekickSpeechFailure.PERMISSION -> Strings.sidekickSpeechPermission
-        SidekickSpeechFailure.BUSY -> Strings.sidekickSpeechBusy
-        SidekickSpeechFailure.LANGUAGE_UNSUPPORTED -> Strings.sidekickSpeechLanguage
-        SidekickSpeechFailure.AUDIO -> Strings.sidekickSpeechAudio
-        SidekickSpeechFailure.THROTTLED -> Strings.sidekickSpeechThrottled
-        SidekickSpeechFailure.AUTH -> Strings.sidekickSpeechAuth
-        SidekickSpeechFailure.ENDPOINT -> Strings.sidekickSpeechEndpoint
-        SidekickSpeechFailure.NOT_CONFIGURED -> Strings.sidekickSpeechNotConfigured
-        SidekickSpeechFailure.UNKNOWN -> Strings.sidekickSpeechFailed
-    }
-
-    private inner class DictationListener : SidekickSpeechListener {
-        override fun onPartial(text: String) {
+        override fun onPartial(spoken: String) {
             _ui.update {
                 it.copy(
                     // The interim transcript is written straight into the draft so the user
                     // reads what the recognizer heard, exactly like typing.
-                    draft = composeDraft(voiceBaseDraft, text)
+                    draft = VoiceDictation.compose(voiceBaseDraft, spoken)
                 )
             }
         }
 
-        override fun onResult(text: String) {
-            voiceStopJob?.cancel()
+        override fun onTranscribing() {
+            _ui.update { it.copy(speechListening = false, speechTranscribing = true) }
+        }
+
+        override fun onResult(spoken: String) {
             _ui.update {
                 it.copy(
                     speechListening = false,
-                    draft = composeDraft(voiceBaseDraft, text)
+                    speechTranscribing = false,
+                    draft = VoiceDictation.compose(voiceBaseDraft, spoken)
                 )
             }
         }
 
         override fun onFailure(failure: SidekickSpeechFailure) {
-            voiceStopJob?.cancel()
             _ui.update {
                 it.copy(
                     speechListening = false,
+                    speechTranscribing = false,
                     // The dictation may have replaced the draft with interim text; put the
                     // user's typed text back so a failed attempt loses nothing.
                     draft = voiceBaseDraft,
-                    error = speechFailureMessage(failure),
+                    error = VoiceDictation.messageFor(failure),
                     speechAvailable = failure != SidekickSpeechFailure.NO_SERVICE
                 )
             }
         }
-    }
-
-    private fun composeDraft(base: String, spoken: String): String {
-        if (spoken.isBlank()) return base
-        if (base.isBlank()) return spoken
-        return base.trimEnd() + " " + spoken.trim()
     }
 
     // ------------------------------------------------------------ asking
@@ -843,20 +650,10 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
         detachSettingsListener?.invoke()
         detachSettingsListener = null
         answerJob?.cancel()
-        voiceStopJob?.cancel()
-        transcribeJob?.cancel()
-        transcribeJob = null
-        // A take left on disk would outlive the panel and the microphone would stay open
-        // until the process died.
-        recorder?.let { take ->
-            recorder = null
-            claimedTakes.add(take)
-            // Non-blocking: onCleared runs on the main thread.
-            take.cancelAsync()
-        }
-        // A recognizer left alive keeps an audio session open; the microphone indicator can
-        // stay lit after the panel is gone.
-        speech.release()
+        // Cancels the live take, deletes any WAV on disk and releases the recognizer —
+        // an audio session left open keeps the microphone indicator lit after the panel
+        // is gone.
+        dictation.release()
         super.onCleared()
     }
 
@@ -865,9 +662,6 @@ class SidekickViewModel(application: Application) : AndroidViewModel(application
 
         /** Same idle window the agent uses: a silent provider must not hang the panel. */
         private const val STREAM_IDLE_TIMEOUT_MS = 90_000L
-
-        /** How long a stopped dictation may take to deliver its final result. */
-        private const val VOICE_STOP_TIMEOUT_MS = 8_000L
 
         fun factory(app: Application): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

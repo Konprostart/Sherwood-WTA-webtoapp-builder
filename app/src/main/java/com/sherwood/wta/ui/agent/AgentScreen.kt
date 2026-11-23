@@ -1,9 +1,12 @@
 package com.sherwood.wta.ui.agent
 
+import android.Manifest
 import android.app.Application
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -111,6 +114,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.font.FontFamily
+import com.sherwood.wta.ui.components.VoiceLanguageDialog
 import com.sherwood.wta.ui.design.WtaButton
 import com.sherwood.wta.ui.design.WtaButtonSize
 import com.sherwood.wta.ui.design.WtaButtonVariant
@@ -147,6 +151,25 @@ fun AgentScreen(
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> uri?.let { vm.attachFolder(it) } }
+
+    var voiceLanguageOpen by remember { mutableStateOf(false) }
+
+    // Same rule as the Sidekick panel: ask for the permission first, then let the engine
+    // decide whether the platform service or the Whisper server does the work.
+    val audioPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) vm.startVoiceInput() else vm.reportVoicePermissionDenied()
+    }
+    val requestDictation: () -> Unit = {
+        // The keyboard would otherwise stay open behind the recording row.
+        focusManager.clearFocus()
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) vm.startVoiceInput() else audioPermission.launch(Manifest.permission.RECORD_AUDIO)
+    }
 
     val leaveScreen: () -> Unit = {
         scope.launch {
@@ -384,10 +407,31 @@ fun AgentScreen(
                     onOpenContextPicker = vm::openContextPicker,
 
                     onOpenModelPicker = vm::openModelPicker,
-                    onCompactContext = vm::compactNow
+                    onCompactContext = vm::compactNow,
+
+                    onToggleDictation = {
+                        when {
+                            state.speechListening -> vm.stopVoiceInput()
+                            state.speechTranscribing -> Unit
+                            else -> requestDictation()
+                        }
+                    },
+                    onCancelDictation = vm::cancelVoiceInput,
+                    onOpenVoiceLanguage = { voiceLanguageOpen = true }
                 )
             }
         }
+    }
+
+    if (voiceLanguageOpen) {
+        VoiceLanguageDialog(
+            selected = state.voiceLanguage,
+            onSelect = { language ->
+                vm.setVoiceLanguage(language)
+                voiceLanguageOpen = false
+            },
+            onDismiss = { voiceLanguageOpen = false }
+        )
     }
 
     if (state.contextPickerOpen) {

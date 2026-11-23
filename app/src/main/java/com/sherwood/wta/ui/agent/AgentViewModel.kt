@@ -39,6 +39,10 @@ import com.sherwood.wta.core.agent.tool.ToolRegistryFactory
 import com.sherwood.wta.core.agent.prompt.SystemPromptBuilder
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.logging.AppLogger
+import com.sherwood.wta.core.sidekick.SidekickSettings
+import com.sherwood.wta.core.sidekick.input.SidekickSpeechFailure
+import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
+import com.sherwood.wta.core.sidekick.input.VoiceDictation
 import com.sherwood.wta.data.model.AiFeature
 import com.sherwood.wta.data.model.toManifestJson
 import kotlinx.coroutines.Dispatchers
@@ -101,13 +105,39 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = com.sherwood.wta.core.agent.AgentPrefs(ctx)
 
+    /**
+     * Dictation for the composer.
+     *
+     * Shared with the Sidekick panel on purpose: one engine policy, one language catalog
+     * and one teardown path means the two microphones cannot drift apart. The panel's
+     * preferences live here because they *are* the dictation preferences (`voiceLanguage`,
+     * engine, on-device preference) — a second set would let the workspace dictate in a
+     * different language than the panel without either UI admitting it.
+     */
+    private val voiceSettings = SidekickSettings.getInstance(ctx)
+    private val dictation = VoiceDictation(
+        ctx,
+        voiceSettings,
+        viewModelScope
+    )
+
+    /** Composer text as it was when dictation started; interim text is appended to it. */
+    private var voiceBaseDraft: String = ""
+
+    private val initialDictation = dictation.availability()
+
     private val sessionEnsureMutex = Mutex()
 
     private var planManager: PlanManager? = null
     private var registryFactory: ToolRegistryFactory? = null
 
     private val _ui = MutableStateFlow(
-        AgentUiState(slashCommands = DEFAULT_SLASH_COMMANDS)
+        AgentUiState(
+            slashCommands = DEFAULT_SLASH_COMMANDS,
+            speechAvailable = initialDictation.available,
+            speechHint = initialDictation.hint,
+            voiceLanguage = voiceSettings.voiceLanguage
+        )
     )
     val ui: StateFlow<AgentUiState> = _ui.asStateFlow()
 
@@ -393,6 +423,123 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
                 mentionQuery = mention.orEmpty(),
                 mentionMatches = mentionMatches
             )
+        }
+    }
+
+    // ------------------------------------------------------------ dictation
+
+    /**
+     * Starts dictation into the composer.
+     *
+     * Both engines need `RECORD_AUDIO`; the caller requests it first, and the engine
+     * reports a permission failure if it is missing anyway. Dictation is refused while a
+     * turn streams: the composer is not the user's to edit then, and the recognizer would
+     * overwrite text the agent is about to consume.
+     */
+    fun startVoiceInput() {
+        val current = _ui.value
+        if (current.isWorking || current.speechListening || current.speechTranscribing) return
+        val availability = dictation.availability()
+        if (!availability.available) {
+            // A dead microphone with no explanation reads as a broken button; the reason
+            // is a hint, and it is also surfaced as the banner so a tap always answers.
+            _ui.update {
+                it.copy(
+                    speechAvailable = false,
+                    speechHint = availability.hint,
+                    error = availability.hint
+                )
+            }
+            return
+        }
+        voiceBaseDraft = current.composerText
+        _ui.update {
+            it.copy(speechListening = true, speechAvailable = true, speechHint = null, error = null)
+        }
+        if (!dictation.start(AgentDictationBridge())) {
+            val after = dictation.availability()
+            _ui.update {
+                it.copy(
+                    speechListening = false,
+                    speechTranscribing = false,
+                    speechAvailable = after.available,
+                    speechHint = after.hint
+                )
+            }
+        }
+    }
+
+    /** Reports a microphone permission the user declined in the app's own words. */
+    fun reportVoicePermissionDenied() {
+        _ui.update { it.copy(error = Strings.sidekickSpeechPermission) }
+    }
+
+    /** Ends dictation and keeps the final transcript. */
+    fun stopVoiceInput() {
+        if (!dictation.isActive()) return
+        dictation.stop()
+    }
+
+    /** Ends dictation and discards the transcript (or the take, for Whisper). */
+    fun cancelVoiceInput() {
+        val current = _ui.value
+        if (!current.speechListening && !current.speechTranscribing) return
+        dictation.cancel()
+        _ui.update { it.copy(speechListening = false, speechTranscribing = false) }
+        // The recognizer may already have replaced the composer with interim text; the
+        // user asked to discard, so the text from before the session comes back.
+        if (current.composerText != voiceBaseDraft) setComposerText(voiceBaseDraft)
+    }
+
+    /**
+     * Persists the dictation language.
+     *
+     * The same preference the Sidekick reads, so changing it in the workspace changes it
+     * for the panel as well — one language, not two.
+     */
+    fun setVoiceLanguage(language: SidekickVoiceLanguage) {
+        voiceSettings.voiceLanguage = language
+        _ui.update { it.copy(voiceLanguage = language) }
+    }
+
+    /** Bridges controller callbacks into the composer state. */
+    private inner class AgentDictationBridge : VoiceDictation.Listener {
+        override fun onListening() {
+            _ui.update {
+                it.copy(speechListening = true, speechTranscribing = false, error = null)
+            }
+        }
+
+        override fun onPartial(spoken: String) {
+            // setComposerText (not a raw copy) so the slash/mention popups follow dictation
+            // exactly as they follow typing.
+            setComposerText(VoiceDictation.compose(voiceBaseDraft, spoken))
+        }
+
+        override fun onTranscribing() {
+            _ui.update { it.copy(speechListening = false, speechTranscribing = true) }
+        }
+
+        override fun onResult(spoken: String) {
+            _ui.update { it.copy(speechListening = false, speechTranscribing = false) }
+            setComposerText(VoiceDictation.compose(voiceBaseDraft, spoken))
+        }
+
+        override fun onFailure(
+            failure: SidekickSpeechFailure
+        ) {
+            _ui.update {
+                it.copy(
+                    speechListening = false,
+                    speechTranscribing = false,
+                    // A failed attempt must not leave interim text behind: the user's own
+                    // words come back, exactly as before dictation started.
+                    error = VoiceDictation.messageFor(failure),
+                    speechAvailable = failure !=
+                        SidekickSpeechFailure.NO_SERVICE
+                )
+            }
+            setComposerText(voiceBaseDraft)
         }
     }
 
@@ -2308,6 +2455,9 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         permissionCollectionJob?.cancel()
         choiceCollectionJob?.cancel()
         activeTurnJob?.cancel()
+        // Stops an in-flight take, unlinks the WAV and releases the recognizer: a session
+        // left alive keeps the microphone indicator lit after the screen is gone.
+        dictation.release()
         if (bound) runCatching { ctx.unbindService(connection) }
     }
 

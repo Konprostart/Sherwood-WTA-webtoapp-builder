@@ -28,21 +28,25 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Cancel
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DataUsage
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -63,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sherwood.wta.core.agent.session.UserAttachment
 import com.sherwood.wta.core.i18n.Strings
+import com.sherwood.wta.core.sidekick.input.SidekickVoiceLanguage
 import com.sherwood.wta.ui.agent.AgentUiState
 import com.sherwood.wta.ui.agent.SlashCommand
 import com.sherwood.wta.ui.design.WtaAlpha
@@ -99,7 +104,13 @@ fun Composer(
     onOpenContextPicker: () -> Unit,
 
     onOpenModelPicker: () -> Unit = {},
-    onCompactContext: () -> Unit = {}
+    onCompactContext: () -> Unit = {},
+
+    /** Tapping the microphone again finishes dictation and keeps the transcript. */
+    onToggleDictation: () -> Unit = {},
+    /** The X next to the recording row discards it. */
+    onCancelDictation: () -> Unit = {},
+    onOpenVoiceLanguage: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -129,7 +140,9 @@ fun Composer(
             onAttachFile = onAttachFile,
             onAttachFolder = onAttachFolder,
             onRemoveAttachment = onRemoveAttachment,
-            resolveAttachmentPreview = resolveAttachmentPreview
+            resolveAttachmentPreview = resolveAttachmentPreview,
+            onToggleDictation = onToggleDictation,
+            onCancelDictation = onCancelDictation
         )
 
         ModeChipRow(
@@ -144,13 +157,15 @@ fun Composer(
             compacting = state.compacting,
             onCompactContext = onCompactContext,
             selectedContextCount = state.contextAppIds.size + state.contextModuleIds.size,
-            onOpenContextPicker = onOpenContextPicker
+            onOpenContextPicker = onOpenContextPicker,
+            voiceLanguage = state.voiceLanguage,
+            onOpenVoiceLanguage = onOpenVoiceLanguage
         )
     }
 }
 
 /**
- * One short row: attach, a filled control-radius field, send/stop.
+ * One short row: attach, a filled control-radius field, microphone, send/stop.
  * [BasicTextField] is required — an M3 TextField forces a 56dp minimum and
  * draws the bottom indicator this row is not allowed to have.
  */
@@ -164,7 +179,9 @@ private fun ComposerCard(
     onAttachFile: () -> Unit,
     onAttachFolder: () -> Unit,
     onRemoveAttachment: (String) -> Unit,
-    resolveAttachmentPreview: (UserAttachment) -> Any?
+    resolveAttachmentPreview: (UserAttachment) -> Any?,
+    onToggleDictation: () -> Unit,
+    onCancelDictation: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -177,6 +194,22 @@ private fun ComposerCard(
                 attachments = state.pendingAttachments,
                 onRemove = onRemoveAttachment,
                 resolveAttachmentPreview = resolveAttachmentPreview
+            )
+        }
+        if (state.speechListening) {
+            DictationRow(
+                label = Strings.sidekickListening,
+                // Finishing keeps the transcript; only the X discards it.
+                onDone = onToggleDictation,
+                onCancel = onCancelDictation
+            )
+        } else if (state.speechTranscribing) {
+            // No "done" affordance: the take is already uploading, and pretending the
+            // user can still approve it would be a lie. X discards it.
+            DictationRow(
+                label = Strings.sidekickSpeechTranscribing,
+                onDone = null,
+                onCancel = onCancelDictation
             )
         }
         CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
@@ -193,7 +226,17 @@ private fun ComposerCard(
                 ComposerField(
                     value = state.composerText,
                     onValueChange = onTextChange,
-                    placeholder = composerPlaceholder(state)
+                    placeholder = composerPlaceholder(state),
+                    // The recognizer owns the text while it listens; letting the keyboard
+                    // edit it too would make every partial overwrite what was just typed.
+                    enabled = !state.speechListening && !state.speechTranscribing
+                )
+                DictationButton(
+                    listening = state.speechListening,
+                    transcribing = state.speechTranscribing,
+                    available = state.speechAvailable,
+                    working = state.isWorking,
+                    onToggle = onToggleDictation
                 )
                 SendButton(
                     working = state.isWorking,
@@ -208,13 +251,96 @@ private fun ComposerCard(
 }
 
 /**
+ * Recording (or transcribing) status above the field, mirroring the Sidekick panel.
+ *
+ * It is outside the field so it stays readable while the field is disabled, and it is the
+ * only place that says why the microphone is busy.
+ */
+@Composable
+private fun DictationRow(
+    label: String,
+    onDone: (() -> Unit)?,
+    onCancel: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 1.5.dp)
+        Spacer(Modifier.width(WtaSpacing.Small))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        if (onDone != null) {
+            IconButton(onClick = onDone, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = Strings.done,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = Strings.cancel,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Microphone for the composer.
+ *
+ * Stays tappable when dictation is unavailable so the tap can explain why (the banner
+ * carries the reason) — a permanently disabled icon is the dead end the panel already
+ * fixed the same way.
+ */
+@Composable
+private fun DictationButton(
+    listening: Boolean,
+    transcribing: Boolean,
+    available: Boolean,
+    working: Boolean,
+    onToggle: () -> Unit
+) {
+    val active = listening || transcribing
+    IconButton(
+        onClick = onToggle,
+        enabled = (!working && !transcribing) || listening,
+        modifier = Modifier.size(32.dp)
+    ) {
+        if (transcribing) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 1.5.dp)
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.Mic,
+                contentDescription = if (listening) Strings.sidekickListening else Strings.sidekickDictate,
+                tint = when {
+                    active -> MaterialTheme.colorScheme.primary
+                    available -> MaterialTheme.colorScheme.onSurfaceVariant
+                    else -> MaterialTheme.colorScheme.outline
+                },
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
  * Filled field on [WtaRadius.Control]. No indicator line and no square corners.
  */
 @Composable
 private fun RowScope.ComposerField(
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String
+    placeholder: String,
+    enabled: Boolean = true
 ) {
     val shape = RoundedCornerShape(WtaRadius.Control)
     val textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -223,6 +349,7 @@ private fun RowScope.ComposerField(
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
+        enabled = enabled,
         modifier = Modifier
             .weight(1f)
             .heightIn(min = 36.dp, max = 120.dp)
@@ -588,7 +715,9 @@ private fun ModeChipRow(
     compacting: Boolean,
     onCompactContext: () -> Unit,
     selectedContextCount: Int,
-    onOpenContextPicker: () -> Unit
+    onOpenContextPicker: () -> Unit,
+    voiceLanguage: SidekickVoiceLanguage,
+    onOpenVoiceLanguage: () -> Unit
 ) {
     var showCompactMenu by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
@@ -656,6 +785,16 @@ private fun ModeChipRow(
                 }
             }
         }
+
+        // The dictation language sits next to the model on purpose: both are "what the
+        // composer will do with my words", and a language buried in Settings is a
+        // language nobody finds before the first failed dictation.
+        ModeChip(
+            label = voiceLanguage.shortLabel,
+            icon = Icons.Outlined.Mic,
+            primary = false,
+            onClick = onOpenVoiceLanguage
+        )
 
         ModelChip(
             label = if (modelMissing) Strings.selectModel
