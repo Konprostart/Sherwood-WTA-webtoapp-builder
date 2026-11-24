@@ -397,8 +397,12 @@ export default defineConfig({
   lastUpdated: true,
   head: [
     ['link', { rel: 'icon', type: 'image/png', href: `${base}logo.png` }],
-    ['meta', { name: 'theme-color', content: '#3b82f6' }],
+    ['link', { rel: 'apple-touch-icon', href: `${base}logo.png` }],
+    // Black, because the mark is a red-on-black tile: a blue browser chrome
+    // around a black-and-red logo read as two different products.
+    ['meta', { name: 'theme-color', content: '#000000' }],
     ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:site_name', content: 'Sherwood Studio' }],
     ['meta', { property: 'og:title', content: 'Sherwood Studio' }],
     [
       'meta',
@@ -407,7 +411,13 @@ export default defineConfig({
         content: 'An on-device APK workshop that goes far beyond URL wrapping.'
       }
     ],
-    ['meta', { property: 'og:image', content: `${base}social-preview.png` }]
+    ['meta', { property: 'og:image', content: `${base}social-preview.png` }],
+    ['meta', { property: 'og:image:width', content: '1280' }],
+    ['meta', { property: 'og:image:height', content: '640' }],
+    ['meta', { property: 'og:image:alt', content: 'Sherwood Studio' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:title', content: 'Sherwood Studio' }],
+    ['meta', { name: 'twitter:image', content: `${base}social-preview.png` }]
   ],
   locales: {
     root: {

@@ -227,7 +227,7 @@ jobs:
             echo "Release $GITHUB_REF_NAME already exists; reusing it"
           else
             gh release create "$GITHUB_REF_NAME" \
-              --title "Sherwood WTA ${VERSION}" \
+              --title "Sherwood Studio ${VERSION}" \
               --generate-notes \
               --verify-tag \
               --draft

@@ -1,9 +1,13 @@
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Shape;
+import java.awt.font.GlyphVector;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -43,6 +47,18 @@ import javax.imageio.ImageIO;
  *   java scripts/GenerateBrandIcons.java            # write every asset
  *   java scripts/GenerateBrandIcons.java --verify   # check the assets on disk
  * </pre>
+ *
+ * <p>The social preview card (the 1280x640 image GitHub, Discord, Telegram and
+ * WhatsApp show when the repository or the docs site is linked) is written by
+ * the same run. Its wordmark needs a font, which this build host does not ship,
+ * so the card takes one explicitly:
+ * <pre>
+ *   java scripts/GenerateBrandIcons.java --font /path/to/Inter.ttf
+ * </pre>
+ * Any TrueType/OpenType face works; the committed card was rendered from Inter
+ * (SIL Open Font License). Without {@code --font} the card is written as the
+ * mark alone on black, which is still valid — it just carries no wordmark. The
+ * font file itself is never committed: only the rendered PNG is.
  *
  * <p>Design units: origin at the mark centre, +x right, +y down.
  */
@@ -347,7 +363,7 @@ public final class GenerateBrandIcons {
         };
     }
 
-    private static void writeAll(String root) throws IOException {
+    private static void writeAll(String root, File fontFile) throws Exception {
         for (Asset a : assets(root)) {
             BufferedImage img = render(a);
             File f = new File(a.path());
@@ -358,6 +374,208 @@ public final class GenerateBrandIcons {
             ImageIO.write(img, "png", f);
             System.out.printf("wrote  %-68s %dx%d%n", a.path(), img.getWidth(), img.getHeight());
         }
+        String card = root + "/docs/public/social-preview.png";
+        BufferedImage social = socialCard(fontFile);
+        ImageIO.write(social, "png", new File(card));
+        System.out.printf("wrote  %-68s %dx%d%s%n", card, social.getWidth(), social.getHeight(),
+                fontFile == null ? "  (mark only: no --font given)" : "");
+    }
+
+    // ------------------------------------------------------------ social preview
+
+    /** Link-preview canvas. GitHub's card and most chat clients use 1.91:1 - 2:1. */
+    private static final int CARD_W = 1280;
+    private static final int CARD_H = 640;
+
+    private static final String WORDMARK = "Sherwood Studio";
+    private static final String TAGLINE = "Build Android APKs on your phone.";
+
+    /** Ink of the card has to stay this far from the border so nothing is clipped. */
+    private static final int CARD_MARGIN = 48;
+
+    /**
+     * The brand card: mark on the left, wordmark and tagline on the right, all on
+     * the same black field as the icon so the two read as one identity.
+     *
+     * <p>Nothing is placed at a hardcoded offset. The mark is rendered first, its
+     * real ink box is measured, and the mark/type pair is then centred as one
+     * block — the mark's ink is much narrower than its square canvas, so padding
+     * the canvas instead would push the lockup visibly off-centre. The wordmark
+     * also shrinks until it fits the space right of the mark, so a wider face than
+     * Inter cannot overflow the canvas.
+     *
+     * <p>Weight comes from stroking the glyph outline: a variable font exposes one
+     * default instance, so {@code deriveFont(BOLD)} would silently render the
+     * regular weight.
+     */
+    private static BufferedImage socialCard(File fontFile)
+            throws IOException, java.awt.FontFormatException {
+        BufferedImage img = new BufferedImage(CARD_W, CARD_H, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = quality(img.createGraphics());
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, CARD_W, CARD_H);
+
+        // 1. the mark, measured rather than assumed
+        int markSize = 300;
+        BufferedImage mark = renderMark(markSize, new double[]{0.92, 0.92}, 3);
+        Rectangle markInk = inkBox(mark);
+        int markW = markInk.width;
+        int markH = markInk.height;
+
+        if (fontFile == null) {
+            g.drawImage(mark, (CARD_W - markSize) / 2, (CARD_H - markSize) / 2, null);
+            g.dispose();
+            return img;
+        }
+
+        Font base = Font.createFont(Font.TRUETYPE_FONT, fontFile);
+        Font tagFont = base.deriveFont(38f);
+        FontMetrics gm = g.getFontMetrics(tagFont);
+        int tagW = gm.stringWidth(TAGLINE);
+
+        // 2. the type, shrunk until the whole lockup fits with its margins
+        int gap = 96;
+        Font titleFont = base.deriveFont(84f);
+        FontMetrics tm = g.getFontMetrics(titleFont);
+        int textW = Math.max(tm.stringWidth(WORDMARK), tagW);
+        int budget = CARD_W - 2 * CARD_MARGIN - markW - gap;
+        while (titleFont.getSize2D() > 24f && Math.max(tm.stringWidth(WORDMARK), tagW) > budget) {
+            titleFont = titleFont.deriveFont(titleFont.getSize2D() - 2f);
+            tm = g.getFontMetrics(titleFont);
+            textW = Math.max(tm.stringWidth(WORDMARK), tagW);
+        }
+
+        // 3. one block, centred on both axes
+        int totalW = markW + gap + textW;
+        int blockLeft = (CARD_W - totalW) / 2;
+        g.drawImage(mark,
+                blockLeft - markInk.x,
+                (CARD_H - markSize) / 2 + (markSize - markH) / 2 - markInk.y,
+                null);
+
+        int textLeft = blockLeft + markW + gap;
+
+        int ruleH = 6;
+        int ruleGap = 34;
+        int titleGap = 26;
+        int blockH = ruleH + ruleGap + tm.getAscent() + tm.getDescent()
+                + titleGap + gm.getAscent() + gm.getDescent();
+        int blockTop = (CARD_H - blockH) / 2;
+        int titleBaseline = blockTop + ruleH + ruleGap + tm.getAscent();
+        int tagBaseline = titleBaseline + tm.getDescent() + titleGap + gm.getAscent();
+
+        // Brand rule above the wordmark, the same red as the mark.
+        g.setColor(new Color(RED));
+        g.fillRect(textLeft, blockTop, 84, ruleH);
+
+        drawOutlinedText(g, WORDMARK, titleFont, textLeft, titleBaseline,
+                new Color(0xFFFFFF), 2.6f);
+        drawOutlinedText(g, TAGLINE, tagFont, textLeft, tagBaseline,
+                new Color(0x9CA3AF), 0.6f);
+
+        g.dispose();
+        return img;
+    }
+
+    /** Bounding box of every non-black pixel, or an empty box for a blank image. */
+    private static Rectangle inkBox(BufferedImage img) {
+        int minX = img.getWidth();
+        int minY = img.getHeight();
+        int maxX = -1;
+        int maxY = -1;
+        for (int y = 0; y < img.getHeight(); y++) {
+            for (int x = 0; x < img.getWidth(); x++) {
+                if ((img.getRGB(x, y) >>> 24) > 8) {
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                }
+            }
+        }
+        return maxX < 0 ? new Rectangle() : new Rectangle(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
+    /** Fills a glyph outline and strokes it by {@code weightPx} to set the weight. */
+    private static void drawOutlinedText(Graphics2D g, String text, Font font,
+                                         int x, int baseline, Color color, float weightPx) {
+        GlyphVector gv = font.createGlyphVector(g.getFontRenderContext(), text);
+        Shape outline = gv.getOutline(x, baseline);
+        g.setColor(color);
+        g.fill(outline);
+        g.setStroke(new BasicStroke(weightPx, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.draw(outline);
+        g.setStroke(new BasicStroke(1f));
+    }
+
+    private static void verifySocialCard(String root) throws IOException {
+        String path = root + "/docs/public/social-preview.png";
+        File f = new File(path);
+        if (!f.isFile()) {
+            check(false, path + " is missing");
+            return;
+        }
+        BufferedImage img = ImageIO.read(f);
+        if (img == null) {
+            check(false, path + " is not readable");
+            return;
+        }
+        check(img.getWidth() == CARD_W && img.getHeight() == CARD_H,
+                path + " is " + img.getWidth() + "x" + img.getHeight()
+                        + ", expected " + CARD_W + "x" + CARD_H);
+        check(!img.getColorModel().hasAlpha(), path + " must be opaque");
+
+        long black = 0;
+        long red = 0;
+        long light = 0;
+        int minX = CARD_W;
+        int minY = CARD_H;
+        int maxX = -1;
+        int maxY = -1;
+        for (int y = 0; y < CARD_H; y++) {
+            for (int x = 0; x < CARD_W; x++) {
+                int rgb = img.getRGB(x, y) & 0xFFFFFF;
+                int r = (rgb >> 16) & 0xFF;
+                int gr = (rgb >> 8) & 0xFF;
+                int b = rgb & 0xFF;
+                if (rgb == BLACK) {
+                    black++;
+                    continue;
+                }
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+                if (r > 150 && gr < 90 && b < 90) {
+                    red++;
+                }
+                if (r > 200 && gr > 200 && b > 200) {
+                    light++;
+                }
+            }
+        }
+        check(black > (long) CARD_W * CARD_H / 2,
+                path + " is not mostly the black brand field (" + black + " px)");
+        check(red > 3000, path + " carries no brand mark (" + red + " red px)");
+        check(light > 2000,
+                path + " carries no wordmark (" + light + " light px) - was --font passed?");
+        check(minX >= CARD_MARGIN && minY >= CARD_MARGIN && maxX < CARD_W - CARD_MARGIN
+                        && maxY < CARD_H - CARD_MARGIN,
+                path + " ink is clipped or touches the margin: "
+                        + minX + "," + minY + " - " + maxX + "," + maxY);
+        // The mark sits left of the type; red beyond the text column would mean the
+        // rule or the mark drifted out of its own half of the card.
+        check(minX < CARD_W / 2, path + " has no mark on the left: ink starts at x=" + minX);
+        // The lockup is centred from measured ink, so the ink box must sit on the
+        // canvas centre; a drift here means the padding was counted as ink again.
+        int inkCentreX = (minX + maxX) / 2;
+        int inkCentreY = (minY + maxY) / 2;
+        check(Math.abs(inkCentreX - CARD_W / 2) <= 20,
+                path + " is " + (inkCentreX - CARD_W / 2) + " px off the horizontal centre");
+        check(Math.abs(inkCentreY - CARD_H / 2) <= 20,
+                path + " is " + (inkCentreY - CARD_H / 2) + " px off the vertical centre");
+        System.out.printf("ok     %-68s %dx%d  ink %d,%d-%d,%d%n",
+                path, img.getWidth(), img.getHeight(), minX, minY, maxX, maxY);
     }
 
     // ------------------------------------------------------------ verification
@@ -513,6 +731,8 @@ public final class GenerateBrandIcons {
                     a.shape() == 't' ? String.format(" / safe circle %.1f", safeR) : "");
         }
 
+        verifySocialCard(root);
+
         if (failures > 0) {
             System.out.println("\n" + failures + " check(s) failed");
             System.exit(1);
@@ -523,17 +743,24 @@ public final class GenerateBrandIcons {
     public static void main(String[] args) throws Exception {
         String root = ".";
         boolean verify = false;
-        for (String arg : args) {
-            if (arg.equals("--verify")) {
+        File font = null;
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--verify")) {
                 verify = true;
+            } else if (args[i].equals("--font") && i + 1 < args.length) {
+                font = new File(args[++i]);
+                if (!font.isFile()) {
+                    System.err.println("font not found: " + font);
+                    System.exit(2);
+                }
             } else {
-                root = arg;
+                root = args[i];
             }
         }
         if (verify) {
             verifyAll(root);
         } else {
-            writeAll(root);
+            writeAll(root, font);
         }
     }
 }
