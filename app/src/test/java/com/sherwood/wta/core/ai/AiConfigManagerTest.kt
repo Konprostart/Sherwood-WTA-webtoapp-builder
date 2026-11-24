@@ -248,4 +248,40 @@ class AiConfigManagerTest {
 
         println("\n✅✅✅ ALL E2E STEPS PASSED ✅✅✅")
     }
+
+    // A restore from another install leaves API-key ciphertext that this device's
+    // AndroidKeyStore cannot open. It must read as empty rather than as "unknown",
+    // otherwise add/update/delete stay blocked forever and no key can be saved.
+
+    @Test
+    fun `unreadable stored keys start empty so new keys can be saved`() {
+        val keys = createManager().resolveApiKeys("enc_v1:garbage", null) { null }
+
+        assertTrue(keys.isEmpty())
+    }
+
+    @Test
+    fun `a plaintext backup still wins over an unreadable primary`() {
+        val json = """[{"id":"k1","provider":"OPENAI","apiKey":"sk-test","createdAt":1}]"""
+
+        val keys = createManager().resolveApiKeys("enc_v1:garbage", json) { null }
+
+        assertEquals(1, keys.size)
+        assertEquals("sk-test", keys.first().apiKey)
+    }
+
+    @Test
+    fun `a readable primary parses without touching the backup`() {
+        val json = """[{"id":"k1","provider":"OPENAI","apiKey":"sk-test","createdAt":1}]"""
+
+        val keys = createManager().resolveApiKeys("enc_v1:cipher", null) { json }
+
+        assertEquals(1, keys.size)
+        assertEquals("k1", keys.first().id)
+    }
+
+    @Test
+    fun `no stored keys resolves to an empty list`() {
+        assertTrue(createManager().resolveApiKeys(null, null) { null }.isEmpty())
+    }
 }

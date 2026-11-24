@@ -6,7 +6,7 @@ rest.
 
 > **English**
 
-This guide targets **Sherwood Studio 2.10.6** (`versionCode 98`).
+This guide targets **Sherwood Studio 2.15.1** (`versionCode 109`).
 
 ---
 

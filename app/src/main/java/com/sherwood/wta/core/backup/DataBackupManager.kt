@@ -82,6 +82,14 @@ class DataBackupManager(private val context: Context) {
         private const val LOCAL_FILES_DIR = "local/files/"
         private const val LOCAL_EXTERNAL_FILES_DIR = "local/external_files/"
         private const val DATASTORE_DIR = "local/datastore/"
+
+        /**
+         * API keys in `ai_config` are encrypted with the exporting install's
+         * AndroidKeyStore key, which does not exist on the importing device. Copying
+         * that ciphertext over the local file would leave AI settings permanently
+         * unable to decrypt — and therefore unable to accept a new key.
+         */
+        internal const val AI_CONFIG_DATASTORE_ENTRY = "${DATASTORE_DIR}ai_config.preferences_pb"
         private const val SHARED_PREFS_DIR = "local/shared_prefs/"
         private const val KEYSTORE_DIR = "local/keystores/"
         private const val ADBLOCK_DIR = "local/adblock/"
@@ -460,7 +468,13 @@ class DataBackupManager(private val context: Context) {
                             isLocalBackupEntry(entry.name) && !entry.isDirectory -> {
                                 val staged = stageLocalBackupEntry(entry.name, zipIn, entryGuard)
                                 if (staged != null) {
-                                    pendingLocalEntries.add(staged)
+                                    if (keepLocalAiConfig(staged)) {
+                                        staged.tempFile.delete()
+                                    } else {
+                                        pendingLocalEntries.add(staged)
+                                    }
+                                    // The entry was still read and hashed, so the
+                                    // archive's manifest must keep matching it.
                                     observedEntries.add(staged.fingerprint)
                                 }
                             }
@@ -1337,6 +1351,18 @@ class DataBackupManager(private val context: Context) {
         val fingerprint: BackupEntryFingerprint
             get() = BackupEntryFingerprint(zipPath, size, sha256)
     }
+
+    /**
+     * True when the staged entry must not replace the live file.
+     *
+     * Only the AI config qualifies today: its content is encrypted with a key that
+     * belongs to the install that wrote the backup, so importing it would make the
+     * API keys on this device permanently unreadable. When the device has no local
+     * AI config yet the file is still imported — there is nothing to protect, and
+     * [com.sherwood.wta.core.ai.AiConfigManager] reads the unreadable keys as empty.
+     */
+    internal fun keepLocalAiConfig(entry: PendingLocalEntry): Boolean =
+        entry.zipPath == AI_CONFIG_DATASTORE_ENTRY && entry.targetFile.exists()
 
     /** Visible for unit tests (zip-slip staging rules). */
     internal fun stageLocalBackupEntry(

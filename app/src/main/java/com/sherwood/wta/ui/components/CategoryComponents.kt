@@ -319,21 +319,29 @@ fun MoveToCategoryDialog(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            com.sherwood.wta.ui.design.WtaSettingCard {
-                CategoryOptionRow(
-                    icon = Icons.Outlined.FolderOpen,
-                    name = Strings.uncategorized,
-                    selected = currentCategoryId == null,
-                    onClick = { onMoveToCategory(null) }
-                )
-                categories.forEach { category ->
-                    com.sherwood.wta.ui.design.WtaSectionDivider()
+            // The dialog body cannot scroll, so an unbounded category list clips its
+            // last rows out of reach. Cap the list and scroll it instead.
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                com.sherwood.wta.ui.design.WtaSettingCard {
                     CategoryOptionRow(
-                        icon = com.sherwood.wta.util.SvgIconMapper.getIcon(category.icon),
-                        name = category.name,
-                        selected = currentCategoryId == category.id,
-                        onClick = { onMoveToCategory(category.id) }
+                        icon = Icons.Outlined.FolderOpen,
+                        name = Strings.uncategorized,
+                        selected = currentCategoryId == null,
+                        onClick = { onMoveToCategory(null) }
                     )
+                    categories.forEach { category ->
+                        com.sherwood.wta.ui.design.WtaSectionDivider()
+                        CategoryOptionRow(
+                            icon = com.sherwood.wta.util.SvgIconMapper.getIcon(category.icon),
+                            name = category.name,
+                            selected = currentCategoryId == category.id,
+                            onClick = { onMoveToCategory(category.id) }
+                        )
+                    }
                 }
             }
         },

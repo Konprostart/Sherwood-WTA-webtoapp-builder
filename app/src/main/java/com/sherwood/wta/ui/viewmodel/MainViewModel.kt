@@ -505,9 +505,13 @@ class MainViewModel(
 
                 if (_currentApp.value != null) {
                     repository.updateWebApp(webApp)
-                    // DB now references the new files — safe to remove the replaced ones.
-                    deleteReplacedIconIfUnused(previousIconPath, state.savedIconPath ?: state.iconUri?.toString())
-                    deleteReplacedSplashIfUnused(previousSplashPath, state.splashConfig?.mediaPath)
+                    // Compare against what the row now references, not the edit state:
+                    // Preview persists the draft through saveAndPreview(), so a splash
+                    // picked before Preview is already committed while state.splashConfig
+                    // still holds the stale (often null) edit value. Reading state here
+                    // deleted the file the DB had just been pointed at.
+                    deleteReplacedIconIfUnused(previousIconPath, webApp.iconPath)
+                    deleteReplacedSplashIfUnused(previousSplashPath, webApp.splashConfig?.mediaPath)
                 } else {
                     val newId = repository.createWebApp(webApp)
 
