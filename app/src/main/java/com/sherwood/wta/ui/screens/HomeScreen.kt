@@ -478,9 +478,9 @@ fun HomeScreen(
                                 leadingIcon = { Icon(Icons.Outlined.Palette, null, Modifier.size(20.dp)) }
                             )
                             DropdownMenuItem(
-                                text = { Text(Strings.menuAbout) },
+                                text = { Text(Strings.settingsMenuTitle) },
                                 onClick = { showMoreMenu = false; onOpenAbout() },
-                                leadingIcon = { Icon(Icons.Outlined.Info, null, Modifier.size(20.dp)) }
+                                leadingIcon = { Icon(Icons.Outlined.Settings, null, Modifier.size(20.dp)) }
                             )
                         }
                     }

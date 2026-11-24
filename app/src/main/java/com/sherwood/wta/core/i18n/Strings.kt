@@ -706,6 +706,7 @@ object Strings {
     val speedNormal: String get() = StringsA.speedNormal
     val speedFast: String get() = StringsA.speedFast
     val speedInstant: String get() = StringsA.speedInstant
+    val settingsMenuTitle: String get() = StringsA.settingsMenuTitle
     val about: String get() = StringsA.about
     val aboutAppDescription: String get() = StringsA.aboutAppDescription
     val showDescriptions: String get() = StringsA.showDescriptions

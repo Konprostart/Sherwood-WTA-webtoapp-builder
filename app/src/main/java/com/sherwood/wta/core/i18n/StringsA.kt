@@ -163,6 +163,19 @@ object StringsA {
         AppLanguage.KOREAN -> "정보"
     }
 
+    val settingsMenuTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "设置"
+        AppLanguage.ENGLISH -> "Settings"
+        AppLanguage.ARABIC -> "الإعدادات"
+        AppLanguage.PORTUGUESE -> "Configurações"
+        AppLanguage.SPANISH -> "Ajustes"
+        AppLanguage.FRENCH -> "Paramètres"
+        AppLanguage.GERMAN -> "Einstellungen"
+        AppLanguage.RUSSIAN -> "Настройки"
+        AppLanguage.JAPANESE -> "設定"
+        AppLanguage.KOREAN -> "설정"
+    }
+
     val tabMore: String get() = when (Strings.lang) {
         AppLanguage.CHINESE -> "更多"
         AppLanguage.ENGLISH -> "More"

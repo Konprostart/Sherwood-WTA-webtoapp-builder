@@ -116,7 +116,7 @@ fun AboutScreen(onBack: () -> Unit) {
     val versionCode = remember(context) { context.currentVersionCode() }
 
     WtaScreen(
-        title = Strings.about,
+        title = Strings.settingsMenuTitle,
         snackbarHostState = snackbarHostState,
         onBack = onBack
     ) {
