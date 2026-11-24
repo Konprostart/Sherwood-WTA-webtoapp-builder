@@ -117,10 +117,10 @@ class AutoPromptStoreTest {
         assertThat(store.move(a.id, 2).getOrThrow().prompts.map { it.name })
             .containsExactly("B", "C", "A").inOrder()
         assertThat(store.moveBy(c.id, -1).getOrThrow().prompts.map { it.name })
-            .containsExactly("B", "A", "C").inOrder()
+            .containsExactly("C", "B", "A").inOrder()
         // A target far past the end lands on the last slot instead of failing.
         assertThat(store.moveBy(b.id, 99).getOrThrow().prompts.map { it.name })
-            .containsExactly("A", "C", "B").inOrder()
+            .containsExactly("C", "A", "B").inOrder()
     }
 
     @Test
