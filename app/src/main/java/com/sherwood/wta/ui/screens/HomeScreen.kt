@@ -137,6 +137,7 @@ fun HomeScreen(
     onOpenAppModifier: () -> Unit = {},
     onOpenAiSettings: () -> Unit = {},
     onOpenAgent: () -> Unit = {},
+    onOpenAutoPrompt: () -> Unit = {},
     onOpenPlugins: () -> Unit = {},
     onOpenStudio: () -> Unit = {},
     onOpenLinuxEnvironment: () -> Unit = {},
@@ -390,6 +391,11 @@ fun HomeScreen(
                                 text = { Text(Strings.menuAgent) },
                                 onClick = { showMoreMenu = false; onOpenAgent() },
                                 leadingIcon = { Icon(Icons.Outlined.Code, null, Modifier.size(20.dp)) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(Strings.autoPromptMenuTitle) },
+                                onClick = { showMoreMenu = false; onOpenAutoPrompt() },
+                                leadingIcon = { Icon(Icons.Outlined.Bolt, null, Modifier.size(20.dp)) }
                             )
                             DropdownMenuItem(
                                 text = { Text(Strings.menuAiSettings) },
