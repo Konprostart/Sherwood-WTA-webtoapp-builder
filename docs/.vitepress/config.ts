@@ -382,13 +382,13 @@ function themeConfig(lang: Lang, prefix: string) {
     },
     footer: {
       message: 'Released under the Unlicense.',
-      copyright: 'Built by Sherwood WTA · <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/privacy">Privacy Policy</a>'
+      copyright: 'Built by Sherwood Studio · <a href="https://konprostart.github.io/Sherwood-WTA-webtoapp-builder/privacy">Privacy Policy</a>'
     }
   }
 }
 
 export default defineConfig({
-  title: 'Sherwood WTA',
+  title: 'Sherwood Studio',
   description:
     'Build Android APKs from web projects, directly on your phone — on-device runtimes, hardened networking, and Play-ready export.',
   lang: 'en',
@@ -397,9 +397,13 @@ export default defineConfig({
   lastUpdated: true,
   head: [
     ['link', { rel: 'icon', type: 'image/png', href: `${base}logo.png` }],
-    ['meta', { name: 'theme-color', content: '#3b82f6' }],
+    ['link', { rel: 'apple-touch-icon', href: `${base}logo.png` }],
+    // Black, because the mark is a red-on-black tile: a blue browser chrome
+    // around a black-and-red logo read as two different products.
+    ['meta', { name: 'theme-color', content: '#000000' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'Sherwood WTA' }],
+    ['meta', { property: 'og:site_name', content: 'Sherwood Studio' }],
+    ['meta', { property: 'og:title', content: 'Sherwood Studio' }],
     [
       'meta',
       {
@@ -407,7 +411,13 @@ export default defineConfig({
         content: 'An on-device APK workshop that goes far beyond URL wrapping.'
       }
     ],
-    ['meta', { property: 'og:image', content: `${base}social-preview.png` }]
+    ['meta', { property: 'og:image', content: `${base}social-preview.png` }],
+    ['meta', { property: 'og:image:width', content: '1280' }],
+    ['meta', { property: 'og:image:height', content: '640' }],
+    ['meta', { property: 'og:image:alt', content: 'Sherwood Studio' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:title', content: 'Sherwood Studio' }],
+    ['meta', { name: 'twitter:image', content: `${base}social-preview.png` }]
   ],
   locales: {
     root: {
@@ -418,7 +428,7 @@ export default defineConfig({
   },
   themeConfig: {
     logo: '/logo.png',
-    siteTitle: 'Sherwood WTA',
+    siteTitle: 'Sherwood Studio',
     search: {
       provider: 'local',
       options: {}

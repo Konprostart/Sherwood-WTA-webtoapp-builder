@@ -1,12 +1,12 @@
-# Contributing to WebToApp
+# Contributing to Sherwood Studio
 
-Thanks for taking the time to help. WebToApp moves fastest when contributions
+Thanks for taking the time to help. Sherwood Studio moves fastest when contributions
 stay **small and well-scoped** — pick one of the lanes below and ignore the
 rest.
 
 > **English**
 
-This guide targets **WebToApp 2.6.9** (`versionCode 71`).
+This guide targets **Sherwood Studio 2.10.6** (`versionCode 98`).
 
 ---
 
@@ -25,7 +25,7 @@ is no need to write code before there's agreement on the shape of the change.
 
 ## Module Market submissions
 
-The fastest way to ship something useful to every WebToApp user is to publish
+The fastest way to ship something useful to every Sherwood Studio user is to publish
 a module. The canonical Module Market guide lives in
 [`modules/README.md`](../modules/README.md). Use that file for the full
 schema, field rules, reviewer checklist, and CI validation details. The short
@@ -148,7 +148,7 @@ shell composable. Three gates enforce this; run them, don't argue with them:
 
 ### Coding conventions
 
-WebToApp leans on the Kotlin and Jetpack Compose patterns already in the
+Sherwood Studio leans on the Kotlin and Jetpack Compose patterns already in the
 codebase. A few rules worth calling out:
 
 - **Comments explain *why*, not *what*.** Non-obvious decisions, cross-file

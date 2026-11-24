@@ -1,6 +1,6 @@
 # Plugin Authoring
 
-Sherwood WTA stays extensible after an app ships. Three kinds of plugins share one management surface and one injection pipeline:
+Sherwood Studio stays extensible after an app ships. Three kinds of plugins share one management surface and one injection pipeline:
 
 | Type | What it is | Good for |
 | --- | --- | --- |

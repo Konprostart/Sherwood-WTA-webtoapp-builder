@@ -121,6 +121,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             release-artifacts/Sherwood-WTA-${VERSION}.apk \
             release-artifacts/Sherwood-WTA-${VERSION}-gplay.aab \
-            --title "Sherwood WTA ${VERSION}" \
+            --title "Sherwood Studio ${VERSION}" \
             --generate-notes \
             --verify-tag

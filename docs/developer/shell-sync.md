@@ -31,7 +31,7 @@ This produces the single canonical template at `app/src/main/assets/template/web
 
 At runtime, a generated APK:
 
-1. `WebToAppApplication` starts.
+1. `SherwoodStudioApplication` starts.
 2. `ShellModeManager.isShellMode()` checks for `app_config.json` in assets.
 3. If present, `getConfig()` deserializes it (via Gson) into `ShellConfig` — possibly decrypting it first.
 4. `ShellServerLauncher` resolves and launches server-backed runtimes; `ShellRuntimeServices` initializes the runtime stack.
