@@ -17,6 +17,7 @@ import com.sherwood.wta.core.shell.ShellServerLauncher
 import com.sherwood.wta.core.webview.DownloadBridge
 import com.sherwood.wta.core.webview.TranslateBridge
 import com.sherwood.wta.data.model.FloatingWindowConfig
+import com.sherwood.wta.data.model.withNotificationPolyfill
 import com.sherwood.wta.ui.shell.injectTranslateScript
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -303,7 +304,7 @@ class FloatingWindowService : Service() {
                             googleSignIn = shellConfig.webViewConfig.nativeBridgeGoogleSignIn,
                             googleSignInClientId = shellConfig.webViewConfig.nativeBridgeGoogleSignInClientId,
                             directory = shellConfig.webViewConfig.nativeBridgeDirectory,
-                        )
+                        ).withNotificationPolyfill(shellConfig.webViewConfig.enableNotificationPolyfill)
                         val nativeBridge = com.sherwood.wta.core.webview.NativeBridge(
                             context = this@FloatingWindowService,
                             scope = serviceScope,

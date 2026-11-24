@@ -27,6 +27,7 @@ import com.sherwood.wta.ui.theme.ShellTheme
 import com.sherwood.wta.core.webview.BackgroundMediaRuntime
 import com.sherwood.wta.core.webview.TranslateBridge
 import com.sherwood.wta.data.model.KeyboardAdjustMode
+import com.sherwood.wta.data.model.withNotificationPolyfill
 import com.sherwood.wta.core.floatingwindow.FloatingWindowService
 import com.sherwood.wta.ui.shared.WindowHelper
 
@@ -900,7 +901,7 @@ class ShellActivity : AppCompatActivity() {
                                 googleSignIn = config.webViewConfig.nativeBridgeGoogleSignIn,
                                 googleSignInClientId = config.webViewConfig.nativeBridgeGoogleSignInClientId,
                                 directory = config.webViewConfig.nativeBridgeDirectory,
-                            )
+                            ).withNotificationPolyfill(config.webViewConfig.enableNotificationPolyfill)
                             val nativeBridge = com.sherwood.wta.core.webview.NativeBridge(
                                 context = this@ShellActivity,
                                 scope = lifecycleScope,

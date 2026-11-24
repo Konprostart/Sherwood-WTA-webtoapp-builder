@@ -77,6 +77,7 @@ import com.sherwood.wta.data.model.HtmlLoadMode
 import com.sherwood.wta.data.model.SplashOrientation
 import com.sherwood.wta.data.model.SplashType
 import com.sherwood.wta.data.model.WebApp
+import com.sherwood.wta.data.model.withNotificationPolyfill
 import com.sherwood.wta.data.model.hasAnyToolbarItem
 import com.sherwood.wta.data.model.resolveToolbarButtons
 import android.content.pm.ActivityInfo
@@ -4184,7 +4185,10 @@ fun WebViewScreen(
                                                 context = context,
                                                 scope = scope,
                                                 webViewProvider = { this },
-                                                capabilities = effectiveWebApp.webViewConfig.nativeBridgeCapabilities,
+                                                capabilities = effectiveWebApp.webViewConfig.nativeBridgeCapabilities
+                                                    .withNotificationPolyfill(
+                                                        effectiveWebApp.webViewConfig.enableNotificationPolyfill
+                                                    ),
                                                 corsBypass = effectiveWebApp.webViewConfig.enableCorsBypass,
                                                 downloadLocationMode = effectiveWebApp.webViewConfig.downloadLocationMode,
                                                 customDownloadDirUri = effectiveWebApp.webViewConfig.customDownloadDirUri,

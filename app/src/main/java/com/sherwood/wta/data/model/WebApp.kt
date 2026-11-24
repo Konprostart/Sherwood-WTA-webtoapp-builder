@@ -1931,6 +1931,16 @@ data class NativeBridgeCapabilities(
     val directory: Boolean = false,
 )
 
+/**
+ * The web Notification polyfill calls
+ * [com.sherwood.wta.core.webview.NativeBridge.showWebNotification]. That method reports
+ * permission denied while [NativeBridgeCapabilities.notification] is off, so a polyfill
+ * that is on by itself never posts a system notification — the page is told the user
+ * refused. Turn the capability on wherever the polyfill is enabled.
+ */
+fun NativeBridgeCapabilities.withNotificationPolyfill(polyfillEnabled: Boolean): NativeBridgeCapabilities =
+    if (polyfillEnabled) copy(notification = true) else this
+
 enum class GeolocationAccuracy {
 
     COARSE,

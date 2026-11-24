@@ -26,6 +26,7 @@ import com.sherwood.wta.data.model.PermissionFeatureDefaults
 import com.sherwood.wta.data.model.AnnouncementTemplateType
 import com.sherwood.wta.data.model.HtmlLoadMode
 import com.sherwood.wta.data.model.WebApp
+import com.sherwood.wta.data.model.withNotificationPolyfill
 import com.sherwood.wta.data.model.withRuntimePermissionsSyncedFromFeatures
 import com.sherwood.wta.data.model.getActivationCodeStrings
 import com.sherwood.wta.ui.components.announcement.toUiTemplate
@@ -4433,7 +4434,22 @@ private fun WebApp.buildWebViewBlock(context: android.content.Context?): WebView
     }
 }
 
-private fun WebApp.buildWebViewBehaviorBlock(): WebViewBehaviorBlock = WebViewBehaviorBlock(
+/**
+ * True when the exported app posts web notifications: either the editor switch is on,
+ * or the export config's own notification channel is the web API.
+ */
+private fun WebApp.exportsWebNotificationPolyfill(): Boolean =
+    webViewConfig.enableNotificationPolyfill ||
+        (apkExportConfig?.let {
+            it.notificationEnabled && it.notificationConfig?.type?.key == "web_api"
+        } == true)
+
+private fun WebApp.buildWebViewBehaviorBlock(): WebViewBehaviorBlock {
+    // The polyfill routes through NativeBridge.showWebNotification, which refuses while
+    // the notification capability is off. Derive both from one value so the page is
+    // never told permission was denied for a polyfill the user switched on.
+    val webNotificationPolyfill = exportsWebNotificationPolyfill()
+    return WebViewBehaviorBlock(
     initialScale = webViewConfig.initialScale,
     pageZoomPercent = webViewConfig.pageZoomPercent,
     viewportMode = webViewConfig.viewportMode.name,
@@ -4458,10 +4474,7 @@ private fun WebApp.buildWebViewBehaviorBlock(): WebViewBehaviorBlock = WebViewBe
     enableBackStatePreservation = webViewConfig.enableBackStatePreservation,
     followSystemDarkMode = webViewConfig.followSystemDarkMode,
     enableClipboardPolyfill = webViewConfig.enableClipboardPolyfill,
-    enableNotificationPolyfill = webViewConfig.enableNotificationPolyfill ||
-        (apkExportConfig?.let {
-            it.notificationEnabled && it.notificationConfig?.type?.key == "web_api"
-        } == true),
+    enableNotificationPolyfill = webNotificationPolyfill,
     geolocationEnabled = webViewConfig.geolocationEnabled ||
         (apkExportConfig?.runtimePermissions?.location == true),
     geolocationAccuracy = webViewConfig.geolocationAccuracy.name,
@@ -4473,7 +4486,9 @@ private fun WebApp.buildWebViewBehaviorBlock(): WebViewBehaviorBlock = WebViewBe
     nativeBridgeVibration = webViewConfig.nativeBridgeCapabilities.vibration,
     nativeBridgeGeolocation = webViewConfig.nativeBridgeCapabilities.geolocation,
     nativeBridgeBrightness = webViewConfig.nativeBridgeCapabilities.brightness,
-    nativeBridgeNotification = webViewConfig.nativeBridgeCapabilities.notification,
+    nativeBridgeNotification = webViewConfig.nativeBridgeCapabilities
+        .withNotificationPolyfill(webNotificationPolyfill)
+        .notification,
     nativeBridgeNotificationScheduled = webViewConfig.nativeBridgeCapabilities.notificationScheduled,
     nativeBridgeNotificationPersistent = webViewConfig.nativeBridgeCapabilities.notificationPersistent,
     nativeBridgeDownload = webViewConfig.nativeBridgeCapabilities.download,
@@ -4525,6 +4540,7 @@ private fun WebApp.buildWebViewBehaviorBlock(): WebViewBehaviorBlock = WebViewBe
     autoRefreshIntervalSec = webViewConfig.autoRefreshIntervalSec,
     autoRefreshShowCountdown = webViewConfig.autoRefreshShowCountdown
 )
+}
 
 private fun WebApp.buildScreenAwakeBlock(): ScreenAwakeBlock = ScreenAwakeBlock(
     keepScreenOn = webViewConfig.keepScreenOn,
