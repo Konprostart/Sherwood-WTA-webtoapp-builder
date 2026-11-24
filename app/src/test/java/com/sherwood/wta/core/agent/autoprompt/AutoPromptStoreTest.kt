@@ -38,7 +38,7 @@ class AutoPromptStoreTest {
     private fun reopen() = AutoPromptStore(ctx)
 
     @Test
-    fun `turning the master switch off keeps every saved prompt`() = runBlocking {
+    fun `turning the master switch off keeps every saved prompt`(): Unit = runBlocking {
         store.save(prompt("One")).getOrThrow()
         store.save(prompt("Two")).getOrThrow()
 
@@ -57,7 +57,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `a saved prompt survives a restart`() = runBlocking {
+    fun `a saved prompt survives a restart`(): Unit = runBlocking {
         val saved = store.save(
             AutoPrompt(
                 name = "Audit",
@@ -78,7 +78,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `editing replaces the prompt in place and keeps the order`() = runBlocking {
+    fun `editing replaces the prompt in place and keeps the order`(): Unit = runBlocking {
         val one = store.save(prompt("One")).getOrThrow().prompts.single()
         store.save(prompt("Two")).getOrThrow()
 
@@ -88,7 +88,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `delete removes only the target`() = runBlocking {
+    fun `delete removes only the target`(): Unit = runBlocking {
         val one = store.save(prompt("One")).getOrThrow().prompts.single()
         store.save(prompt("Two")).getOrThrow()
 
@@ -97,7 +97,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `duplicate inserts a named copy right after the source`() = runBlocking {
+    fun `duplicate inserts a named copy right after the source`(): Unit = runBlocking {
         val one = store.save(prompt("One")).getOrThrow().prompts.single()
         store.save(prompt("Two")).getOrThrow()
 
@@ -109,7 +109,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `move reorders and clamps out-of-range targets`() = runBlocking {
+    fun `move reorders and clamps out-of-range targets`(): Unit = runBlocking {
         val a = store.save(prompt("A")).getOrThrow().prompts.single()
         val b = store.save(prompt("B")).getOrThrow().prompts.last()
         val c = store.save(prompt("C")).getOrThrow().prompts.last()
@@ -124,7 +124,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `the per-prompt switch persists`() = runBlocking {
+    fun `the per-prompt switch persists`(): Unit = runBlocking {
         val saved = store.save(prompt("One")).getOrThrow().prompts.single()
 
         val after = store.setPromptEnabled(saved.id, false).getOrThrow()
@@ -133,14 +133,14 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `blank prompts are rejected without touching the list`() = runBlocking {
+    fun `blank prompts are rejected without touching the list`(): Unit = runBlocking {
         assertThat(store.save(AutoPrompt(name = "", text = "body")).isFailure).isTrue()
         assertThat(store.save(AutoPrompt(name = "name", text = "  ")).isFailure).isTrue()
         assertThat(store.state().prompts).isEmpty()
     }
 
     @Test
-    fun `the first run seeds once and deleting everything does not re-seed`() = runBlocking {
+    fun `the first run seeds once and deleting everything does not re-seed`(): Unit = runBlocking {
         val seeded = store.seedIfFirstRun(listOf(prompt("A"), prompt("B")))
         assertThat(seeded.prompts.map { it.name }).containsExactly("A", "B").inOrder()
 
@@ -154,7 +154,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `an unreadable document is preserved and never overwritten`() = runBlocking {
+    fun `an unreadable document is preserved and never overwritten`(): Unit = runBlocking {
         val broken = "{this is not json"
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
@@ -174,7 +174,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `a null prompt array is treated as a corrupt document`() = runBlocking {
+    fun `a null prompt array is treated as a corrupt document`(): Unit = runBlocking {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_DOCUMENT, """{"version":1,"masterEnabled":true,"prompts":null}""")
@@ -185,7 +185,7 @@ class AutoPromptStoreTest {
     }
 
     @Test
-    fun `the master switch defaults to on with no saved document`() = runBlocking {
+    fun `the master switch defaults to on with no saved document`(): Unit = runBlocking {
         assertThat(store.state().masterEnabled).isTrue()
         assertThat(store.state().prompts).isEmpty()
     }

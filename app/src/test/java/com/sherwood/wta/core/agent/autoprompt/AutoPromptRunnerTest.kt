@@ -62,7 +62,7 @@ class AutoPromptRunnerTest {
     }
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp(): Unit = runBlocking {
         ctx = ApplicationProvider.getApplicationContext()
         sessionStore = SessionStore(ctx, ProjectFileManager(ctx))
         sessionStore.clearAll()
@@ -97,7 +97,7 @@ class AutoPromptRunnerTest {
     ) = AutoPrompt(name = name, text = text, enabled = enabled, agentProfileId = agentProfileId, modelId = modelId)
 
     @Test
-    fun `a ready prompt creates a session holding the text and publishes the run`() = runBlocking {
+    fun `a ready prompt creates a session holding the text and publishes the run`(): Unit = runBlocking {
         val result = runner().prepare(prompt())
 
         val ready = result as AutoPromptRunner.PrepareResult.Ready
@@ -118,7 +118,7 @@ class AutoPromptRunnerTest {
     }
 
     @Test
-    fun `every run gets its own session`() = runBlocking {
+    fun `every run gets its own session`(): Unit = runBlocking {
         val first = runner().prepare(prompt(name = "First", text = "One")) as AutoPromptRunner.PrepareResult.Ready
         AutoPromptHandoff.clear()
         val second = runner().prepare(prompt(name = "Second", text = "Two")) as AutoPromptRunner.PrepareResult.Ready
@@ -128,7 +128,7 @@ class AutoPromptRunnerTest {
     }
 
     @Test
-    fun `a switched off prompt is blocked before a session exists`() = runBlocking {
+    fun `a switched off prompt is blocked before a session exists`(): Unit = runBlocking {
         val result = runner().prepare(prompt(enabled = false))
 
         assertThat((result as AutoPromptRunner.PrepareResult.Blocked).reason)
@@ -138,7 +138,7 @@ class AutoPromptRunnerTest {
     }
 
     @Test
-    fun `the master switch blocks every run`() = runBlocking {
+    fun `the master switch blocks every run`(): Unit = runBlocking {
         promptStore.setMasterEnabled(false).getOrThrow()
 
         val result = runner().prepare(prompt())
@@ -149,7 +149,7 @@ class AutoPromptRunnerTest {
     }
 
     @Test
-    fun `a missing API key is blocked before a session exists`() = runBlocking {
+    fun `a missing API key is blocked before a session exists`(): Unit = runBlocking {
         val result = runner(keys = emptyList()).prepare(prompt())
 
         assertThat((result as AutoPromptRunner.PrepareResult.Blocked).reason)
@@ -158,7 +158,7 @@ class AutoPromptRunnerTest {
     }
 
     @Test
-    fun `a missing model is blocked before a session exists`() = runBlocking {
+    fun `a missing model is blocked before a session exists`(): Unit = runBlocking {
         val result = runner(models = emptyList()).prepare(prompt())
 
         assertThat((result as AutoPromptRunner.PrepareResult.Blocked).reason)
@@ -167,7 +167,7 @@ class AutoPromptRunnerTest {
     }
 
     @Test
-    fun `a pinned model overrides the default for that run`() = runBlocking {
+    fun `a pinned model overrides the default for that run`(): Unit = runBlocking {
         val result = runner(models = listOf(model, otherModel), defaultModelId = "model-1")
             .prepare(prompt(modelId = "model-2"))
 
@@ -177,7 +177,7 @@ class AutoPromptRunnerTest {
     }
 
     @Test
-    fun `a prompt bound to a deleted profile falls back to the active profile`() = runBlocking {
+    fun `a prompt bound to a deleted profile falls back to the active profile`(): Unit = runBlocking {
         val result = runner().prepare(prompt(agentProfileId = "deleted-profile"))
 
         val ready = result as AutoPromptRunner.PrepareResult.Ready
