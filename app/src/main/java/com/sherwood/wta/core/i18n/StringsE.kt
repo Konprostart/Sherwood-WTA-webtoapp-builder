@@ -22452,4 +22452,734 @@ object StringsE {
         AppLanguage.JAPANESE -> "URL から ?query や #fragment を削除してください。"
         AppLanguage.KOREAN -> "URL에서 ?query 또는 #fragment를 제거하세요."
     }
+
+    // ---- auto prompt -------------------------------------------------------
+
+    val autoPromptTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "自动提示"
+        AppLanguage.ENGLISH -> "AUTO PROMPT"
+        AppLanguage.ARABIC -> "المطالبات التلقائية"
+        AppLanguage.PORTUGUESE -> "PROMPT AUTOMÁTICO"
+        AppLanguage.SPANISH -> "PROMPT AUTOMÁTICO"
+        AppLanguage.FRENCH -> "PROMPT AUTOMATIQUE"
+        AppLanguage.GERMAN -> "AUTO-PROMPT"
+        AppLanguage.RUSSIAN -> "АВТОПРОМПТ"
+        AppLanguage.JAPANESE -> "自動プロンプト"
+        AppLanguage.KOREAN -> "자동 프롬프트"
+    }
+
+    val autoPromptMenuTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "自动提示"
+        AppLanguage.ENGLISH -> "Auto Prompt"
+        AppLanguage.ARABIC -> "المطالبات التلقائية"
+        AppLanguage.PORTUGUESE -> "Prompt automático"
+        AppLanguage.SPANISH -> "Prompt automático"
+        AppLanguage.FRENCH -> "Prompt automatique"
+        AppLanguage.GERMAN -> "Auto-Prompt"
+        AppLanguage.RUSSIAN -> "Автопромпт"
+        AppLanguage.JAPANESE -> "自動プロンプト"
+        AppLanguage.KOREAN -> "자동 프롬프트"
+    }
+
+    val autoPromptMasterDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "管理可随时运行的提示词。开关仅允许运行，不会自动启动任何内容。"
+        AppLanguage.ENGLISH -> "Manage prompts you can run on demand. The switch only allows runs — nothing starts automatically."
+        AppLanguage.ARABIC -> "أدر المطالبات التي يمكنك تشغيلها عند الطلب. المفتاح يسمح بالتشغيل فقط — لا شيء يبدأ تلقائيًا."
+        AppLanguage.PORTUGUESE -> "Gerencie prompts que você pode executar sob demanda. O interruptor apenas permite execuções — nada começa automaticamente."
+        AppLanguage.SPANISH -> "Gestiona prompts que puedes ejecutar bajo demanda. El interruptor solo permite ejecuciones: nada se inicia automáticamente."
+        AppLanguage.FRENCH -> "Gérez des prompts exécutables à la demande. L'interrupteur autorise seulement l'exécution — rien ne démarre automatiquement."
+        AppLanguage.GERMAN -> "Verwalte Prompts, die du auf Anfrage ausführst. Der Schalter erlaubt nur das Ausführen — nichts startet automatisch."
+        AppLanguage.RUSSIAN -> "Управляйте промптами, которые запускаете по запросу. Переключатель только разрешает запуск — ничего не начинается само."
+        AppLanguage.JAPANESE -> "オンデマンドで実行できるプロンプトを管理します。スイッチは実行を許可するだけで、自動では何も開始しません。"
+        AppLanguage.KOREAN -> "필요할 때 실행할 프롬프트를 관리합니다. 스위치는 실행을 허용할 뿐 자동으로 시작하지 않습니다."
+    }
+
+    val autoPromptMasterOffHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "关闭期间所有提示词都会保留，开启后即可运行。"
+        AppLanguage.ENGLISH -> "Saved prompts are kept while Auto Prompt is off. Turn it on to run one."
+        AppLanguage.ARABIC -> "تظل المطالبات المحفوظة محفوظة أثناء إيقاف الميزة. شغّلها لتشغيل إحداها."
+        AppLanguage.PORTUGUESE -> "Os prompts salvos são mantidos com o Prompt automático desligado. Ligue-o para executar um."
+        AppLanguage.SPANISH -> "Los prompts guardados se conservan con el Prompt automático desactivado. Actívalo para ejecutar uno."
+        AppLanguage.FRENCH -> "Les prompts enregistrés sont conservés quand le Prompt automatique est désactivé. Activez-le pour en exécuter un."
+        AppLanguage.GERMAN -> "Gespeicherte Prompts bleiben erhalten, solange Auto-Prompt aus ist. Schalte es ein, um einen auszuführen."
+        AppLanguage.RUSSIAN -> "Сохранённые промпты остаются при выключенном автопромпте. Включите его, чтобы запустить."
+        AppLanguage.JAPANESE -> "自動プロンプトがオフでも保存済みのプロンプトは残ります。オンにすると実行できます。"
+        AppLanguage.KOREAN -> "자동 프롬프트가 꺼져 있어도 저장된 프롬프트는 유지됩니다. 켜면 실행할 수 있습니다."
+    }
+
+    val autoPromptFooter: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "每次运行都会新建一个 Agent 会话，并以该提示词作为第一条消息。"
+        AppLanguage.ENGLISH -> "Each run starts a new agent session with the prompt as the first message."
+        AppLanguage.ARABIC -> "كل تشغيل يبدأ جلسة وكيل جديدة ويكون نص المطالبة أول رسالة فيها."
+        AppLanguage.PORTUGUESE -> "Cada execução inicia uma nova sessão do agente com o prompt como primeira mensagem."
+        AppLanguage.SPANISH -> "Cada ejecución inicia una nueva sesión del agente con el prompt como primer mensaje."
+        AppLanguage.FRENCH -> "Chaque exécution démarre une nouvelle session d'agent avec le prompt comme premier message."
+        AppLanguage.GERMAN -> "Jeder Lauf startet eine neue Agent-Sitzung mit dem Prompt als erster Nachricht."
+        AppLanguage.RUSSIAN -> "Каждый запуск открывает новую сессию агента, где промпт — первое сообщение."
+        AppLanguage.JAPANESE -> "実行するたびに、プロンプトを最初のメッセージとする新しいエージェントセッションが始まります。"
+        AppLanguage.KOREAN -> "실행할 때마다 프롬프트를 첫 메시지로 하는 새 에이전트 세션이 시작됩니다."
+    }
+
+    val autoPromptAdd: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "添加提示词"
+        AppLanguage.ENGLISH -> "Add prompt"
+        AppLanguage.ARABIC -> "إضافة مطالبة"
+        AppLanguage.PORTUGUESE -> "Adicionar prompt"
+        AppLanguage.SPANISH -> "Añadir prompt"
+        AppLanguage.FRENCH -> "Ajouter un prompt"
+        AppLanguage.GERMAN -> "Prompt hinzufügen"
+        AppLanguage.RUSSIAN -> "Добавить промпт"
+        AppLanguage.JAPANESE -> "プロンプトを追加"
+        AppLanguage.KOREAN -> "프롬프트 추가"
+    }
+
+    val autoPromptNewTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "新建提示词"
+        AppLanguage.ENGLISH -> "New prompt"
+        AppLanguage.ARABIC -> "مطالبة جديدة"
+        AppLanguage.PORTUGUESE -> "Novo prompt"
+        AppLanguage.SPANISH -> "Nuevo prompt"
+        AppLanguage.FRENCH -> "Nouveau prompt"
+        AppLanguage.GERMAN -> "Neuer Prompt"
+        AppLanguage.RUSSIAN -> "Новый промпт"
+        AppLanguage.JAPANESE -> "新しいプロンプト"
+        AppLanguage.KOREAN -> "새 프롬프트"
+    }
+
+    val autoPromptEditTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "编辑提示词"
+        AppLanguage.ENGLISH -> "Edit prompt"
+        AppLanguage.ARABIC -> "تعديل المطالبة"
+        AppLanguage.PORTUGUESE -> "Editar prompt"
+        AppLanguage.SPANISH -> "Editar prompt"
+        AppLanguage.FRENCH -> "Modifier le prompt"
+        AppLanguage.GERMAN -> "Prompt bearbeiten"
+        AppLanguage.RUSSIAN -> "Изменить промпт"
+        AppLanguage.JAPANESE -> "プロンプトを編集"
+        AppLanguage.KOREAN -> "프롬프트 편집"
+    }
+
+    val autoPromptSearchHint: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "搜索提示词"
+        AppLanguage.ENGLISH -> "Search prompts"
+        AppLanguage.ARABIC -> "ابحث في المطالبات"
+        AppLanguage.PORTUGUESE -> "Pesquisar prompts"
+        AppLanguage.SPANISH -> "Buscar prompts"
+        AppLanguage.FRENCH -> "Rechercher des prompts"
+        AppLanguage.GERMAN -> "Prompts durchsuchen"
+        AppLanguage.RUSSIAN -> "Поиск промптов"
+        AppLanguage.JAPANESE -> "プロンプトを検索"
+        AppLanguage.KOREAN -> "프롬프트 검색"
+    }
+
+    val autoPromptEmptyTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "还没有提示词"
+        AppLanguage.ENGLISH -> "No prompts yet"
+        AppLanguage.ARABIC -> "لا توجد مطالبات بعد"
+        AppLanguage.PORTUGUESE -> "Ainda não há prompts"
+        AppLanguage.SPANISH -> "Aún no hay prompts"
+        AppLanguage.FRENCH -> "Aucun prompt pour l'instant"
+        AppLanguage.GERMAN -> "Noch keine Prompts"
+        AppLanguage.RUSSIAN -> "Промптов пока нет"
+        AppLanguage.JAPANESE -> "プロンプトはまだありません"
+        AppLanguage.KOREAN -> "아직 프롬프트가 없습니다"
+    }
+
+    val autoPromptEmptyMessage: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "添加自己的提示词，或从已保存的分类开始。"
+        AppLanguage.ENGLISH -> "Add your own prompt, or start from a saved category."
+        AppLanguage.ARABIC -> "أضف مطالبتك أو ابدأ من فئة محفوظة."
+        AppLanguage.PORTUGUESE -> "Adicione seu próprio prompt ou comece a partir de uma categoria salva."
+        AppLanguage.SPANISH -> "Añade tu propio prompt o empieza desde una categoría guardada."
+        AppLanguage.FRENCH -> "Ajoutez votre propre prompt ou partez d'une catégorie enregistrée."
+        AppLanguage.GERMAN -> "Füge deinen eigenen Prompt hinzu oder starte mit einer gespeicherten Kategorie."
+        AppLanguage.RUSSIAN -> "Добавьте свой промпт или начните с сохранённой категории."
+        AppLanguage.JAPANESE -> "独自のプロンプトを追加するか、保存済みのカテゴリから始めましょう。"
+        AppLanguage.KOREAN -> "직접 프롬프트를 추가하거나 저장된 카테고리에서 시작하세요."
+    }
+
+    val autoPromptNoResults: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "没有匹配的提示词。"
+        AppLanguage.ENGLISH -> "No prompt matches this search."
+        AppLanguage.ARABIC -> "لا توجد مطالبة تطابق هذا البحث."
+        AppLanguage.PORTUGUESE -> "Nenhum prompt corresponde a esta pesquisa."
+        AppLanguage.SPANISH -> "Ningún prompt coincide con esta búsqueda."
+        AppLanguage.FRENCH -> "Aucun prompt ne correspond à cette recherche."
+        AppLanguage.GERMAN -> "Kein Prompt passt zu dieser Suche."
+        AppLanguage.RUSSIAN -> "Ни один промпт не соответствует запросу."
+        AppLanguage.JAPANESE -> "この検索に一致するプロンプトはありません。"
+        AppLanguage.KOREAN -> "이 검색과 일치하는 프롬프트가 없습니다."
+    }
+
+    val autoPromptStatusOn: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "开"
+        AppLanguage.ENGLISH -> "On"
+        AppLanguage.ARABIC -> "مفعّل"
+        AppLanguage.PORTUGUESE -> "Ligado"
+        AppLanguage.SPANISH -> "Activado"
+        AppLanguage.FRENCH -> "Activé"
+        AppLanguage.GERMAN -> "An"
+        AppLanguage.RUSSIAN -> "Вкл."
+        AppLanguage.JAPANESE -> "オン"
+        AppLanguage.KOREAN -> "켜짐"
+    }
+
+    val autoPromptStatusOff: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "关"
+        AppLanguage.ENGLISH -> "Off"
+        AppLanguage.ARABIC -> "معطّل"
+        AppLanguage.PORTUGUESE -> "Desligado"
+        AppLanguage.SPANISH -> "Desactivado"
+        AppLanguage.FRENCH -> "Désactivé"
+        AppLanguage.GERMAN -> "Aus"
+        AppLanguage.RUSSIAN -> "Выкл."
+        AppLanguage.JAPANESE -> "オフ"
+        AppLanguage.KOREAN -> "꺼짐"
+    }
+
+    val autoPromptRun: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "运行"
+        AppLanguage.ENGLISH -> "Run"
+        AppLanguage.ARABIC -> "تشغيل"
+        AppLanguage.PORTUGUESE -> "Executar"
+        AppLanguage.SPANISH -> "Ejecutar"
+        AppLanguage.FRENCH -> "Exécuter"
+        AppLanguage.GERMAN -> "Ausführen"
+        AppLanguage.RUSSIAN -> "Запустить"
+        AppLanguage.JAPANESE -> "実行"
+        AppLanguage.KOREAN -> "실행"
+    }
+
+    val autoPromptDuplicate: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "复制"
+        AppLanguage.ENGLISH -> "Duplicate"
+        AppLanguage.ARABIC -> "تكرار"
+        AppLanguage.PORTUGUESE -> "Duplicar"
+        AppLanguage.SPANISH -> "Duplicar"
+        AppLanguage.FRENCH -> "Dupliquer"
+        AppLanguage.GERMAN -> "Duplizieren"
+        AppLanguage.RUSSIAN -> "Дублировать"
+        AppLanguage.JAPANESE -> "複製"
+        AppLanguage.KOREAN -> "복제"
+    }
+
+    val autoPromptMoveUp: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "上移"
+        AppLanguage.ENGLISH -> "Move up"
+        AppLanguage.ARABIC -> "نقل لأعلى"
+        AppLanguage.PORTUGUESE -> "Mover para cima"
+        AppLanguage.SPANISH -> "Subir"
+        AppLanguage.FRENCH -> "Monter"
+        AppLanguage.GERMAN -> "Nach oben"
+        AppLanguage.RUSSIAN -> "Вверх"
+        AppLanguage.JAPANESE -> "上へ移動"
+        AppLanguage.KOREAN -> "위로 이동"
+    }
+
+    val autoPromptMoveDown: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "下移"
+        AppLanguage.ENGLISH -> "Move down"
+        AppLanguage.ARABIC -> "نقل لأسفل"
+        AppLanguage.PORTUGUESE -> "Mover para baixo"
+        AppLanguage.SPANISH -> "Bajar"
+        AppLanguage.FRENCH -> "Descendre"
+        AppLanguage.GERMAN -> "Nach unten"
+        AppLanguage.RUSSIAN -> "Вниз"
+        AppLanguage.JAPANESE -> "下へ移動"
+        AppLanguage.KOREAN -> "아래로 이동"
+    }
+
+    val autoPromptMore: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "更多操作"
+        AppLanguage.ENGLISH -> "More actions"
+        AppLanguage.ARABIC -> "مزيد من الإجراءات"
+        AppLanguage.PORTUGUESE -> "Mais ações"
+        AppLanguage.SPANISH -> "Más acciones"
+        AppLanguage.FRENCH -> "Plus d'actions"
+        AppLanguage.GERMAN -> "Weitere Aktionen"
+        AppLanguage.RUSSIAN -> "Ещё действия"
+        AppLanguage.JAPANESE -> "その他の操作"
+        AppLanguage.KOREAN -> "더보기"
+    }
+
+    val autoPromptCategory: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "分类"
+        AppLanguage.ENGLISH -> "Category"
+        AppLanguage.ARABIC -> "الفئة"
+        AppLanguage.PORTUGUESE -> "Categoria"
+        AppLanguage.SPANISH -> "Categoría"
+        AppLanguage.FRENCH -> "Catégorie"
+        AppLanguage.GERMAN -> "Kategorie"
+        AppLanguage.RUSSIAN -> "Категория"
+        AppLanguage.JAPANESE -> "カテゴリ"
+        AppLanguage.KOREAN -> "카테고리"
+    }
+
+    val autoPromptCategoryResearch: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "研究"
+        AppLanguage.ENGLISH -> "Research"
+        AppLanguage.ARABIC -> "بحث"
+        AppLanguage.PORTUGUESE -> "Pesquisa"
+        AppLanguage.SPANISH -> "Investigación"
+        AppLanguage.FRENCH -> "Recherche"
+        AppLanguage.GERMAN -> "Recherche"
+        AppLanguage.RUSSIAN -> "Исследование"
+        AppLanguage.JAPANESE -> "調査"
+        AppLanguage.KOREAN -> "리서치"
+    }
+
+    val autoPromptCategoryCoding: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "编程"
+        AppLanguage.ENGLISH -> "Coding"
+        AppLanguage.ARABIC -> "برمجة"
+        AppLanguage.PORTUGUESE -> "Programação"
+        AppLanguage.SPANISH -> "Programación"
+        AppLanguage.FRENCH -> "Développement"
+        AppLanguage.GERMAN -> "Programmierung"
+        AppLanguage.RUSSIAN -> "Разработка"
+        AppLanguage.JAPANESE -> "プログラミング"
+        AppLanguage.KOREAN -> "코딩"
+    }
+
+    val autoPromptCategoryTesting: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "测试"
+        AppLanguage.ENGLISH -> "Testing"
+        AppLanguage.ARABIC -> "اختبار"
+        AppLanguage.PORTUGUESE -> "Testes"
+        AppLanguage.SPANISH -> "Pruebas"
+        AppLanguage.FRENCH -> "Tests"
+        AppLanguage.GERMAN -> "Tests"
+        AppLanguage.RUSSIAN -> "Тестирование"
+        AppLanguage.JAPANESE -> "テスト"
+        AppLanguage.KOREAN -> "테스트"
+    }
+
+    val autoPromptCategorySecurity: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "安全"
+        AppLanguage.ENGLISH -> "Security"
+        AppLanguage.ARABIC -> "الأمان"
+        AppLanguage.PORTUGUESE -> "Segurança"
+        AppLanguage.SPANISH -> "Seguridad"
+        AppLanguage.FRENCH -> "Sécurité"
+        AppLanguage.GERMAN -> "Sicherheit"
+        AppLanguage.RUSSIAN -> "Безопасность"
+        AppLanguage.JAPANESE -> "セキュリティ"
+        AppLanguage.KOREAN -> "보안"
+    }
+
+    val autoPromptCategoryMaintenance: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "维护"
+        AppLanguage.ENGLISH -> "Maintenance"
+        AppLanguage.ARABIC -> "الصيانة"
+        AppLanguage.PORTUGUESE -> "Manutenção"
+        AppLanguage.SPANISH -> "Mantenimiento"
+        AppLanguage.FRENCH -> "Maintenance"
+        AppLanguage.GERMAN -> "Wartung"
+        AppLanguage.RUSSIAN -> "Обслуживание"
+        AppLanguage.JAPANESE -> "メンテナンス"
+        AppLanguage.KOREAN -> "유지보수"
+    }
+
+    val autoPromptCategoryCustom: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "自定义"
+        AppLanguage.ENGLISH -> "Custom"
+        AppLanguage.ARABIC -> "مخصص"
+        AppLanguage.PORTUGUESE -> "Personalizado"
+        AppLanguage.SPANISH -> "Personalizado"
+        AppLanguage.FRENCH -> "Personnalisé"
+        AppLanguage.GERMAN -> "Benutzerdefiniert"
+        AppLanguage.RUSSIAN -> "Свой"
+        AppLanguage.JAPANESE -> "カスタム"
+        AppLanguage.KOREAN -> "사용자 지정"
+    }
+
+    val autoPromptAgent: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "Agent"
+        AppLanguage.ENGLISH -> "Agent"
+        AppLanguage.ARABIC -> "الوكيل"
+        AppLanguage.PORTUGUESE -> "Agente"
+        AppLanguage.SPANISH -> "Agente"
+        AppLanguage.FRENCH -> "Agent"
+        AppLanguage.GERMAN -> "Agent"
+        AppLanguage.RUSSIAN -> "Агент"
+        AppLanguage.JAPANESE -> "エージェント"
+        AppLanguage.KOREAN -> "에이전트"
+    }
+
+    val autoPromptAgentActive: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "当前配置"
+        AppLanguage.ENGLISH -> "Active profile"
+        AppLanguage.ARABIC -> "الملف النشط"
+        AppLanguage.PORTUGUESE -> "Perfil ativo"
+        AppLanguage.SPANISH -> "Perfil activo"
+        AppLanguage.FRENCH -> "Profil actif"
+        AppLanguage.GERMAN -> "Aktives Profil"
+        AppLanguage.RUSSIAN -> "Активный профиль"
+        AppLanguage.JAPANESE -> "アクティブプロファイル"
+        AppLanguage.KOREAN -> "활성 프로필"
+    }
+
+    val autoPromptModel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "模型"
+        AppLanguage.ENGLISH -> "Model"
+        AppLanguage.ARABIC -> "الطراز"
+        AppLanguage.PORTUGUESE -> "Modelo"
+        AppLanguage.SPANISH -> "Modelo"
+        AppLanguage.FRENCH -> "Modèle"
+        AppLanguage.GERMAN -> "Modell"
+        AppLanguage.RUSSIAN -> "Модель"
+        AppLanguage.JAPANESE -> "モデル"
+        AppLanguage.KOREAN -> "모델"
+    }
+
+    val autoPromptModelDefault: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "默认模型"
+        AppLanguage.ENGLISH -> "Default model"
+        AppLanguage.ARABIC -> "الطراز الافتراضي"
+        AppLanguage.PORTUGUESE -> "Modelo predefinido"
+        AppLanguage.SPANISH -> "Modelo predeterminado"
+        AppLanguage.FRENCH -> "Modèle par défaut"
+        AppLanguage.GERMAN -> "Standardmodell"
+        AppLanguage.RUSSIAN -> "Модель по умолчанию"
+        AppLanguage.JAPANESE -> "既定のモデル"
+        AppLanguage.KOREAN -> "기본 모델"
+    }
+
+    val autoPromptName: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "名称"
+        AppLanguage.ENGLISH -> "Name"
+        AppLanguage.ARABIC -> "الاسم"
+        AppLanguage.PORTUGUESE -> "Nome"
+        AppLanguage.SPANISH -> "Nombre"
+        AppLanguage.FRENCH -> "Nom"
+        AppLanguage.GERMAN -> "Name"
+        AppLanguage.RUSSIAN -> "Название"
+        AppLanguage.JAPANESE -> "名前"
+        AppLanguage.KOREAN -> "이름"
+    }
+
+    val autoPromptDescription: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "描述（可选）"
+        AppLanguage.ENGLISH -> "Description (optional)"
+        AppLanguage.ARABIC -> "الوصف (اختياري)"
+        AppLanguage.PORTUGUESE -> "Descrição (opcional)"
+        AppLanguage.SPANISH -> "Descripción (opcional)"
+        AppLanguage.FRENCH -> "Description (facultative)"
+        AppLanguage.GERMAN -> "Beschreibung (optional)"
+        AppLanguage.RUSSIAN -> "Описание (необязательно)"
+        AppLanguage.JAPANESE -> "説明（任意）"
+        AppLanguage.KOREAN -> "설명(선택)"
+    }
+
+    val autoPromptText: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "提示词内容"
+        AppLanguage.ENGLISH -> "Prompt text"
+        AppLanguage.ARABIC -> "نص المطالبة"
+        AppLanguage.PORTUGUESE -> "Texto do prompt"
+        AppLanguage.SPANISH -> "Texto del prompt"
+        AppLanguage.FRENCH -> "Texte du prompt"
+        AppLanguage.GERMAN -> "Prompt-Text"
+        AppLanguage.RUSSIAN -> "Текст промпта"
+        AppLanguage.JAPANESE -> "プロンプト本文"
+        AppLanguage.KOREAN -> "프롬프트 텍스트"
+    }
+
+    val autoPromptNameRequired: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请输入名称。"
+        AppLanguage.ENGLISH -> "Enter a name."
+        AppLanguage.ARABIC -> "أدخل اسمًا."
+        AppLanguage.PORTUGUESE -> "Informe um nome."
+        AppLanguage.SPANISH -> "Escribe un nombre."
+        AppLanguage.FRENCH -> "Saisissez un nom."
+        AppLanguage.GERMAN -> "Gib einen Namen ein."
+        AppLanguage.RUSSIAN -> "Введите название."
+        AppLanguage.JAPANESE -> "名前を入力してください。"
+        AppLanguage.KOREAN -> "이름을 입력하세요."
+    }
+
+    val autoPromptTextRequired: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请输入提示词内容。"
+        AppLanguage.ENGLISH -> "Enter the prompt text."
+        AppLanguage.ARABIC -> "أدخل نص المطالبة."
+        AppLanguage.PORTUGUESE -> "Informe o texto do prompt."
+        AppLanguage.SPANISH -> "Escribe el texto del prompt."
+        AppLanguage.FRENCH -> "Saisissez le texte du prompt."
+        AppLanguage.GERMAN -> "Gib den Prompt-Text ein."
+        AppLanguage.RUSSIAN -> "Введите текст промпта."
+        AppLanguage.JAPANESE -> "プロンプト本文を入力してください。"
+        AppLanguage.KOREAN -> "프롬프트 텍스트를 입력하세요."
+    }
+
+    val autoPromptDeleteTitle: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "删除提示词？"
+        AppLanguage.ENGLISH -> "Delete prompt?"
+        AppLanguage.ARABIC -> "حذف المطالبة؟"
+        AppLanguage.PORTUGUESE -> "Excluir prompt?"
+        AppLanguage.SPANISH -> "¿Eliminar prompt?"
+        AppLanguage.FRENCH -> "Supprimer le prompt ?"
+        AppLanguage.GERMAN -> "Prompt löschen?"
+        AppLanguage.RUSSIAN -> "Удалить промпт?"
+        AppLanguage.JAPANESE -> "プロンプトを削除しますか？"
+        AppLanguage.KOREAN -> "프롬프트를 삭제할까요?"
+    }
+
+    val autoPromptCopied: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "已复制提示词"
+        AppLanguage.ENGLISH -> "Prompt copied"
+        AppLanguage.ARABIC -> "تم نسخ المطالبة"
+        AppLanguage.PORTUGUESE -> "Prompt copiado"
+        AppLanguage.SPANISH -> "Prompt copiado"
+        AppLanguage.FRENCH -> "Prompt copié"
+        AppLanguage.GERMAN -> "Prompt kopiert"
+        AppLanguage.RUSSIAN -> "Промпт скопирован"
+        AppLanguage.JAPANESE -> "プロンプトをコピーしました"
+        AppLanguage.KOREAN -> "프롬프트를 복사했습니다"
+    }
+
+    val autoPromptNoModel: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请先在 AI 设置中为 Agent 添加模型。"
+        AppLanguage.ENGLISH -> "Add an AI model for the agent in AI settings first."
+        AppLanguage.ARABIC -> "أضف طرازًا للوكيل في إعدادات AI أولًا."
+        AppLanguage.PORTUGUESE -> "Adicione um modelo de IA para o agente nas configurações de IA primeiro."
+        AppLanguage.SPANISH -> "Añade primero un modelo de IA para el agente en los ajustes de IA."
+        AppLanguage.FRENCH -> "Ajoutez d'abord un modèle d'IA pour l'agent dans les réglages IA."
+        AppLanguage.GERMAN -> "Füge zuerst ein KI-Modell für den Agent in den KI-Einstellungen hinzu."
+        AppLanguage.RUSSIAN -> "Сначала добавьте модель ИИ для агента в настройках ИИ."
+        AppLanguage.JAPANESE -> "先に AI 設定でエージェント用のモデルを追加してください。"
+        AppLanguage.KOREAN -> "먼저 AI 설정에서 에이전트용 모델을 추가하세요."
+    }
+
+    val autoPromptNoApiKey: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "所选模型没有配置 API 密钥。"
+        AppLanguage.ENGLISH -> "The selected model has no API key configured."
+        AppLanguage.ARABIC -> "الطراز المحدد ليس لديه مفتاح API."
+        AppLanguage.PORTUGUESE -> "O modelo selecionado não tem chave de API configurada."
+        AppLanguage.SPANISH -> "El modelo seleccionado no tiene clave de API configurada."
+        AppLanguage.FRENCH -> "Le modèle sélectionné n'a pas de clé API configurée."
+        AppLanguage.GERMAN -> "Für das gewählte Modell ist kein API-Schlüssel hinterlegt."
+        AppLanguage.RUSSIAN -> "У выбранной модели не настроен ключ API."
+        AppLanguage.JAPANESE -> "選択したモデルに API キーが設定されていません。"
+        AppLanguage.KOREAN -> "선택한 모델에 API 키가 설정되어 있지 않습니다."
+    }
+
+    val autoPromptMasterOff: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "请先开启自动提示。"
+        AppLanguage.ENGLISH -> "Turn on Auto Prompt first."
+        AppLanguage.ARABIC -> "شغّل المطالبات التلقائية أولًا."
+        AppLanguage.PORTUGUESE -> "Ative o Prompt automático primeiro."
+        AppLanguage.SPANISH -> "Activa primero el Prompt automático."
+        AppLanguage.FRENCH -> "Activez d'abord le Prompt automatique."
+        AppLanguage.GERMAN -> "Schalte zuerst Auto-Prompt ein."
+        AppLanguage.RUSSIAN -> "Сначала включите автопромпт."
+        AppLanguage.JAPANESE -> "先に自動プロンプトをオンにしてください。"
+        AppLanguage.KOREAN -> "먼저 자동 프롬프트를 켜세요."
+    }
+
+    val autoPromptPromptOff: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "该提示词已关闭。"
+        AppLanguage.ENGLISH -> "This prompt is turned off."
+        AppLanguage.ARABIC -> "هذه المطالبة معطّلة."
+        AppLanguage.PORTUGUESE -> "Este prompt está desativado."
+        AppLanguage.SPANISH -> "Este prompt está desactivado."
+        AppLanguage.FRENCH -> "Ce prompt est désactivé."
+        AppLanguage.GERMAN -> "Dieser Prompt ist ausgeschaltet."
+        AppLanguage.RUSSIAN -> "Этот промпт выключен."
+        AppLanguage.JAPANESE -> "このプロンプトはオフです。"
+        AppLanguage.KOREAN -> "이 프롬프트는 꺼져 있습니다."
+    }
+
+    val autoPromptRunFailed: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "无法启动该提示词。"
+        AppLanguage.ENGLISH -> "The prompt could not be started."
+        AppLanguage.ARABIC -> "تعذّر بدء المطالبة."
+        AppLanguage.PORTUGUESE -> "Não foi possível iniciar o prompt."
+        AppLanguage.SPANISH -> "No se pudo iniciar el prompt."
+        AppLanguage.FRENCH -> "Impossible de démarrer le prompt."
+        AppLanguage.GERMAN -> "Der Prompt konnte nicht gestartet werden."
+        AppLanguage.RUSSIAN -> "Не удалось запустить промпт."
+        AppLanguage.JAPANESE -> "プロンプトを開始できませんでした。"
+        AppLanguage.KOREAN -> "프롬프트를 시작하지 못했습니다."
+    }
+
+    fun autoPromptCount(n: Int): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "共 $n 个提示词"
+        AppLanguage.ENGLISH -> "$n prompts"
+        AppLanguage.ARABIC -> "$n مطالبات"
+        AppLanguage.PORTUGUESE -> "$n prompts"
+        AppLanguage.SPANISH -> "$n prompts"
+        AppLanguage.FRENCH -> "$n prompts"
+        AppLanguage.GERMAN -> "$n Prompts"
+        AppLanguage.RUSSIAN -> "Промптов: $n"
+        AppLanguage.JAPANESE -> "プロンプト $n 件"
+        AppLanguage.KOREAN -> "프롬프트 ${n}개"
+    }
+
+    fun autoPromptDeleteMessage(name: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "“$name”将被删除，且无法撤销。"
+        AppLanguage.ENGLISH -> "“$name” will be deleted. This cannot be undone."
+        AppLanguage.ARABIC -> "سيتم حذف “$name”. لا يمكن التراجع عن ذلك."
+        AppLanguage.PORTUGUESE -> "“$name” será excluído. Isso não pode ser desfeito."
+        AppLanguage.SPANISH -> "“$name” se eliminará. Esto no se puede deshacer."
+        AppLanguage.FRENCH -> "« $name » sera supprimé. Cette action est irréversible."
+        AppLanguage.GERMAN -> "„$name“ wird gelöscht. Das lässt sich nicht rückgängig machen."
+        AppLanguage.RUSSIAN -> "«$name» будет удалён. Это нельзя отменить."
+        AppLanguage.JAPANESE -> "「$name」を削除します。元に戻せません。"
+        AppLanguage.KOREAN -> "“$name”이(가) 삭제됩니다. 되돌릴 수 없습니다."
+    }
+
+    fun autoPromptCopyName(name: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "$name 副本"
+        AppLanguage.ENGLISH -> "$name copy"
+        AppLanguage.ARABIC -> "نسخة من $name"
+        AppLanguage.PORTUGUESE -> "$name (cópia)"
+        AppLanguage.SPANISH -> "$name (copia)"
+        AppLanguage.FRENCH -> "$name (copie)"
+        AppLanguage.GERMAN -> "$name (Kopie)"
+        AppLanguage.RUSSIAN -> "$name (копия)"
+        AppLanguage.JAPANESE -> "$name のコピー"
+        AppLanguage.KOREAN -> "$name 복사본"
+    }
+
+    fun autoPromptStarting(name: String): String = when (Strings.lang) {
+        AppLanguage.CHINESE -> "正在启动“$name”…"
+        AppLanguage.ENGLISH -> "Starting “$name”…"
+        AppLanguage.ARABIC -> "جارٍ بدء “$name”…"
+        AppLanguage.PORTUGUESE -> "Iniciando “$name”…"
+        AppLanguage.SPANISH -> "Iniciando “$name”…"
+        AppLanguage.FRENCH -> "Démarrage de « $name »…"
+        AppLanguage.GERMAN -> "„$name“ wird gestartet…"
+        AppLanguage.RUSSIAN -> "Запуск «$name»…"
+        AppLanguage.JAPANESE -> "「$name」を開始しています…"
+        AppLanguage.KOREAN -> "“$name” 시작 중…"
+    }
+
+    val autoPromptTplResearchName: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "调研项目或仓库"
+        AppLanguage.ENGLISH -> "Research a project or repository"
+        AppLanguage.ARABIC -> "بحث مشروع أو مستودع"
+        AppLanguage.PORTUGUESE -> "Pesquisar um projeto ou repositório"
+        AppLanguage.SPANISH -> "Investigar un proyecto o repositorio"
+        AppLanguage.FRENCH -> "Analyser un projet ou un dépôt"
+        AppLanguage.GERMAN -> "Projekt oder Repository recherchieren"
+        AppLanguage.RUSSIAN -> "Изучить проект или репозиторий"
+        AppLanguage.JAPANESE -> "プロジェクトやリポジトリを調査"
+        AppLanguage.KOREAN -> "프로젝트 또는 저장소 조사"
+    }
+
+    val autoPromptTplResearchDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "在修改前了解项目、许可证和技术栈。"
+        AppLanguage.ENGLISH -> "Understand the project, its licences and its stack before changing anything."
+        AppLanguage.ARABIC -> "تعرّف على المشروع وتراخيصه وتقنياته قبل أي تغيير."
+        AppLanguage.PORTUGUESE -> "Conheça o projeto, as licenças e a stack antes de alterar."
+        AppLanguage.SPANISH -> "Conoce el proyecto, sus licencias y su stack antes de cambiar nada."
+        AppLanguage.FRENCH -> "Comprenez le projet, ses licences et sa stack avant de modifier."
+        AppLanguage.GERMAN -> "Verstehe Projekt, Lizenzen und Stack, bevor du etwas änderst."
+        AppLanguage.RUSSIAN -> "Изучите проект, лицензии и стек перед изменениями."
+        AppLanguage.JAPANESE -> "変更する前に、プロジェクト・ライセンス・技術スタックを把握します。"
+        AppLanguage.KOREAN -> "변경하기 전에 프로젝트, 라이선스, 기술 스택을 파악합니다."
+    }
+
+    val autoPromptTplCodingName: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "实现或修改功能"
+        AppLanguage.ENGLISH -> "Build or change a feature"
+        AppLanguage.ARABIC -> "بناء ميزة أو تعديلها"
+        AppLanguage.PORTUGUESE -> "Criar ou alterar uma funcionalidade"
+        AppLanguage.SPANISH -> "Crear o cambiar una función"
+        AppLanguage.FRENCH -> "Créer ou modifier une fonctionnalité"
+        AppLanguage.GERMAN -> "Funktion bauen oder ändern"
+        AppLanguage.RUSSIAN -> "Реализовать или изменить функцию"
+        AppLanguage.JAPANESE -> "機能を実装・変更"
+        AppLanguage.KOREAN -> "기능 구현 또는 수정"
+    }
+
+    val autoPromptTplCodingDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "规划、实现并检查一个功能的代码。"
+        AppLanguage.ENGLISH -> "Plan, implement and review the code for one feature."
+        AppLanguage.ARABIC -> "خطّط ونفّذ وراجع كود ميزة واحدة."
+        AppLanguage.PORTUGUESE -> "Planeje, implemente e revise o código de uma funcionalidade."
+        AppLanguage.SPANISH -> "Planifica, implementa y revisa el código de una función."
+        AppLanguage.FRENCH -> "Planifiez, implémentez et relisez le code d'une fonctionnalité."
+        AppLanguage.GERMAN -> "Plane, implementiere und prüfe den Code für eine Funktion."
+        AppLanguage.RUSSIAN -> "Спланируйте, реализуйте и проверьте код одной функции."
+        AppLanguage.JAPANESE -> "1 つの機能について計画・実装・レビューを行います。"
+        AppLanguage.KOREAN -> "한 가지 기능의 코드를 계획하고 구현하고 검토합니다."
+    }
+
+    val autoPromptTplTestingName: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "运行测试并修复失败"
+        AppLanguage.ENGLISH -> "Run tests and fix failures"
+        AppLanguage.ARABIC -> "تشغيل الاختبارات وإصلاح الأعطال"
+        AppLanguage.PORTUGUESE -> "Executar testes e corrigir falhas"
+        AppLanguage.SPANISH -> "Ejecutar pruebas y corregir fallos"
+        AppLanguage.FRENCH -> "Lancer les tests et corriger les échecs"
+        AppLanguage.GERMAN -> "Tests ausführen und Fehler beheben"
+        AppLanguage.RUSSIAN -> "Запустить тесты и исправить падения"
+        AppLanguage.JAPANESE -> "テストを実行して失敗を修正"
+        AppLanguage.KOREAN -> "테스트 실행 및 실패 수정"
+    }
+
+    val autoPromptTplTestingDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "运行测试套件，找出失败原因并使其稳定。"
+        AppLanguage.ENGLISH -> "Run the test suite, find the cause of failures and stabilize it."
+        AppLanguage.ARABIC -> "شغّل مجموعة الاختبارات وحدّد سبب الأعطال ثم ثبّتها."
+        AppLanguage.PORTUGUESE -> "Execute a suíte de testes, encontre a causa das falhas e estabilize."
+        AppLanguage.SPANISH -> "Ejecuta la suite, encuentra la causa de los fallos y estabilízala."
+        AppLanguage.FRENCH -> "Lancez la suite, trouvez la cause des échecs et stabilisez-la."
+        AppLanguage.GERMAN -> "Führe die Testsuite aus, finde die Ursache der Fehler und stabilisiere sie."
+        AppLanguage.RUSSIAN -> "Запустите набор тестов, найдите причину падений и стабилизируйте его."
+        AppLanguage.JAPANESE -> "テストスイートを実行し、失敗の原因を特定して安定させます。"
+        AppLanguage.KOREAN -> "테스트 스위트를 실행하고 실패 원인을 찾아 안정화합니다."
+    }
+
+    val autoPromptTplSecurityName: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "安全检查"
+        AppLanguage.ENGLISH -> "Security review"
+        AppLanguage.ARABIC -> "مراجعة الأمان"
+        AppLanguage.PORTUGUESE -> "Revisão de segurança"
+        AppLanguage.SPANISH -> "Revisión de seguridad"
+        AppLanguage.FRENCH -> "Audit de sécurité"
+        AppLanguage.GERMAN -> "Sicherheitsprüfung"
+        AppLanguage.RUSSIAN -> "Проверка безопасности"
+        AppLanguage.JAPANESE -> "セキュリティレビュー"
+        AppLanguage.KOREAN -> "보안 검토"
+    }
+
+    val autoPromptTplSecurityDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "检查权限、依赖和危险代码路径。"
+        AppLanguage.ENGLISH -> "Check permissions, dependencies and risky code paths."
+        AppLanguage.ARABIC -> "افحص الأذونات والاعتماديات ومسارات الكود الخطرة."
+        AppLanguage.PORTUGUESE -> "Verifique permissões, dependências e caminhos de código arriscados."
+        AppLanguage.SPANISH -> "Revisa permisos, dependencias y rutas de código arriesgadas."
+        AppLanguage.FRENCH -> "Vérifiez les permissions, les dépendances et les chemins de code risqués."
+        AppLanguage.GERMAN -> "Prüfe Berechtigungen, Abhängigkeiten und riskante Codepfade."
+        AppLanguage.RUSSIAN -> "Проверьте разрешения, зависимости и опасные участки кода."
+        AppLanguage.JAPANESE -> "権限・依存関係・危険なコード経路を確認します。"
+        AppLanguage.KOREAN -> "권한, 종속성, 위험한 코드 경로를 확인합니다."
+    }
+
+    val autoPromptTplMaintenanceName: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "依赖维护"
+        AppLanguage.ENGLISH -> "Dependency maintenance"
+        AppLanguage.ARABIC -> "صيانة الاعتماديات"
+        AppLanguage.PORTUGUESE -> "Manutenção de dependências"
+        AppLanguage.SPANISH -> "Mantenimiento de dependencias"
+        AppLanguage.FRENCH -> "Maintenance des dépendances"
+        AppLanguage.GERMAN -> "Abhängigkeitspflege"
+        AppLanguage.RUSSIAN -> "Обслуживание зависимостей"
+        AppLanguage.JAPANESE -> "依存関係のメンテナンス"
+        AppLanguage.KOREAN -> "종속성 유지보수"
+    }
+
+    val autoPromptTplMaintenanceDesc: String get() = when (Strings.lang) {
+        AppLanguage.CHINESE -> "查找过时的库并规划升级。"
+        AppLanguage.ENGLISH -> "Find outdated libraries and plan the upgrade."
+        AppLanguage.ARABIC -> "ابحث عن المكتبات القديمة وخطّط للترقية."
+        AppLanguage.PORTUGUESE -> "Procure bibliotecas desatualizadas e planeje a atualização."
+        AppLanguage.SPANISH -> "Busca bibliotecas desactualizadas y planifica la actualización."
+        AppLanguage.FRENCH -> "Repérez les bibliothèques obsolètes et planifiez la mise à jour."
+        AppLanguage.GERMAN -> "Finde veraltete Bibliotheken und plane das Upgrade."
+        AppLanguage.RUSSIAN -> "Найдите устаревшие библиотеки и спланируйте обновление."
+        AppLanguage.JAPANESE -> "古いライブラリを見つけ、更新を計画します。"
+        AppLanguage.KOREAN -> "오래된 라이브러리를 찾아 업그레이드를 계획합니다."
+    }
 }

@@ -83,6 +83,12 @@ class AgentProfileStore private constructor(context: Context) {
         return profiles().firstOrNull { it.id == id } ?: AgentProfile.DEFAULT
     }
 
+    /** A saved profile by id, or null when it never existed or has since been deleted. */
+    fun profileById(id: String?): AgentProfile? {
+        val wanted = id?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return profiles().firstOrNull { it.id == wanted }
+    }
+
     fun save(profile: AgentProfile): Result<Unit> {
         val cleaned = profile.copy(
             id = profile.id.trim(),

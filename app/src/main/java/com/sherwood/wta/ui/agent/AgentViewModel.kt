@@ -702,21 +702,30 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         _ui.update { it.copy(modelPickerOpen = false, modelProviderGroups = emptyList(), selectedProviderKeyId = null) }
     }
 
-    private suspend fun resolveTextModel(models: List<com.sherwood.wta.data.model.SavedModel>): com.sherwood.wta.data.model.SavedModel? {
-        val codingModels = models.filter { it.supportsFeature(AiFeature.AGENT) }
-        if (codingModels.isEmpty()) return null
-        // A profile may pin its own model; when that model was removed from settings the
-        // profile falls back to the normal resolution instead of failing the turn.
-        val profileModelId = com.sherwood.wta.core.agent.profile.AgentProfileStore
+    /**
+     * Resolves the model for a turn.
+     *
+     * [profile] is the profile the turn actually runs with — passed in so an Auto Prompt
+     * that pins a profile also gets that profile's model, instead of the UI resolving a
+     * different model than the dispatch would use. Null means the active profile.
+     *
+     * [explicitModelId] is a per-run override (an Auto Prompt pinning a model). A deleted
+     * model or profile falls through to the next choice rather than blocking the turn.
+     */
+    private suspend fun resolveTextModel(
+        models: List<com.sherwood.wta.data.model.SavedModel>,
+        profile: com.sherwood.wta.core.agent.profile.AgentProfile? = null,
+        explicitModelId: String? = null
+    ): com.sherwood.wta.data.model.SavedModel? {
+        val effectiveProfile = profile ?: com.sherwood.wta.core.agent.profile.AgentProfileStore
             .getInstance(getApplication<Application>())
             .active()
-            .modelId
-            ?.takeIf { it.isNotBlank() }
-        if (profileModelId != null) {
-            codingModels.firstOrNull { it.id == profileModelId }?.let { return it }
-        }
-        val defaultId = configManager.defaultModelIdFlow.first()
-        return codingModels.firstOrNull { it.id == defaultId } ?: codingModels.first()
+        return com.sherwood.wta.core.agent.profile.AgentModelResolver.resolve(
+            models = models,
+            explicitModelId = explicitModelId,
+            profileModelId = effectiveProfile.modelId,
+            defaultModelId = configManager.defaultModelIdFlow.first()
+        )
     }
 
     fun selectModel(modelId: String) {
@@ -1428,12 +1437,22 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun dispatchTurn(
         session: AgentSession,
-        prompt: String
+        prompt: String,
+        overrides: com.sherwood.wta.core.agent.autoprompt.AutoPromptTurnOverrides? = null
     ) {
         val models = configManager.savedModelsFlow.first()
         val keys = configManager.apiKeysFlow.first()
 
-        val textModel = resolveTextModel(models)
+        // The active profile narrows the tool set, the model and the prompt. A missing
+        // profile store degrades to the default profile, which changes nothing. An Auto
+        // Prompt may pin another profile for this single run; a profile that has since
+        // been deleted falls back to the active one.
+        val profileStore = com.sherwood.wta.core.agent.profile.AgentProfileStore
+            .getInstance(getApplication<Application>())
+        val profile = overrides?.profileId?.let { profileStore.profileById(it) }
+            ?: profileStore.active()
+
+        val textModel = resolveTextModel(models, profile, overrides?.modelId)
         if (textModel == null) {
             // send()/regenerate() already flipped the phase to Connecting before
             // launching — every pre-turn bail-out here must put it back.
@@ -1459,11 +1478,6 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         val factory = registryFactory ?: ToolRegistryFactory(plan, imageRegistry).also {
             registryFactory = it
         }
-        // The active profile narrows the tool set, the model and the prompt. A missing
-        // profile store degrades to the default profile, which changes nothing.
-        val profile = com.sherwood.wta.core.agent.profile.AgentProfileStore
-            .getInstance(getApplication<Application>())
-            .active()
         val registry = factory.build(
             hasImageModel = imageModel != null,
             allowed = profile.toolAllowlist
@@ -1821,6 +1835,53 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
                         projectFiles = current?.let { c -> files.listAll(c.id) }.orEmpty()
                     )
                 }
+                maybeStartPendingAutoPrompt()
+            }
+        }
+    }
+
+    /**
+     * Starts a run prepared by the Auto Prompt screen, exactly once.
+     *
+     * The run is already persisted (new session + user message) and announced through
+     * [com.sherwood.wta.core.agent.autoprompt.AutoPromptHandoff]. The turn can only be
+     * dispatched here because this view model owns the bound agent service, and the two
+     * preconditions — the current session arriving and the service binding — may happen in
+     * either order, so both paths call this. The handoff itself is single-use.
+     */
+    private fun maybeStartPendingAutoPrompt() {
+        if (!bound || service == null) return
+        if (_ui.value.phase != AgentUiState.Phase.Idle) return
+        val current = _ui.value.currentSession ?: return
+        val request = com.sherwood.wta.core.agent.autoprompt.AutoPromptHandoff
+            .consume(current.id) ?: return
+
+        _ui.update { it.copy(phase = AgentUiState.Phase.Connecting, error = null, info = null) }
+        viewModelScope.launch {
+            try {
+                val session = sessionStore.get(current.id)
+                val last = session?.messages?.lastOrNull()
+                // The handoff must match what is actually persisted: a run whose session
+                // was deleted or edited in between is dropped instead of replaying text
+                // that is no longer in the conversation.
+                if (session == null ||
+                    last?.role != AgentMessage.Role.USER ||
+                    last.content != request.promptText
+                ) {
+                    resetTurnUiState()
+                    return@launch
+                }
+                dispatchTurn(
+                    session,
+                    request.promptText,
+                    com.sherwood.wta.core.agent.autoprompt.AutoPromptTurnOverrides(
+                        profileId = request.profileId,
+                        modelId = request.modelId
+                    )
+                )
+            } catch (t: Throwable) {
+                resetTurnUiState()
+                throw t
             }
         }
     }
@@ -1907,6 +1968,10 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         applyAutoApproveToService(_ui.value.autoApprove)
+
+        // The Auto Prompt screen may have navigated here before the service finished
+        // binding; a pending run starts as soon as both sides are ready.
+        maybeStartPendingAutoPrompt()
     }
 
     /**

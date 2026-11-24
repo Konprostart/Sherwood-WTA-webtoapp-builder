@@ -59,6 +59,7 @@ import com.sherwood.wta.ui.screens.LinuxEnvironmentScreen
 import com.sherwood.wta.ui.screens.PluginEditorScreen
 import com.sherwood.wta.ui.screens.ModuleMarketScreen
 import com.sherwood.wta.ui.screens.MoreScreen
+import com.sherwood.wta.ui.screens.AutoPromptScreen
 import com.sherwood.wta.ui.screens.PortManagerScreen
 import com.sherwood.wta.ui.screens.PlayStoreScreen
 import com.sherwood.wta.ui.screens.RuntimeDepsScreen
@@ -103,6 +104,7 @@ object Routes {
     const val GIT_SETTINGS = "git_settings"
     const val STUDIO = "studio"
     const val AGENT = "agent"
+    const val AUTO_PROMPT = "auto_prompt"
     const val BROWSER_KERNEL = "browser_kernel"
     const val HOSTS_ADBLOCK = "hosts_adblock"
     const val PLUGINS = "plugins"
@@ -241,6 +243,7 @@ fun AppNavigation() {
                         onOpenAppModifier = { navController.navigate(Routes.APP_MODIFIER) },
                         onOpenAiSettings = { navController.navigate(Routes.AI_SETTINGS) },
                         onOpenAgent = { navController.navigate(Routes.AGENT) },
+                        onOpenAutoPrompt = { navController.navigate(Routes.AUTO_PROMPT) },
                         onOpenPlugins = { navController.navigate(Routes.PLUGINS) },
                         onOpenStudio = { navController.navigate(Routes.STUDIO) },
                         onOpenLinuxEnvironment = { navController.navigate(Routes.LINUX_ENVIRONMENT) },
@@ -708,6 +711,13 @@ fun AppNavigation() {
                     onBack = { navController.popBackStackSafely() },
                     onOpenAiSettings = { navController.navigate(Routes.AI_SETTINGS) },
                     onOpenApp = { appId -> navController.navigate(Routes.editApp(appId)) }
+                )
+            }
+
+            composable(Routes.AUTO_PROMPT) {
+                AutoPromptScreen(
+                    onNavigateBack = { navController.popBackStackSafely() },
+                    onOpenAgent = { navController.navigate(Routes.AGENT) }
                 )
             }
 

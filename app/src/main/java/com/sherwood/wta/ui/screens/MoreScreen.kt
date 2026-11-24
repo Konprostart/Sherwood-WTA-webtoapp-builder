@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ import com.sherwood.wta.ui.theme.ifDescriptionsShown
 @Composable
 fun MoreScreen(
     onOpenAgent: () -> Unit = {},
+    onOpenAutoPrompt: () -> Unit = {},
     onOpenAiSettings: () -> Unit = {},
 
     onOpenBrowserKernel: () -> Unit = {},
@@ -82,6 +85,12 @@ fun MoreScreen(
                             title = Strings.menuAgent,
                             icon = painterResource(R.drawable.ic_sidebar_agent),
                             onClick = onOpenAgent
+                        )
+                        WtaSectionDivider()
+                        MoreMenuItem(
+                            title = Strings.autoPromptMenuTitle,
+                            icon = Icons.Outlined.AutoAwesome,
+                            onClick = onOpenAutoPrompt
                         )
                         WtaSectionDivider()
                         MoreMenuItem(
@@ -192,17 +201,43 @@ private fun MoreMenuItem(
     icon: Painter,
     onClick: () -> Unit
 ) {
+    MoreMenuItem(title = title, onClick = onClick) {
+        Icon(
+            painter = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+/** Vector-icon variant, used where the icon has no drawable resource in the shared res tree. */
+@Composable
+private fun MoreMenuItem(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    MoreMenuItem(title = title, onClick = onClick) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun MoreMenuItem(
+    title: String,
+    onClick: () -> Unit,
+    iconContent: @Composable () -> Unit
+) {
     WtaSettingRow(
         title = title,
         onClick = onClick,
-        iconContent = {
-            Icon(
-                painter = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
+        iconContent = iconContent
     ) {
         Icon(
             imageVector = Icons.Outlined.ChevronRight,
