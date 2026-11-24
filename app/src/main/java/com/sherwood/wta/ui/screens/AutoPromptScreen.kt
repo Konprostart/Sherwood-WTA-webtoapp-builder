@@ -749,11 +749,11 @@ private fun AutoPromptEditorDialog(
 
                 EditorDropdown(
                     label = Strings.autoPromptModel,
-                    value = agentModels.firstOrNull { it.id == modelId }?.let(::modelDisplayName)
+                    value = agentModels.firstOrNull { it.id == modelId }?.let(::modelOptionLabel)
                         ?: Strings.autoPromptModelDefault,
                     options = listOf<Pair<String?, String>>(
                         null to Strings.autoPromptModelDefault
-                    ) + agentModels.map { it.id to modelDisplayName(it) },
+                    ) + agentModels.map { it.id to modelOptionLabel(it) },
                     onSelect = { modelId = it }
                 )
 
@@ -831,6 +831,10 @@ private fun modelLabel(prompt: AutoPrompt, models: List<SavedModel>): String =
 
 private fun modelDisplayName(model: SavedModel): String =
     model.alias?.takeIf { it.isNotBlank() } ?: model.model.name
+
+/** Dropdown label: the provider is what makes two same-named models distinguishable. */
+private fun modelOptionLabel(model: SavedModel): String =
+    "${modelDisplayName(model)} · ${model.model.provider.displayName}"
 
 private fun blockedMessage(reason: AutoPromptRunPlan.BlockedReason): String = when (reason) {
     AutoPromptRunPlan.BlockedReason.MASTER_DISABLED -> Strings.autoPromptMasterOff
