@@ -1,6 +1,6 @@
 # Remote Activation — Server Contract
 
-WebToApp can verify activation codes against **your own HTTPS endpoint**
+Sherwood Studio can verify activation codes against **your own HTTPS endpoint**
 instead of (or in addition to) the codes baked into the APK. This lets you
 revoke codes, issue them dynamically, and control usage centrally — without
 rebuilding the app.
