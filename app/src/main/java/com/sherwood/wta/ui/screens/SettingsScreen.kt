@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SmartToy
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sherwood.wta.core.ai.AiConfigManager
+import com.sherwood.wta.core.category.CategoryFilterStore
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.core.invite.InviteStore
 import com.sherwood.wta.core.sidekick.SidekickSettings
@@ -83,6 +85,13 @@ fun SettingsScreen(
     val enableParticles by themeManager.enableParticlesFlow.collectAsStateWithLifecycle()
     val enableHaptics by themeManager.enableHapticsFlow.collectAsStateWithLifecycle()
     val animSpeed by themeManager.animationSpeedFlow.collectAsStateWithLifecycle()
+
+    // ---- home-screen category filter ---------------------------------------
+    // The selection itself is persisted by MainViewModel on every change; this switch only
+    // decides whether it is restored on the next cold start. It lives here because the old
+    // "More" tab that used to own it was retired in favour of the home overflow menu.
+    val categoryFilterStore = remember { CategoryFilterStore(context) }
+    var rememberCategoryFilter by remember { mutableStateOf(categoryFilterStore.rememberEnabled) }
 
     // ---- floating assistant (Sidekick) --------------------------------------
     // The overlay itself lives above the navigation graph; this screen only owns the
@@ -273,6 +282,17 @@ fun SettingsScreen(
                             )
                         }
                     }
+                    WtaSectionDivider()
+                    WtaToggleRow(
+                        title = Strings.rememberCategoryFilter,
+                        subtitle = Strings.rememberCategoryFilterDesc.ifDescriptionsShown(),
+                        icon = Icons.Outlined.FilterList,
+                        checked = rememberCategoryFilter,
+                        onCheckedChange = {
+                            rememberCategoryFilter = it
+                            categoryFilterStore.rememberEnabled = it
+                        }
+                    )
                 }
             }
 

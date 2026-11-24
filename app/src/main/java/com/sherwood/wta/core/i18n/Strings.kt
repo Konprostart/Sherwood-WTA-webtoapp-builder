@@ -61,13 +61,6 @@ object Strings {
     val menuAiSettings: String get() = StringsA.menuAiSettings
     val menuAppModifier: String get() = StringsA.menuAppModifier
     val menuExtensionModules: String get() = StringsE.pluginsManageTitle
-    val menuAbout: String get() = StringsA.menuAbout
-    val tabMore: String get() = StringsA.tabMore
-    val moreSectionAiTools: String get() = StringsA.moreSectionAiTools
-    val moreSectionDevTools: String get() = StringsA.moreSectionDevTools
-    val moreSectionBrowser: String get() = StringsA.moreSectionBrowser
-    val moreSectionAppearance: String get() = StringsA.moreSectionAppearance
-    val moreSectionGeneral: String get() = StringsA.moreSectionGeneral
     val rememberCategoryFilter: String get() = StringsA.rememberCategoryFilter
     val rememberCategoryFilterDesc: String get() = StringsA.rememberCategoryFilterDesc
     val menuStats: String get() = StringsA.menuStats

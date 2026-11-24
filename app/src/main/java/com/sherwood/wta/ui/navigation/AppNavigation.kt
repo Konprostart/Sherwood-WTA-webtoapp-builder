@@ -21,7 +21,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.widget.Toast
 import com.sherwood.wta.core.host.AdvancedAppTypes
-import com.sherwood.wta.core.host.HostRuntimePrefs
 import com.sherwood.wta.core.i18n.InitializeLanguage
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.data.model.AppType
@@ -58,7 +57,6 @@ import com.sherwood.wta.ui.screens.HostsAdBlockScreen
 import com.sherwood.wta.ui.screens.LinuxEnvironmentScreen
 import com.sherwood.wta.ui.screens.PluginEditorScreen
 import com.sherwood.wta.ui.screens.ModuleMarketScreen
-import com.sherwood.wta.ui.screens.MoreScreen
 import com.sherwood.wta.ui.screens.AutoPromptScreen
 import com.sherwood.wta.ui.screens.PortManagerScreen
 import com.sherwood.wta.ui.screens.PlayStoreScreen
@@ -70,7 +68,6 @@ import org.koin.androidx.compose.koinViewModel
 
 object Routes {
     const val HOME = "home"
-    const val MORE = "more"
 
     const val CREATE_APP = "create_app"
     const val CREATE_MEDIA_APP = "create_media_app"
