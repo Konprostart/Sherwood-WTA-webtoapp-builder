@@ -102,6 +102,8 @@ import com.sherwood.wta.core.sidekick.input.SidekickAttachment
 import com.sherwood.wta.core.sidekick.input.SidekickImageAttachment
 import com.sherwood.wta.core.sidekick.input.SidekickTextAttachment
 import com.sherwood.wta.ui.agent.components.MarkdownText
+import com.sherwood.wta.ui.components.MessageCopyButton
+import com.sherwood.wta.ui.components.MessageCopyPayload
 import com.sherwood.wta.ui.design.WtaButton
 import com.sherwood.wta.ui.design.WtaButtonSize
 import com.sherwood.wta.ui.design.WtaButtonVariant
@@ -469,10 +471,14 @@ private fun SidekickBody(
 
 @Composable
 private fun SidekickBubble(turn: SidekickTurn, streaming: Boolean) {
+    // One-tap copy for both roles, using the same text the bubble shows, so an answer
+    // can move between the panel and the Workspace transcript without reformatting.
+    val copyText = MessageCopyPayload.sidekick(turn)
+    val canCopy = MessageCopyPayload.isCopyable(copyText)
     if (turn.role == SidekickTurn.Role.USER) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+            horizontalAlignment = Alignment.End
         ) {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -501,14 +507,28 @@ private fun SidekickBubble(turn: SidekickTurn, streaming: Boolean) {
                     }
                 }
             }
+            if (canCopy) {
+                MessageCopyButton(text = { copyText })
+            }
         }
     } else {
-        val text = if (streaming && turn.text.isBlank()) Strings.sidekickThinking else turn.text
-        MarkdownText(
-            text = text,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start
+        ) {
+            val text = if (streaming && turn.text.isBlank()) Strings.sidekickThinking else turn.text
+            MarkdownText(
+                text = text,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth()
+            )
+            // A pending answer shows the "thinking" placeholder, which is not the turn's
+            // own text — canCopy is false until real tokens arrive, so nothing empty is
+            // ever copied.
+            if (canCopy) {
+                MessageCopyButton(text = { copyText })
+            }
+        }
     }
 }
 

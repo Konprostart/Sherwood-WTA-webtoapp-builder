@@ -92,6 +92,8 @@ import com.sherwood.wta.core.agent.session.UserAttachment
 import com.sherwood.wta.core.i18n.Strings
 import com.sherwood.wta.ui.agent.AgentViewModel
 import com.sherwood.wta.ui.agent.ThinkingSegment
+import com.sherwood.wta.ui.components.MessageCopyButton
+import com.sherwood.wta.ui.components.MessageCopyPayload
 import com.sherwood.wta.ui.design.WtaAlpha
 import com.sherwood.wta.ui.design.WtaCard
 import com.sherwood.wta.ui.design.WtaCardTone
@@ -173,6 +175,12 @@ fun MessageBubble(
         else -> MaterialTheme.colorScheme.onSurface
     }
     var menuOpen by remember { mutableStateOf(false) }
+    // One-tap copy payload for this bubble. The inline button copies the prose only;
+    // the ⋯ menu keeps the variant that also includes thinking and tool calls.
+    val copyText = remember(message.id, message.content) {
+        MessageCopyPayload.agent(message)
+    }
+    val canCopy = remember(copyText) { MessageCopyPayload.isCopyable(copyText) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -265,6 +273,9 @@ fun MessageBubble(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = WtaAlpha.Strong)
             )
             Spacer(Modifier.width(WtaSpacing.Tiny))
+            if (canCopy) {
+                MessageCopyButton(text = { copyText })
+            }
             Box {
                 WtaIconButton(
                     onClick = { menuOpen = true },
@@ -444,6 +455,10 @@ fun StreamingBubble(
     pendingTools: List<RecordedToolCall>,
     activity: String?
 ) {
+    // Streamed prose only: markers are stripped so the clipboard never receives the
+    // invisible U+2063 bookkeeping characters. Recomputed per token because the answer
+    // is still growing — the button is already on screen while text keeps arriving.
+    val copyText = MessageCopyPayload.streaming(text)
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
         WtaCard(
             tone = WtaCardTone.Surface,
@@ -503,6 +518,11 @@ fun StreamingBubble(
                     )
                 }
             }
+        }
+        // Copy stays available while the answer is still streaming, so a half-read
+        // answer can be moved elsewhere without waiting for the turn to finish.
+        if (copyText.isNotEmpty()) {
+            MessageCopyButton(text = { copyText })
         }
     }
 }
